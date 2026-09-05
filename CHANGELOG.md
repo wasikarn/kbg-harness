@@ -5,6 +5,20 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.7] — 2026-09-06
+
+### Fixed
+
+- `scripts/run-gauntlet.sh` no longer leaks inherited `GIT_DIR`/`GIT_WORK_TREE`/etc. into the
+  test layer. `pre-push` fires as a git hook — from a linked worktree, git exports an absolute
+  worktree-scoped `GIT_DIR` into the hook's environment — and `tests/hooks/test-gates.sh` /
+  `tests/hooks/test-session-stop.sh` both `git init`/`commit` inside temp fixture dirs expecting
+  isolation. Confirmed by reproduction: doing this by hand against this repo flipped its own
+  `core.bare` to `true` and broke `git status` outright, matching a Codex review P1 finding
+  almost exactly. Fix: `unset` the git-identity env vars right after `cd "$ROOT"`, before the
+  test layer forks. New regression test `tests/scripts/test-gauntlet-git-env-isolation.sh`
+  poisons `GIT_DIR` toward a decoy repo and asserts the decoy's HEAD/`core.bare` stay untouched.
+
 ## [1.1.6] — 2026-09-06
 
 ### Added
