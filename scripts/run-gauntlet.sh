@@ -13,8 +13,7 @@ cd "$ROOT" || exit 1
 # as a git hook (pre-push, esp. from a linked worktree) has GIT_DIR etc. set
 # in its env, which hijacks those git-init calls onto the real repo instead
 # of the fixture dir. Clear them before the test layer runs.
-unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY \
-      GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_NAMESPACE
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_NAMESPACE
 LOG="$(mktemp -d)"
 trap 'trash "$LOG" 2>/dev/null || true' EXIT
 

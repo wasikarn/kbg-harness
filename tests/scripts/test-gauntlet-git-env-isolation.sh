@@ -23,6 +23,7 @@ trap cleanup EXIT
   && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m decoy-canary ) >/dev/null 2>&1
 decoy_head_before=$(git -C "$DECOY" rev-parse HEAD)
 
+REQUIRED_VARS="GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_COMMON_DIR GIT_NAMESPACE"
 UNSET_LINE=$(/usr/bin/grep -E '^unset GIT_' "$GAUNTLET" || true)
 if [ -z "$UNSET_LINE" ]; then
   bad "run-gauntlet.sh has no 'unset GIT_...' isolation line"
@@ -33,6 +34,24 @@ else
     ok "GIT_* unset happens before run_hook_tests is launched"
   else
     bad "GIT_* unset is positioned after run_hook_tests launches (or launch line not found)"
+  fi
+
+  # Named per-variable check, not just "grep found something": a line-wrap,
+  # typo, or dropped name in run-gauntlet.sh's unset statement must fail this
+  # loudly instead of passing on whatever fragment grep happened to capture.
+  unset_result=$(
+    for v in $REQUIRED_VARS; do export "$v=x"; done
+    eval "$UNSET_LINE"
+    missed=""
+    for v in $REQUIRED_VARS; do
+      declare -p "$v" >/dev/null 2>&1 && missed="$missed $v"
+    done
+    [ -z "$missed" ] && echo OK || echo "MISSED:$missed"
+  )
+  if [ "$unset_result" = "OK" ]; then
+    ok "extracted unset statement clears all 7 named GIT_* vars"
+  else
+    bad "extracted unset statement did not clear: ${unset_result#MISSED:}"
   fi
 
   ( export GIT_DIR="$DECOY/.git"

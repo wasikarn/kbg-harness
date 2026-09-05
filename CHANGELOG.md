@@ -5,6 +5,21 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.8] — 2026-09-06
+
+### Fixed
+
+- `tests/scripts/test-gauntlet-git-env-isolation.sh` (shipped in 1.1.7) extracted the fix's
+  `unset` statement with `grep -E '^unset GIT_'`, which only matches the first of its two
+  backslash-continued lines — `eval` on that fragment silently exercised 4 of the 7 named vars.
+  The test passed anyway only because `GIT_DIR`, the one variable the poisoning scenario
+  actually needs, sits on the matched line; a future reorder would have kept it green while
+  testing nothing real (`/mh:deep-audit` finding). Fix: collapsed `run-gauntlet.sh`'s `unset` to
+  one line (makes the grep faithful today) and added a direct per-variable `declare -p` check
+  in the test (makes a future reformat, typo, or dropped name fail loudly instead of passing on
+  whatever fragment `grep` happens to capture). A/B-verified: fails against the pre-1.1.8 two-line
+  split, passes against the collapsed line.
+
 ## [1.1.7] — 2026-09-06
 
 ### Fixed
