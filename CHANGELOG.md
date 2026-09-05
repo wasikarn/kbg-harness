@@ -5,6 +5,14 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.9] — 2026-09-06
+
+### Fixed
+
+- check 70's allowlist covers `.code-review-graph/` (the `code-review-graph` MCP server's local
+  cache). Trashing it once didn't hold — it regenerated on its own with no deliberate invocation
+  — so the allowlist is the option that matches reality, not a one-off cleanup.
+
 ## [1.1.8] — 2026-09-06
 
 ### Fixed
