@@ -5,6 +5,18 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.10] — 2026-09-06
+
+### Fixed
+
+- check 70's allowlist no longer needs `.code-review-graph` (added in 1.1.9). Root-caused instead
+  of tolerated: the `code-review-graph` MCP server supports a per-repo external `data_dir`,
+  persisted in its own registry (`~/.code-review-graph/registry.json`) — not the global
+  `CRG_DATA_DIR` env var, which is used verbatim across every registered repo and would have
+  collided with the operator's other 8 already-registered repos sharing one `graph.db`. Ran
+  `code-review-graph build --repo . --data-dir ~/.cache/code-review-graph/matt-harness` once;
+  the repo root stays clean going forward, verified after a rebuild that it doesn't regenerate.
+
 ## [1.1.9] — 2026-09-06
 
 ### Fixed
