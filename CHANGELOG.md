@@ -5,6 +5,20 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.29] — 2026-09-07
+
+### Added
+
+- Evals for `tech-humanize`, the first skill cases under `evals/` (16 cases total): English
+  prose with planted tells, a Thai standup with planted calque, leaked closer, and an
+  unverified claim, a human-written control that must survive lightly edited, and a file-input
+  case that grades `README.md`'s bytes to prove the prose-only constraint (frontmatter and code
+  block intact). Regex graders assert a planted tell is absent or a source specific is kept;
+  the last message is the final rewrite only, so a hollow final cannot pass on the draft's
+  specifics and a "still AI" bullet quoting a removed tell cannot fail it (validator findings).
+  `tests/evals/test-eval-cases.sh` proves each skill-case pattern against the scaffolded
+  fixture; that proof rejected a non-discriminating grader on the control before commit.
+
 ## [1.1.28] — 2026-09-07
 
 ### Changed

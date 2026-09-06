@@ -44,8 +44,10 @@ task-completion self-grading tops out near chance). So:
 - The six review agents (`plan-reviewer`, `blind-spot-hunter`, `silent-failure-hunter`,
   `requirement-analyst`, `test-gap-analyzer`, `type-design-analyzer`) have a planted-defect case and a clean control each
   under `evals/`, in `claude plugin eval`'s native layout, graded on their own Output Format
-  (`evals/README.md`). The runner is early-access gated; `tests/evals/test-eval-cases.sh` keeps
-  the cases loadable until it opens.
+  (`evals/README.md`). `tech-humanize` has four more: two planted, a human-written control, and
+  a file-input case graded on the file's bytes. The runner is early-access gated;
+  `tests/evals/test-eval-cases.sh` keeps the cases loadable until it opens and proves every
+  regex grader against its fixture or verdict sample.
 - `gate:task:complete-separation` makes the rule mechanical for task state.
 
 The same rule at fan-in: when N subagent outputs feed one synthesis, agreement and conflict are

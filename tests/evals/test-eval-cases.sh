@@ -22,7 +22,10 @@ for d in "$EVALS"/*/; do
   g=$(ls "$d/graders"/*.md 2>/dev/null | wc -l | tr -d ' ')
   [ "$g" -ge 3 ] || { bad "$c: $g graders (need >=3)"; continue; }
   /usr/bin/grep -q '^schema_version: "1.1"' "$d/case.yaml" || { bad "$c: case.yaml lacks schema_version 1.1"; continue; }
-  /usr/bin/grep -q 'subagent_type: "mh:' "$d/prompt.md" || { bad "$c: prompt.md does not name a subagent_type"; continue; }
+  case "$c" in
+    tech-humanize-*) /usr/bin/grep -q 'skill: "mh:tech-humanize"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
+    *) /usr/bin/grep -q 'subagent_type: "mh:' "$d/prompt.md" || { bad "$c: prompt.md does not name a subagent_type"; continue; } ;;
+  esac
 
   # scaffold_script: extract the block, run it in a temp workspace, check every file prompt.md names.
   ws="$TMP/$c"; mkdir -p "$ws"
@@ -64,9 +67,16 @@ PY
     plan-reviewer-clean)          sample=$'findings: []\nverdict: production-ready' ;;
     requirement-analyst-planted)  sample='verdict: needs-clarification' ;;
     requirement-analyst-clean)    sample='verdict: ready' ;;
+    tech-humanize-*)              sample='FIXTURE' ;;
     *) sample='' ;;
   esac
   [ -n "$sample" ] || { bad "$c: no verdict sample in test-eval-cases.sh (add one to the case list)"; continue; }
+  # Skill cases have no verdict token. Their proof is the fixture itself: every regex grader
+  # pattern must match the scaffolded input (a not_contains tell is really planted, a contains
+  # specific is really there), or the grader cannot discriminate.
+  if [ "$sample" = FIXTURE ]; then
+    sample=$(cat "$ws"/*.md "$ws"/*/*.md 2>/dev/null)
+  fi
   if ! python3 - "$d/graders" "$sample" <<'PY'
 import sys, os, re
 bad = 0
@@ -85,17 +95,20 @@ for f in sorted(os.listdir(sys.argv[1])):
         rx = re.compile(p.group(1))
     except re.error as e:
         print(f"  bad regex in {f}: {e}"); bad = 1; continue
+    fl = re.search(r"^flags: (\w+)$", m.group(1), re.M)
+    flags = re.I if fl and "i" in fl.group(1) else 0
     if f in ("contract.md", "clean.md"):
-        fl = re.search(r"^flags: (\w+)$", m.group(1), re.M)
-        flags = re.I if fl and "i" in fl.group(1) else 0
         if not re.search(p.group(1), sample, flags):
             print(f"  {f}: pattern rejects the observed verdict shape {sample!r}"); bad = 1
+    elif os.path.basename(os.path.dirname(sys.argv[1])).startswith("tech-humanize-"):
+        if not re.search(p.group(1), sample, flags | re.M):
+            print(f"  {f}: pattern does not match the scaffolded fixture, so it cannot discriminate"); bad = 1
 sys.exit(bad)
 PY
   then bad "$c: a grader is malformed"; continue; fi
   ok "$c"
 done
-[ "$n" -eq 12 ] || bad "expected 12 cases, found $n"
+[ "$n" -eq 16 ] || bad "expected 16 cases, found $n"
 
 echo "eval-cases: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
