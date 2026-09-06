@@ -8,14 +8,17 @@ ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT" || exit 1
 fail=0
 staged() { git diff --cached --name-only --diff-filter=ACMR -- "$@"; }
+# Syntax layers skip the audit's known-bad fixtures: they are invalid on purpose (checks 17,
+# 18, 19 must fire on them). The home-path ban still covers them.
+staged_lint() { staged "$@" ':(exclude)tests/skills/harness-audit/known-bad'; }
 
 # 1. shell syntax
 while IFS= read -r f; do
   [ -n "$f" ] || continue
   bash -n "$f" || fail=1
-done < <(staged '*.sh' 'git-hooks/*')
+done < <(staged_lint '*.sh' 'git-hooks/*')
 if command -v shellcheck >/dev/null; then
-  files=$(staged '*.sh' 'git-hooks/*')
+  files=$(staged_lint '*.sh' 'git-hooks/*')
   # shellcheck disable=SC2086
   [ -z "$files" ] || shellcheck -S warning $files || fail=1
 fi
@@ -24,13 +27,13 @@ fi
 while IFS= read -r f; do
   [ -n "$f" ] || continue
   python3 -m py_compile "$f" || fail=1
-done < <(staged '*.py')
+done < <(staged_lint '*.py')
 
 # 3. JSON
 while IFS= read -r f; do
   [ -n "$f" ] || continue
   python3 -m json.tool "$f" >/dev/null || { echo "pre-commit: invalid JSON: $f" >&2; fail=1; }
-done < <(staged '*.json')
+done < <(staged_lint '*.json')
 
 # 4. hardcoded home paths (repo is public); frozen history dirs exempt
 while IFS= read -r f; do

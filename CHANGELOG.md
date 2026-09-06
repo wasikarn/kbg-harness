@@ -5,6 +5,39 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.30] — 2026-09-07
+
+### Added
+
+- `harness-audit` self-test now proves every check, not nine of twenty-nine: a `fleet-bad`
+  fixture plants at least one defect per remaining check (02, 03, 07, 08, 09, 10, 11, 17, 18,
+  19, 21, 23, 24, 32, 33, 35, 41, 42, 54; 43 is driven by the env ceiling) and a `fleet-good` fixture
+  is a complete clean fleet; a copy of it serves as the plugin cache for the loadability
+  checks, and a decoy cache holding none of the fleet proves those checks still fire. Check
+  29's WARN branch (injection phrase in a description) gets its own fires/silent pair. The
+  loadability checks run under an empty HOME and check 43 under no budget env, so the result
+  does not depend on the developer's machine. 79 assertions, up from 33.
+- Green-because-empty guard in `audit.sh`: a full run WARNs when `agents/`, `skills/`, or
+  `hooks/` is missing. An empty dir is still vacuous; the guard names the removed surface only. Tested.
+- Evals for `harness-audit` (18 cases total): a planted fleet with two CRITs the session must
+  fix and confirm with a second audit run (`tool_used: Bash` min 2, file graders on the fix),
+  and a clean control that must receive no edits by any route (`tool_used: Edit` max 0, a Bash
+  mutation pattern max 0, and the grant line byte-unchanged on disk). Contract graders are
+  anchored to the `=== Summary` block. Both scaffolds were
+  audited by hand: the planted one reports exactly the two CRITs, the clean one none. Bash is
+  not granted by default in the eval runner; the README gives the `--allow-tools Bash` flag.
+
+### Changed
+
+- `git-hooks/pre-commit`: the shell, Python, and JSON syntax layers skip
+  `tests/skills/harness-audit/known-bad/`, whose files are invalid on purpose; the home-path
+  ban still covers them.
+- `harness-audit` SKILL.md: extending-checks section names the fleet fixture pair and the
+  self-test command; the green-because-empty failure mode names the new guard. Research
+  (2026-09-07): `claude plugin validate` checks manifest fields and agent frontmatter parse
+  only, and `/skill-doctor` is a usage and context-cost report, so no audit check overlaps a
+  vendor surface.
+
 ## [1.1.29] — 2026-09-07
 
 ### Added

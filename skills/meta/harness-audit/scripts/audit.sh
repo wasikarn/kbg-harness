@@ -210,6 +210,13 @@ for _cf in "${_checks[@]}"; do
 done
 unset _cf
 
+# Green-because-empty guard: a check that globs a surface dir passes vacuously when the dir
+# is gone. Name the gap once here instead of in every check.
+for _s in agents skills hooks; do
+  [ -d "$CLAUDE_DIR/$_s" ] || warn "no $_s/ dir under $CLAUDE_DIR: every check over $_s passed vacuously"
+done
+unset _s
+
 # Split-integrity guard: the kept check set is explicit (v1.0.0 rebuild);
 # retired numbers are never reused, so a deliberate retirement edits this list.
 _all_ids=$(grep -hoE '^# [0-9]+\. ' "${_checks[@]}" 2>/dev/null | grep -oE '[0-9]+' | sort -n)

@@ -19,7 +19,7 @@ bash "${CLAUDE_SKILL_DIR}/scripts/audit.sh" --only 22  # one check by number
 
 | Area | Checks |
 |---|---|
-| Loadability | 02 skills, 03 hooks + agents (plugin cache or symlink) |
+| Loadability | 02 skills, 03 agents (plugin cache or symlink) |
 | Frontmatter | 04 agents (name, description, bucket enum), 05 skills (name, description, bucket dir, trigger clause), 28 strict YAML, 54 model + effort present |
 | Names | 07/08 name matches filename, 23 lowercase-hyphen format |
 | Agent tool grants | 09 explicit `tools:`, 10 no duplicates, 24 real tool tokens, 41 never `Agent`, 32 reviewers stay read-only |
@@ -45,8 +45,14 @@ Add `scripts/checks/NN-slug.sh` (two-digit prefix, hyphen, slug; the loader glob
 `checks/[0-9][0-9]-*.sh`) with a `# NN. <title>` header line. Call `crit`, `warn`, or `info`
 with a message; never print your own summary line. Then add `NN` to `_exp_ids` near the end of
 `audit.sh` in the same commit: the integrity guard fails closed on any lost, duplicated, or
-unlisted fragment. Pair a new check with a known-bad and known-good fixture in
-`tests/skills/harness-audit/known-bad/` and an assertion in `test-harness-audit.sh`.
+unlisted fragment. Pair a new check with a defect in `tests/skills/harness-audit/known-bad/fleet-bad/` (at least one
+per check; `fleet-good/` must stay silent) and an assertion in `test-harness-audit.sh`; a check that
+needs its own tree gets a `check-NN-*` fixture pair instead. Every check has a fires/silent
+proof; a new one without it is the gap the integrity guard cannot see.
+
+```bash
+bash tests/skills/harness-audit/test-harness-audit.sh   # self-test, every check fires and stays silent
+```
 
 ## Completion criterion
 
@@ -59,5 +65,6 @@ re-running is not done.
 - **Fixing without re-running.** A typo in the fix only shows up on the re-run.
 - **Stale `--plugin-cache`.** A hand-passed old version reintroduces the loadability CRITs the
   auto-detection exists to avoid.
-- **Green because empty.** A check that globs a directory that no longer exists passes vacuously;
-  when a surface type is removed, remove or retarget its check.
+- **Green because empty.** A check that globs a directory that no longer exists passes vacuously.
+  A full run WARNs when `agents/`, `skills/`, or `hooks/` is missing; when a surface type is
+  removed on purpose, remove or retarget its checks and the guard together.

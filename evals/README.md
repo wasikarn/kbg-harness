@@ -1,6 +1,6 @@
 # Review-agent and skill evals
 
-Sixteen cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
+Eighteen cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
 agents, one planted-defect case and one clean control per agent, the same fires/silent pairing
 `tests/skills/harness-audit/known-bad/` uses for audit checks. Each case is
 `prompt.md` (the ask: an agent case dispatches by `subagent_type`, a skill case invokes by `skill:`), `case.yaml` (a
@@ -20,12 +20,22 @@ the file's contents). Their `skill-fired.md` is `tool_used: Skill`; their regex 
 planted tell is absent (`not_contains`) or a source specific is kept (`contains`), and the loader
 test proves each pattern against the scaffolded fixture.
 
+Two for `harness-audit` (tag `harness-audit`): a planted fleet with two CRITs (skill name
+mismatch, missing `tools:` grant) that the session must fix and confirm with a second run
+(`audit-reran.md` is `tool_used: Bash`, min 2; file graders check the fix landed in the named
+file), and a clean control that must get no edits (`no-edits.md` is `tool_used: Edit`, max 0; `max`
+is this suite's first use of the key and unverified against the runner, so `fleet-unchanged.md`
+proves the same thing on the file's bytes).
+The scaffolded repo is its own plugin cache (`--plugin-cache .`). Bash is not granted by
+default: run these with `--allow-tools Bash` (the prompt frontmatter also lists it).
+
 Run (needs `plugin eval` early access on the account; 2.1.263 prints "currently in early access"
 otherwise):
 
 ```bash
 claude plugin eval . --scaffold --runs 1 --no-publish
 claude plugin eval . --scaffold --tag silent-failure-hunter --runs 1 --no-publish
+claude plugin eval . --scaffold --tag harness-audit --allow-tools Bash --runs 1 --no-publish
 ```
 
 `--scaffold` is required: the fixtures live in each case's `scaffold_script`.

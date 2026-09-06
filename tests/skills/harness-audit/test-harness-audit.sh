@@ -3,7 +3,9 @@
 #
 # audit.sh's fragment integrity guard catches LOST checks, not SILENT ones. Each
 # known-bad fixture below is paired with a clean one; the matching check must
-# FIRE on bad and stay SILENT on good. Covered: 04, 05, 20, 22, 28, 29, 70, 71, 72.
+# FIRE on bad and stay SILENT on good. Per-check fixtures cover 04, 05, 20, 22, 28, 29, 70,
+# 71, 72; the fleet-bad / fleet-good pair covers the other twenty with at least one defect per
+# check (43 is driven by the env ceiling, not a planted defect).
 set -uo pipefail
 
 HERE="$(cd -P "$(dirname "$0")" && pwd)"
@@ -23,7 +25,8 @@ INFO_FOUND=0
 OUT=""
 run_check() {
   local id="$1" root="$2" out c w i
-  out=$(bash "$AUDIT" "$root" --only "$id" 2>/dev/null || true)
+  shift 2
+  out=$(bash "$AUDIT" "$root" --only "$id" "$@" 2>/dev/null || true)
   OUT="$out"
   c=$(printf '%s\n' "$out" | sed -n 's/^Critical: //p')
   w=$(printf '%s\n' "$out" | sed -n 's/^Warnings: //p')
@@ -34,7 +37,7 @@ run_check() {
 }
 # expect <id> <fixture> <crit-cond> <warn-cond> <label>: run and assert.
 expect_silent() {
-  run_check "$1" "$FIX/$2"
+  run_check "$1" "$FIX/$2" "${@:3}"
   if [ "$CRIT_FOUND" -eq 0 ] && [ "$WARN_FOUND" -eq 0 ]; then ok "check-$1 $2 silent"
   else bad "check-$1 $2 not silent (crit=$CRIT_FOUND warn=$WARN_FOUND)"; fi
 }
@@ -50,12 +53,12 @@ expect_info_only() {
   else bad "check-$1 $2 did not fail open as INFO ($3) (crit=$CRIT_FOUND warn=$WARN_FOUND info=$INFO_FOUND)"; fi
 }
 expect_warn() {
-  run_check "$1" "$FIX/$2"
+  run_check "$1" "$FIX/$2" "${@:3}"
   if [ "$WARN_FOUND" -ge 1 ] && [ "$CRIT_FOUND" -eq 0 ]; then ok "check-$1 $2 fires WARN (warn=$WARN_FOUND)"
   else bad "check-$1 $2 did NOT fire WARN (crit=$CRIT_FOUND warn=$WARN_FOUND)"; fi
 }
 expect_crit() {
-  run_check "$1" "$FIX/$2"
+  run_check "$1" "$FIX/$2" "${@:3}"
   if [ "$CRIT_FOUND" -ge 1 ]; then ok "check-$1 $2 fires CRIT (crit=$CRIT_FOUND)"
   else bad "check-$1 $2 did NOT fire CRIT (crit=$CRIT_FOUND warn=$WARN_FOUND)"; fi
 }
@@ -105,6 +108,12 @@ if [ "$INFO_FOUND" -ge 1 ] && [ "$CRIT_FOUND" -eq 0 ]; then
 else
   bad "check-29 bad fixture did NOT fire INFO (crit=$CRIT_FOUND warn=$WARN_FOUND info=$INFO_FOUND)"
 fi
+
+# Check 29 WARN branch: an injection phrase in a description fires WARN; a plain one is silent.
+expect_warn 29 check-29-bad-injection
+run_check 29 "$FIX/check-29-good"
+if [ "$CRIT_FOUND" -eq 0 ] && [ "$WARN_FOUND" -eq 0 ] && [ "$INFO_FOUND" -eq 0 ]; then ok "check-29 good silent (no INFO either)"
+else bad "check-29 good not silent (crit=$CRIT_FOUND warn=$WARN_FOUND info=$INFO_FOUND)"; fi
 
 # Check 70: stray top-level entries (gitignored working-tree clutter). WARN on a
 # leftover `*-workspace/` dir; silent when the root holds only keep-list entries.
@@ -158,6 +167,53 @@ printf 'const VALID_REASONING_EFFORTS = new Set(["low", "medium", "high"]);\n' >
 cp "$CODEX_TMP/cache/scripts/codex-companion.mjs" "$_c72_home/.claude/plugins/cache/openai-codex/codex/1.0.10/scripts/codex-companion.mjs"
 HOME="$_c72_home" expect_silent_match 72 check-72-good-effort-set 'codex/1\.0\.10/'
 HOME="$_c72_home" expect_warn 72 check-72-bad-effort-drift
+
+# Fleet pair: every check without a per-check fixture. fleet-bad plants one defect per
+# check; fleet-good is a complete clean fleet and doubles as the fake plugin cache for
+# 02/03 (loadability = present under --plugin-cache). 43 is driven by the env ceiling.
+GOOD="$FIX/fleet-good"
+# The cache is a copy, not the fixture itself: passing fleet-good as its own cache would make
+# 02/03 pass with the checks gutted. A decoy cache (populated, holding none of the fleet)
+# proves they still discriminate; an empty cache would only WARN "unverified". 02/03 also
+# read HOME's symlink farm, so they run under an empty HOME (not the full run: python3 loses
+# user-site PyYAML without the real HOME and check 28 WARNs). 43 gets no budget env.
+CACHE="$CODEX_TMP/cache-copy"; cp -R "$GOOD" "$CACHE"
+DECOY="$CODEX_TMP/decoy-cache"; mkdir -p "$DECOY/agents" "$DECOY/skills/meta/unrelated"
+EMPTY_HOME="$CODEX_TMP/empty-home"; mkdir -p "$EMPTY_HOME"
+export SLASH_COMMAND_TOOL_CHAR_BUDGET=
+for id in 02 03; do
+  HOME="$EMPTY_HOME" expect_crit   "$id" fleet-bad  --plugin-cache "$CACHE"
+  HOME="$EMPTY_HOME" expect_silent "$id" fleet-good --plugin-cache "$CACHE"
+  HOME="$EMPTY_HOME" expect_crit   "$id" fleet-good --plugin-cache "$DECOY"
+done
+for id in 07 08 09 11 17 18 19 23 32 33; do
+  expect_crit   "$id" fleet-bad  --plugin-cache "$CACHE"
+  expect_silent "$id" fleet-good --plugin-cache "$CACHE"
+done
+for id in 10 21 24 35 41 42 54; do
+  expect_warn   "$id" fleet-bad
+  expect_silent "$id" fleet-good
+done
+SLASH_COMMAND_TOOL_CHAR_BUDGET=10     expect_warn   43 fleet-bad
+SLASH_COMMAND_TOOL_CHAR_BUDGET=100000 expect_silent 43 fleet-good
+# Full run on the clean fleet: proves the fixture is a whole fleet, not just silent per check,
+# and that the vacuous-surface guard stays quiet when agents/, skills/, hooks/ all exist.
+full=$(bash "$AUDIT" "$GOOD" --plugin-cache "$CACHE" 2>/dev/null || true)
+if printf '%s\n' "$full" | /usr/bin/grep -q '^Critical: 0$' && printf '%s\n' "$full" | /usr/bin/grep -q '^Warnings: 0$'; then
+  ok "fleet-good full run: 0 CRIT, 0 WARN"
+else
+  bad "fleet-good full run not clean: $(printf '%s\n' "$full" | /usr/bin/grep -E 'CRIT|WARN' | head -3)"
+fi
+# Vacuous-surface guard: a fleet with no hooks/ dir must say so in a full run (green-because-empty).
+NOHOOKS="$CODEX_TMP/nohooks"
+mkdir -p "$NOHOOKS" && cp -R "$GOOD/agents" "$GOOD/skills" "$NOHOOKS/"
+# Capture first: under pipefail, grep -q closing the pipe early hands the audit a SIGPIPE.
+nohooks_out=$(bash "$AUDIT" "$NOHOOKS" --plugin-cache "$CACHE" 2>/dev/null || true)
+if printf '%s\n' "$nohooks_out" | /usr/bin/grep -q "no hooks/ dir"; then
+  ok "vacuous-surface guard names the missing hooks/ dir"
+else
+  bad "vacuous-surface guard silent on a fleet with no hooks/ dir"
+fi
 
 echo ""
 echo "self-test: $pass passed, $fail failed"

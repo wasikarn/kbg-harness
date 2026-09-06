@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test-eval-cases.sh: static check of evals/<case>/ for the review-agent evals.
+# test-eval-cases.sh: static check of evals/<case>/ for the review-agent and skill evals.
 # `claude plugin eval` is early-access gated, so this keeps the suite loadable
 # without running it: every case has prompt.md + case.yaml + >=3 graders, the
 # scaffold_script runs in a temp dir and writes the files the prompt names, and
@@ -24,6 +24,7 @@ for d in "$EVALS"/*/; do
   /usr/bin/grep -q '^schema_version: "1.1"' "$d/case.yaml" || { bad "$c: case.yaml lacks schema_version 1.1"; continue; }
   case "$c" in
     tech-humanize-*) /usr/bin/grep -q 'skill: "mh:tech-humanize"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
+    harness-audit-*) /usr/bin/grep -q 'skill: "mh:harness-audit"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     *) /usr/bin/grep -q 'subagent_type: "mh:' "$d/prompt.md" || { bad "$c: prompt.md does not name a subagent_type"; continue; } ;;
   esac
 
@@ -68,6 +69,7 @@ PY
     requirement-analyst-planted)  sample='verdict: needs-clarification' ;;
     requirement-analyst-clean)    sample='verdict: ready' ;;
     tech-humanize-*)              sample='FIXTURE' ;;
+    harness-audit-*)              sample=$'=== Summary ===\nCritical: 0\nWarnings: 1\nInfo:     4\n' ;;
     *) sample='' ;;
   esac
   [ -n "$sample" ] || { bad "$c: no verdict sample in test-eval-cases.sh (add one to the case list)"; continue; }
@@ -108,7 +110,7 @@ PY
   then bad "$c: a grader is malformed"; continue; fi
   ok "$c"
 done
-[ "$n" -eq 16 ] || bad "expected 16 cases, found $n"
+[ "$n" -eq 18 ] || bad "expected 18 cases, found $n"
 
 echo "eval-cases: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
