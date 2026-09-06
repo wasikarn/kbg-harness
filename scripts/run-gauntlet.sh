@@ -4,7 +4,7 @@
 #   lint      bash -n (+shellcheck if installed) on tracked .sh,
 #             py_compile on tracked .py, JSON parse on tracked .json
 #   tests     every tests/hooks/*.sh on disk + tests/skills/**/test*.sh
-#             + tests/scripts/*.sh + tests/skills/memory-lint python tests
+#             + tests/scripts/*.sh + tests/evals/*.sh + tests/skills/memory-lint python tests
 # Wired to git-hooks/pre-push. harness-audit runs in pre-commit, not here.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -46,7 +46,7 @@ run_lint() {
 
 run_hook_tests() {
   local rc=0 t
-  for t in tests/hooks/*.sh tests/skills/test*.sh tests/skills/*/test*.sh tests/scripts/test*.sh; do
+  for t in tests/hooks/*.sh tests/skills/test*.sh tests/skills/*/test*.sh tests/scripts/test*.sh tests/evals/test*.sh; do
     [ -f "$t" ] || continue
     echo "--- $t"
     bash "$t" 2>&1 || rc=1

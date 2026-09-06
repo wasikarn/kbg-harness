@@ -5,6 +5,20 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.15] — 2026-09-06
+
+### Added
+
+- `evals/`: ten `claude plugin eval` cases for the five review agents, one planted-defect case
+  and one clean control each (the same fires/silent pairing the audit checks use). Fixtures are
+  written by each case's `scaffold_script`; graders check that the agent was dispatched
+  (`tool_used: Agent`), that the report ends in the agent's documented Output Format, that the
+  planted defect is found at its file (or the clean control gets the clean verdict), and an LLM
+  rubric for the finding's substance. The runner is early-access gated on 2.1.263, so
+  `tests/evals/test-eval-cases.sh` (now in the gauntlet) checks the suite statically: files
+  present, scaffold scripts run and produce the files the prompt names, regex graders compile.
+  Check 70's allowlist gains `evals`; `evals/results/` is gitignored.
+
 ## [1.1.14] — 2026-09-06
 
 ### Changed

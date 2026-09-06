@@ -1,0 +1,43 @@
+schema_version: "1.1"
+name: nextjs-reviewer-planted
+context:
+  scaffold_script: |
+    cat > package.json <<'FIXTURE_EOF'
+    {
+      "name": "shop-web",
+      "private": true,
+      "dependencies": { "next": "14.2.5", "react": "18.3.1", "react-dom": "18.3.1", "stripe": "16.2.0" }
+    }
+    FIXTURE_EOF
+    mkdir -p app
+    cat > app/layout.tsx <<'FIXTURE_EOF'
+    export default function RootLayout({ children }: { children: React.ReactNode }) {
+      return <html lang="en"><body>{children}</body></html>;
+    }
+    FIXTURE_EOF
+    mkdir -p app/account
+    cat > app/account/Profile.tsx <<'FIXTURE_EOF'
+    'use client';
+
+    import { useEffect, useState } from 'react';
+
+    export function Profile({ customerId }: { customerId: string }) {
+      const [data, setData] = useState<unknown>(null);
+      useEffect(() => {
+        fetch(`https://api.stripe.com/v1/customers/${customerId}`, {
+          headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+        })
+          .then((r) => r.json())
+          .then(setData);
+      }, [customerId]);
+      return <pre>{JSON.stringify(data, null, 2)}</pre>;
+    }
+    FIXTURE_EOF
+    mkdir -p app/account
+    cat > app/account/page.tsx <<'FIXTURE_EOF'
+    import { Profile } from './Profile';
+
+    export default function AccountPage() {
+      return <Profile customerId="cus_123" />;
+    }
+    FIXTURE_EOF

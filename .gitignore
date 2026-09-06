@@ -37,3 +37,6 @@ eval/results/
 # commit (nothing auto-rebuilds it) — regenerate on demand with `/graphify .`
 # rather than trusting a checked-in copy. See CLAUDE.md's "graphify" section.
 graphify-out/
+
+# claude plugin eval runs (evals/README.md)
+evals/results/
