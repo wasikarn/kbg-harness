@@ -1,6 +1,6 @@
 ---
 name: tech-humanize
-description: "Humanize dev/tech writing (English/Thai) to sound natural, not AI-generated. Use when editing chat, standup/PR/commit, UI copy, or prose/ticket/spec/ADR, or say แก้ให้เป็นธรรมชาติ. Don't use for translation."
+description: "Humanize dev/tech writing (English/Thai) to sound natural, not AI-generated. Use when editing chat, standup/PR/commit, UI copy, or prose/ticket/spec/ADR. Don't use for translation."
 model_limitation: "lexical-tell catalog currency (assumes current-gen LLM output still carries the enumerated tells — em dash, delve, rule-of-three, etc. — which research confirms shift/decay across model generations; re-validate at each quarterly cadence pass, docs/plans/mh-rebuild-v1-2026-09-05.md)"
 metadata:
   origin: kbg-native

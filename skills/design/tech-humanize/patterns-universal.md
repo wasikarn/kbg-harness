@@ -52,7 +52,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **Words to watch:** stands/serves as, is a testament/reminder, a vital/significant/crucial/pivotal/key role/moment, underscores/highlights its importance/significance, reflects broader, symbolizing its ongoing/enduring/lasting, contributing to the, setting the stage for, marking/shaping the, represents/marks a shift, key turning point, evolving landscape, focal point, indelible mark, deeply rooted
 
-**Thai cue:** ถ้าเจอ "ถือเป็นก้าวสำคัญ", "สะท้อนถึงความสำคัญ", "เป็นหลักฐาน", "สร้างคุณค่า", "ส่งเสริม" ที่ต่อท้ายประโยคโดยไม่เพิ่มข้อมูล → suspect
+**Thai cue:** "ถือเป็นก้าวสำคัญ", "สะท้อนถึงความสำคัญ", "เป็นหลักฐาน", "สร้างคุณค่า", "ส่งเสริม" tacked onto the end of a sentence without adding information → suspect
 
 **Problem:** LLM writing puffs up importance by adding statements about how arbitrary aspects represent or contribute to a broader topic.
 
@@ -80,7 +80,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **Words to watch:** highlighting/underscoring/emphasizing..., ensuring..., reflecting/symbolizing..., contributing to..., cultivating/fostering..., encompassing..., showcasing...
 
-**Thai cue:** "ซึ่งสะท้อนถึง...", "เพื่อส่งเสริม...", "ช่วยเสริมสร้าง...", "โดยเน้นย้ำถึง..." ต่อท้ายประโยคแบบน้ำท่วมทุ่ง → suspect
+**Thai cue:** "ซึ่งสะท้อนถึง...", "เพื่อส่งเสริม...", "ช่วยเสริมสร้าง...", "โดยเน้นย้ำถึง..." trailing a sentence as padding → suspect
 
 **Problem:** AI chatbots tack present participle ("-ing") phrases onto sentences to add fake depth.
 
@@ -95,7 +95,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **Words to watch:** boasts a, vibrant, rich (figurative), profound, enhancing its, showcasing, exemplifies, commitment to, natural beauty, nestled, in the heart of, groundbreaking (figurative), renowned, breathtaking, must-visit, stunning
 
-**Thai cue:** "งดงามตระการตา", "สวยงามราวภาพวาด", "เป็นที่รู้จักในระดับสากล", "ขึ้นชื่อเรื่อง", "ตั้งอยู่ใจกลาง" → suspect ถ้าไม่มีข้อมูลจริง
+**Thai cue:** "งดงามตระการตา", "สวยงามราวภาพวาด", "เป็นที่รู้จักในระดับสากล", "ขึ้นชื่อเรื่อง", "ตั้งอยู่ใจกลาง" → suspect when no real data backs it
 
 **Problem:** LLMs have serious problems keeping a neutral tone, especially for "cultural heritage" topics.
 
@@ -110,7 +110,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **Words to watch:** Industry reports, Observers have cited, Experts argue, Some critics argue, several sources/publications (when few cited)
 
-**Thai cue:** "ผู้เชี่ยวชาญบางท่านกล่าวว่า", "นักวิจารณ์หลายคนมองว่า", "รายงานระบุ" โดยไม่มีชื่อ/แหล่ง → suspect
+**Thai cue:** "ผู้เชี่ยวชาญบางท่านกล่าวว่า", "นักวิจารณ์หลายคนมองว่า", "รายงานระบุ" with no name or source → suspect
 
 **Problem:** AI chatbots attribute opinions to vague authorities without specific sources.
 
@@ -125,7 +125,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **Words to watch:** Despite its... faces several challenges..., Despite these challenges, Challenges and Legacy, Future Outlook
 
-**Thai cue:** "ท่ามกลางความท้าทาย", "อย่างไรก็ตาม...ยังคงเติบโต", "อนาคตของ..." แบบสรุปมักเป็น formula → suspect
+**Thai cue:** "ท่ามกลางความท้าทาย", "อย่างไรก็ตาม...ยังคงเติบโต", "อนาคตของ..." as a wrap-up is usually formula → suspect
 
 **Problem:** Many LLM-generated articles include formulaic "Challenges" sections.
 
@@ -142,7 +142,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **High-frequency AI words:** Actually, additionally, align with, crucial, delve, emphasizing, enduring, enhance, fostering, garner, highlight (verb), interplay, intricate/intricacies, key (adjective), landscape (abstract noun), pivotal, showcase, tapestry (abstract noun), testament, underscore (verb), valuable, vibrant
 
-**Thai cue:** "อันที่จริง", "นอกจากนี้", "สำคัญยิ่ง", "ส่งเสริม", "เน้นย้ำ", "ภูมิทัศน์", "จุดเปลี่ยน", "สัมผัสได้", "พยาน", "ขีดเส้นใต้" → ถ้าใช้ผิดที่ผิด context suspect
+**Thai cue:** "อันที่จริง", "นอกจากนี้", "สำคัญยิ่ง", "ส่งเสริม", "เน้นย้ำ", "ภูมิทัศน์", "จุดเปลี่ยน", "สัมผัสได้", "พยาน", "ขีดเส้นใต้" → suspect when used out of context
 
 **Problem:** These words appear far more frequently in post-2023 text. They often co-occur.
 
@@ -157,7 +157,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **Words to watch:** serves as/stands as/marks/represents [a], boasts/features/offers [a]
 
-**Thai cue:** "ทำหน้าที่เป็น", "ถือเป็น", "ถือได้ว่าเป็น", "เป็นสัญลักษณ์ของ" แทนที่จะใช้ "คือ" / "เป็น" ตรงๆ → suspect
+**Thai cue:** "ทำหน้าที่เป็น", "ถือเป็น", "ถือได้ว่าเป็น", "เป็นสัญลักษณ์ของ" instead of a plain "คือ" / "เป็น" → suspect
 
 **Problem:** LLMs substitute elaborate constructions for simple copulas.
 
@@ -172,7 +172,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **Problem:** Constructions like "Not only...but..." or "It's not just about..., it's..." are overused. So are clipped tailing-negation fragments such as "no guessing" or "no wasted motion" tacked onto the end of a sentence instead of written as a real clause.
 
-**Thai cue:** "ไม่ใช่แค่...แต่ยัง...", "ไม่เพียงเท่านั้น แต่...", "ไม่ต้องเดาอีกต่อไป", "ไม่มีอะไรต้องเสียเวลา" ต่อท้าย → suspect
+**Thai cue:** "ไม่ใช่แค่...แต่ยัง...", "ไม่เพียงเท่านั้น แต่...", "ไม่ต้องเดาอีกต่อไป", "ไม่มีอะไรต้องเสียเวลา" as a tail → suspect
 
 **Before:**
 > It's not just about the beat riding under the vocals it's part of the aggression and atmosphere It's not merely a song it's a statement
@@ -191,7 +191,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **Problem:** LLMs force ideas into groups of three to appear comprehensive.
 
-**Thai cue:** "streamline processes, enhance collaboration, and foster alignment" pattern → สองพอ สามเกิน
+**Thai cue:** "streamline processes, enhance collaboration, and foster alignment" pattern → two is enough, three is too many
 
 **Before:**
 > งานนี้ประกอบด้วย keynote sessions, panel discussions, and networking opportunities ผู้เข้าร่วมคาดหวัง innovation, inspiration, and industry insights
@@ -215,7 +215,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **Problem:** LLMs use "from X to Y" constructions where X and Y aren't on a meaningful scale.
 
-**Thai cue:** "ตั้งแต่...จนถึง...", "จาก...สู่..." ที่ปลายทั้งสองข้างไม่อยู่บน scale เดียวกัน → suspect
+**Thai cue:** "ตั้งแต่...จนถึง...", "จาก...สู่..." where the two ends are not on one scale → suspect
 
 **Before:**
 > Our journey through the universe has taken us from the singularity of the Big Bang to the grand cosmic web from the birth and death of stars to the enigmatic dance of dark matter
@@ -357,7 +357,7 @@ Before returning the final rewrite, scan it for em dashes (`—`). Any hit means
 
 **Problem:** Overly positive, people-pleasing language.
 
-**Thai cue:** "คำถามดีมากค่ะ", "ถูกต้องเลยครับ", "เป็นประเด็นที่ดีมาก" ในงานเขียนจริง → suspect (AI assistant leak)
+**Thai cue:** "คำถามดีมากค่ะ", "ถูกต้องเลยครับ", "เป็นประเด็นที่ดีมาก" in real writing → suspect (AI assistant leak)
 
 **Before:**
 > Great question! You're absolutely right that this is a complex topic That's an excellent point about the economic factors
@@ -391,7 +391,7 @@ Before returning the final rewrite, scan it for em dashes (`—`). Any hit means
 
 **Problem:** Over-qualifying statements.
 
-**Thai cue:** "อาจจะเป็นไปได้ว่าน่าจะอาจจะ..." → suspect (1 hedge พอ)
+**Thai cue:** "อาจจะเป็นไปได้ว่าน่าจะอาจจะ..." → suspect (one hedge is enough)
 
 **Before:**
 > It could potentially possibly be argued that the policy might have some effect on outcomes
@@ -487,13 +487,13 @@ Before returning the final rewrite, scan it for em dashes (`—`). Any hit means
 A clean human writer can hit several of the patterns above without any AI involvement. Before rewriting, sanity-check that you are not gutting legitimate prose. The following are *not* reliable indicators on their own:
 
 - **Perfect grammar and consistent style.** Many writers are professionals or have been edited. Polish does not equal AI.
-- **Mixed casual and formal registers.** This often signals a person in a technical field, a young writer, or someone with neurodivergent prose habits — not a chatbot. **For Thai: คนไทย code-switch ไทย-อังกฤษตามถนัดเป็นเรื่องปกติ ไม่ใช่ AI tell เสมอไป**
+- **Mixed casual and formal registers.** This often signals a person in a technical field, a young writer, or someone with neurodivergent prose habits — not a chatbot. **For Thai: Thai writers code-switch Thai-English by habit; it is normal, not always an AI tell**
 - **"Bland" or "robotic" prose.** AI prose has *specific* tells. Generic dryness without those tells is just dry writing.
-- **Formal or academic vocabulary.** AI overuses *specific* fancy words (see §7), not all fancy words. Don't flatten "ostensibly" or "constituent" just because they sound brainy. **For Thai: คำทางการที่ใช้ในบริบทเป็นทางการ ไม่ใช่ AI tell เสมอไป**
+- **Formal or academic vocabulary.** AI overuses *specific* fancy words (see §7), not all fancy words. Don't flatten "ostensibly" or "constituent" just because they sound brainy. **For Thai: formal words in a formal context are not always an AI tell**
 - **Letter-style opening or closing on a comment.** Salutations and sign-offs predate ChatGPT by centuries.
 - **Common transition words in isolation.** *Additionally*, *moreover*, *consequently* are AI-coded only when piled up. One *however* is not a tell.
 - **Curly quotes alone.** macOS, Word, Google Docs, and most CMSes auto-curl by default. Curly quotes only count when stacked with other tells.
-- **Em dashes alone.** Many editors and journalists use them often. Em dashes are evidence only when paired with formulaic sales-y rhythm. **For Thai: em dash ขึ้นต้นชี้ pattern แต่ไม่ใช่ proof ถ้าเจอที่เดียวในเอกสาร**
+- **Em dashes alone.** Many editors and journalists use them often. Em dashes are evidence only when paired with formulaic sales-y rhythm. **For Thai: an em dash hints at the pattern but is not proof when it appears once in a document**
 - **Unsourced claims.** Most of the web is unsourced. Lack of citations doesn't prove anything.
 - **Correct, complex formatting.** Visual editors and templates produce clean output without any AI.
 
@@ -504,10 +504,10 @@ When in doubt, look for **clusters** of tells, not isolated ones. A single em da
 
 When you see these, lean toward leaving the prose alone — they are evidence of a real person writing, and over-editing will destroy what makes the piece sound human:
 
-- **Specific, unusual, hard-to-fabricate detail.** A real address. A weird quote. The phrase "the lawyer who used to work upstairs from my dentist." LLMs round off specifics; humans hoard them. **For Thai: ลิงก์ ticket, log timestamp, ชื่อคนจริงในทีม, "เมื่อวานคุยกับพี่แจ็ค"**
+- **Specific, unusual, hard-to-fabricate detail.** A real address. A weird quote. The phrase "the lawyer who used to work upstairs from my dentist." LLMs round off specifics; humans hoard them. **For Thai: a ticket link, a log timestamp, a real teammate's name, "เมื่อวานคุยกับพี่แจ็ค"**
 - **Mixed feelings and unresolved tension.** "I think this is mostly good, but it bothers me, and I can't fully explain why." LLMs default to clean takes.
 - **Dated, era-bound references.** Slang, memes, or in-jokes that map to a specific year and subculture. Models lag by a year or more.
 - **First-person editorial choices the writer can defend.** If the writer can explain *why* they made a particular cut or used a particular word, that's a strong human signal.
-- **Variety in sentence length.** Real writing alternates short and long. AI writing tends toward an even, mid-length cadence. **For Thai: สลับ "ผ่าน" (สั้น) กับ "ทดสอบบน staging แล้ว เคส burst ผ่าน ส่วน moto drop ยังไม่ผ่าน" (ยาว)**
+- **Variety in sentence length.** Real writing alternates short and long. AI writing tends toward an even, mid-length cadence. **For Thai: alternate "ผ่าน" (short) with "ทดสอบบน staging แล้ว เคส burst ผ่าน ส่วน moto drop ยังไม่ผ่าน" (long)**
 - **Genuine asides, parenthetical, or self-corrections.** "(I keep wanting to say 'almost' here, but it really was certain.)" Models rarely interrupt themselves like this.
 - **Edits made before November 30, 2022.** ChatGPT's public launch. Anything older than that is, with very rare exceptions, not AI-written.

@@ -1,6 +1,6 @@
 # Worked Examples (extends SKILL.md)
 
-> ตัวอย่างการ apply 30 universal + 12 Thai-specific top-level patterns ใน `SKILL.md` + `patterns-thai.md` แบบเต็มรอบ: draft → "still-AI" bullets → final rewrite. ใช้เป็น reference ตอน stuck.
+> Worked applications of the 30 universal + 12 Thai-specific top-level patterns in `SKILL.md` + `patterns-thai.md`, full loop: draft → "still-AI" bullets → final rewrite. Use as a reference when stuck.
 >
 > ❌/✅ below = bad/good notation, not the decorative emoji §18 tells you to cut from real writing.
 >
@@ -40,7 +40,7 @@
 
 **What makes the below so obviously AI generated?**
 - The rhythm is still a bit too tidy (clean contrasts, evenly paced paragraphs).
-- The named people and study citations can read like plausible-but-made-up placeholders unless they're real and sourced. — **For Thai: ยิ่งเป็นชื่อไทย/สถิติไทยที่ไม่เคยได้ยิน ต้อง suspect**
+- The named people and study citations can read like plausible-but-made-up placeholders unless they're real and sourced. — **For Thai: a Thai name or Thai statistic you have never heard of is even more suspect**
 - The closer leans a touch slogan-y ("ถ้าคุณไม่มี test...") rather than sounding like a person talking.
 
 **Now make it not obviously AI generated.**
@@ -52,7 +52,7 @@
 >
 > Productivity metrics ลื่นไหล GitHub บอก Copilot users "accept 30% of suggestions" แต่ acceptance ไม่ใช่ correctness และ correctness ไม่ใช่ value ถ้าคุณไม่มี test คุณเดาอยู่ดี
 
-**Changes made:** Stripped the chatbot framing (I hope this helps, Let me know), significance inflation (pivotal moment, broader trends), promotional and -ing padding (underscoring, fostering), rule-of-three and synonym cycling (catalyst/partner/foundation), false ranges (from X to Y), copula avoidance (serves as, stands as), em dashes/emojis/boldface/curly quotes, the formulaic "challenges" section, cutoff and hedging disclaimers, filler and persuasive framing, the generic upbeat conclusion (อนาคตสดใส), and the sycophantic opening (คำถามดีมากครับ). Then rebuilt the voice with varied rhythm and concrete detail, and applied §0 register choice (dev register mixed Thai-English, internal team voice) plus §31 terminology (kept "AI coding tools" ไม่แปล, kept "Copilot", kept technical terms in English).
+**Changes made:** Stripped the chatbot framing (I hope this helps, Let me know), significance inflation (pivotal moment, broader trends), promotional and -ing padding (underscoring, fostering), rule-of-three and synonym cycling (catalyst/partner/foundation), false ranges (from X to Y), copula avoidance (serves as, stands as), em dashes/emojis/boldface/curly quotes, the formulaic "challenges" section, cutoff and hedging disclaimers, filler and persuasive framing, the generic upbeat conclusion (อนาคตสดใส), and the sycophantic opening (คำถามดีมากครับ). Then rebuilt the voice with varied rhythm and concrete detail, and applied §0 register choice (dev register mixed Thai-English, internal team voice) plus §31 terminology (kept "AI coding tools" untranslated, kept "Copilot", kept technical terms in English).
 
 ---
 
@@ -78,7 +78,7 @@ Failure modes for `SKILL.md`'s Process and Output steps, in full — the numbere
 
 ## Per-Register Worked Examples (v2.2)
 
-ตัวอย่างการ apply register selection gate (SKILL.md §0) + patterns ต่อ register.
+How the register selection gate (SKILL.md §0) + per-register patterns apply.
 
 ### Example A — Chat / LINE (Register A)
 
@@ -98,10 +98,10 @@ Failure modes for `SKILL.md`'s Process and Output steps, in full — the numbere
 
 **Changes applied:**
 - Drop formal 3rd person → `ค่ะ` opener (chat register female)
-- `backend` เก็บอังกฤษ (dev term)
-- `5-10 นาที` = concrete estimate (real window ที่ maintenance จริง)
+- `backend` kept in English (dev term)
+- `5-10 นาที` = concrete estimate (the real maintenance window)
 - `ทักมา` action verb (UI-actual)
-- 🙏 emoji แทน formal closer
+- 🙏 emoji instead of a formal closer
 
 ### Example B — Standup (Register B)
 
@@ -112,8 +112,8 @@ Failure modes for `SKILL.md`'s Process and Output steps, in full — the numbere
 - `"ดิฉัน"` (3rd person, AI)
 - `"ได้ทำการปรับปรุง"` (nominalization)
 - `"นอกจากนี้ยัง"` (formal connector spam)
-- `"เพื่อนร่วมทีมอีก 2 ท่าน"` (vague — ไม่ระบุ PR, ไม่ระบุชื่อ)
-- `"อัปเดต documentation ให้ทันสมัย"` (vague — ไฟล์อะไร, PR อะไร)
+- `"เพื่อนร่วมทีมอีก 2 ท่าน"` (vague; no PR, no name)
+- `"อัปเดต documentation ให้ทันสมัย"` (vague; which file, which PR)
 
 **After (standup register — Standup Reporting Style from [[feedback_standup_reporting]]):**
 ```
@@ -134,10 +134,10 @@ Failure modes for `SKILL.md`'s Process and Output steps, in full — the numbere
 **Changes applied:**
 - 1st person implied (drop `ดิฉัน`/`ผม`)
 - Verbatim ticket ID (`TP-549`), PR number (`#64`), branch (`develop`)
-- 4-section structure (✅🎯🚧🙋) ตาม team format
+- 4-section structure (✅🎯🚧🙋) per team format
 - Topic-first opener (`TP-549:`)
-- Particle ไม่ลงท้ายทุกบรรทัด (terse)
-- Filter scope: own work (P'Meow/P'Noi = review by others, ไม่ใช่ own PR)
+- Particle not on every line (terse)
+- Filter scope: own work (P'Meow/P'Noi = reviews of others' PRs, not own PRs)
 
 ### Example C — UI Error Message (Register C)
 
@@ -147,7 +147,7 @@ Failure modes for `SKILL.md`'s Process and Output steps, in full — the numbere
 **Red flags:**
 - `"ขออภัยในความไม่สะดวกค่ะ!"` (sycophantic opener)
 - `"อันเนื่องมาจาก"` (formal connector)
-- `"ท่าน"` (royal register ใน UI — overkill)
+- `"ท่าน"` (royal register in UI; overkill)
 - `"มุ่งมั่นมอบประสบการณ์ที่ดีที่สุด"` (UI-aspirational, marketing calque)
 - `"พร้อมให้บริการท่านตลอด 24 ชั่วโมง"` (UI-leaked closer)
 
@@ -158,12 +158,12 @@ Failure modes for `SKILL.md`'s Process and Output steps, in full — the numbere
 
 **Changes applied:**
 - Status word first (`ชำระเงินไม่สำเร็จ`)
-- `ถูกปฏิเสธ` (ไม่ใช่ "ปฏิเสธการทำรายการ" — drop nominalization)
+- `ถูกปฏิเสธ` (not "ปฏิเสธการทำรายการ"; drop the nominalization)
 - Actionable next step: `ลองใหม่อีกครั้ง` / `เช็คยอดเงิน` / `ทักแชท`
-- One `ค่ะ` opener เท่านั้น (UI formal register)
-- ไม่มี title parenthetical English (`## การชำระเงิน (Declined)` ❌)
-- ≤25 คำ
-- ไม่มี "ขออภัย", "มุ่งมั่น", "พร้อมให้บริการ"
+- One `ค่ะ` opener only (UI formal register)
+- No English parenthetical in the title (`## การชำระเงิน (Declined)` ❌)
+- ≤25 words
+- No "ขออภัย", "มุ่งมั่น", "พร้อมให้บริการ"
 
 ### Example D — Prose / Blog (Register D)
 
@@ -171,14 +171,14 @@ Failure modes for `SKILL.md`'s Process and Output steps, in full — the numbere
 
 **v2.2 specific fix in the prose example:**
 - ❌ `"Google ปี 2024 Codex 55% เร็วขึ้น"` → ✅ `"Wang et al. 2024 (arxiv:2404.xxxxx) — Codex 55% บน HumanEval"` (T3 cite)
-- ❌ `"มิร่า engineer ที่ fintech startup ที่ผมสัมภาษณ์ บอกว่า..."` → ระบุชื่อ + วันที่สัมภาษณ์ หรือ drop
-- ❌ `Uplevel ปี 2024 ไม่เจอ statistically significant difference` → ตรวจ paper จริง หรือ drop
+- ❌ `"มิร่า engineer ที่ fintech startup ที่ผมสัมภาษณ์ บอกว่า..."` → give the name + interview date, or drop
+- ❌ `Uplevel ปี 2024 ไม่เจอ statistically significant difference` → check the real paper, or drop
 - ❌ `"หวังว่าจะเป็นประโยชน์"` closer → drop
 - ❌ `"ถ้าคุณไม่มี test คุณบอกไม่ได้ว่า suggestion ถูกหรือเปล่า"` slogan-y closer → soften or drop
 
 ### Side-by-Side: Same Content, 4 Registers
 
-ผมเขียน `ผมได้ merge PR #64 เข้า develop แล้ว measurement redesign เสร็จเรียบร้อย`:
+Given the draft `ผมได้ merge PR #64 เข้า develop แล้ว measurement redesign เสร็จเรียบร้อย`:
 
 | Register | Rewrite | Why |
 |----------|---------|-----|
@@ -187,7 +187,7 @@ Failure modes for `SKILL.md`'s Process and Output steps, in full — the numbere
 | **C** (UI) | `"บันทึกการเปลี่ยนแปลงเรียบร้อย"` | status-word-first, action-complete |
 | **D** (blog) | `"PR #64 merge เข้า develop เมื่อเช้า เป็นก้าวแรกของ measurement redesign — ก้าวต่อไปคือ..."` | narrative, personal, longer |
 
-**Rule:** same fact, different register → different sentence shape, different particle, different length. ใช้ register ที่ผู้อ่านอยู่, ไม่ใช่ register ที่ "ฟังดูดี".
+**Rule:** same fact, different register → different sentence shape, different particle, different length. Use the register the reader is in, not the one that "sounds good".
 
 
 ---

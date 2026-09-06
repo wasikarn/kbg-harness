@@ -1,8 +1,8 @@
 # Thai-Specific Patterns (extends SKILL.md §1-§30)
 
-> ไฟล์นี้ extend catalog ใน `SKILL.md` เพิ่มอีก 12 top-level patterns (§31-§42) ที่จำเป็นสำหรับ Thai text เท่านั้น — terminology & calque, anti-fabrication, connectives, register matrix, code-switching tells, AI-leaked closers. อ่าน `SKILL.md` §0 Thai Foundations ก่อน แล้วค่อยกลับมาที่นี่.
+> This file extends the catalog in `SKILL.md` with 12 more top-level patterns (§31-§42) that only Thai text needs: terminology & calque, anti-fabrication, connectives, register matrix, code-switching tells, AI-leaked closers. Read `SKILL.md` §0 Thai Foundations first, then come back here.
 >
-> ❌/✅ ด้านล่างคือ notation สำหรับ bad/good example (เหมือน code // BAD/// GOOD) ไม่ใช่ decorative emoji ที่ §18 ใน `SKILL.md` สอนให้ตัดออกจากงานเขียนจริง.
+> ❌/✅ below is the notation for bad/good examples (like code // BAD / // GOOD), not the decorative emoji that §18 in `SKILL.md` says to cut from real writing.
 
 ---
 
@@ -12,34 +12,34 @@
 
 **Problem:** Three terminology mistakes show up repeatedly in AI Thai text:
 
-(a) **Drift in meaning**: คำที่ดริฟต์ความหมายในไทย (เช่น `API` มักหมายถึง web API เท่านั้น, แต่ในชีวิตจริง = interface ของ lib/function ก็มี) → **เก็บอังกฤษเพื่อความแม่น**
-(b) **Calque (แปลตรงตัว)**: ใช้กริยาไทยที่แปลตามตัวอังกฤษ แต่ไม่ตรงกับ action จริง
-(c) **Non-standard transliteration**: ทับศัพท์มั่ว ไม่ตรง RTGS
+(a) **Drift in meaning**: words whose meaning has drifted in Thai (e.g. `API` usually means only a web API, but in practice a lib/function interface is an API too) → **keep English for precision**
+(b) **Calque (`แปลตรงตัว`)**: a Thai verb that translates the English word literally but does not match the real action
+(c) **Non-standard transliteration**: ad-hoc transliteration that does not follow RTGS
 
 **Meaning-overlap test (run BEFORE the decision flow below, on every candidate term — not just terms already in the glossary table):** for any Thai noun/verb standing in for an English technical term, ask *does this word's actual, common meaning overlap with the technical meaning, or does it just sound like a plausible translation?* A grammatically-fine sentence is not evidence the term is correct — `ตั๋ว` (travel/event ticket) reads as a fine translation of "ticket" and is still (a) drift-in-meaning, because its real meaning has nothing to do with an issue-tracker record. Fail this test on any term, glossary or not → treat as (a). This is the check that catches new drift the glossary table hasn't enumerated yet; the table only covers terms already caught once.
 
-**3 วิธีตัดสิน terminology:**
+**3 ways to decide terminology:**
 
-| วิธี | ตัวอย่าง | ใช้เมื่อ |
-|------|---------|---------|
+| Method | Example | Use when |
+|--------|---------|----------|
 | **เก็บอังกฤษ** (Latin) | `staging`, `merge`, `API`, `PR #82` | internal dev; คำที่แปลแล้วเพี้ยน/กำกวม |
 | **ทับศัพท์** (อักษรไทย) | ซอฟต์แวร์, ดิจิทัล, เวอร์ชัน | คำที่ฝังในภาษาไทยทั่วไปแล้ว |
 | **แปล** (ความหมายไทย) | ฐานข้อมูล, การควบคุมเวอร์ชัน | user-facing; non-dev อ่าน |
 
 **Decision flow:**
 ```
-ลูกค้า/non-dev อ่าน? ─ ใช่ ─> มีคำไทยที่ชัดไหม? ─ มี ─> แปล
-   │                                 └ ไม่มี/แปลแล้วเพี้ยน ─> เก็บอังกฤษ + วงเล็บอธิบาย
-   └ ไม่ (dev อ่าน) ─> เก็บอังกฤษ (default) หรือทับศัพท์ถ้าฝังแล้ว
+Customer/non-dev reads it? ─ yes ─> is there a clear Thai word? ─ yes ─> แปล (translate)
+   │                                        └ none / translation drifts ─> เก็บอังกฤษ (keep English) + parenthetical gloss
+   └ no (dev reads it) ─> เก็บอังกฤษ (default), or ทับศัพท์ (transliterate) if already embedded in Thai
 ```
 
-**Verify transliteration** ที่ https://transliteration.orst.go.th/search (ราชบัณฑิตยสภา). อย่าทับศัพท์มั่ว.
+**Verify transliteration** at https://transliteration.orst.go.th/search (Royal Society of Thailand). Never transliterate ad hoc.
 
-**Section heading / หัวข้อ user-facing:** ห้ามผสม `(Declined)` แบบ `## การชำระเงินไม่สำเร็จ (Declined)` ให้ย้ายคำอังกฤษไปอยู่ใน body หรือแปลเป็น "ถูกปฏิเสธ" แทน.
+**Section heading / user-facing headings:** never mix in `(Declined)` as in `## การชำระเงินไม่สำเร็จ (Declined)`; move the English word into the body or translate it as "ถูกปฏิเสธ" instead.
 
 **Default glossary (standard Thai+tech):**
 
-| คำ | Internal | User-facing |
+| Term | Internal | User-facing |
 |----|----------|-------------|
 | staging / develop / production | คงอังกฤษ | "ระบบทดสอบ" / (none) / "ระบบจริง" + อธิบาย |
 | merge | merge | รวมโค้ด |
@@ -49,14 +49,14 @@
 | declined (bank/payment) | declined (เก็บไว้ใน log เท่านั้น) | ถูกปฏิเสธ |
 | ticket / issue (Jira, GitHub) | ticket (เก็บอังกฤษ) | "รายการแจ้งงาน" หรือคง ticket — ห้ามใช้ "ตั๋ว" (แปลว่าตั๋วเดินทาง/ตั๋วหนัง คนละความหมายกับ issue-tracker record เลย — drift-in-meaning (a), ไม่ใช่แค่ทับศัพท์ผิด) |
 
-> Product-specific terms (ANPR, dwell, front-facing, PDPA, traffic-campaign) → เก็บใน project glossary แยก ไม่ใส่ใน global skill นี้.
+> Product-specific terms (ANPR, dwell, front-facing, PDPA, traffic-campaign) → keep them in a separate project glossary, not in this global skill.
 
 When replacing a calque, pick a verb matching the real action — not a vague placeholder — as the before/after pairs below do.
 
 **Before (terminology drift + calque):**
 > ตัวกรองหันหน้าผมถือไว้ก่อน รอดันแก้เรื่องมอไซค์
 
-**After (default เก็บอังกฤษ + ไทยเป็นกาว):**
+**After (default `เก็บอังกฤษ`, Thai as glue):**
 > front-facing filter ยังไม่ปล่อยขึ้น prod รอแก้ moto-drop ก่อน
 
 **Before (non-RTGS transliteration):**
@@ -68,7 +68,7 @@ When replacing a calque, pick a verb matching the real action — not a vague pl
 **Before (drift-in-meaning — dev-tracker noun, not the deploy-vocab example above):**
 > แผนผังความสัมพันธ์ตั๋ว (Dependency Map)
 
-**After (เก็บอังกฤษ):**
+**After (`เก็บอังกฤษ`, keep English):**
 > แผนผังความสัมพันธ์ Ticket (Dependency Map)
 
 Same (a) drift-in-meaning failure as the `front-facing`/`API` cases above, in the issue-tracking vocabulary domain instead of deploy. Missed in a live scan 2026-07-14 despite this section already existing — the scan never reached §31 at all (see `SKILL.md`'s "The loop" step 3), so the meaning-overlap test above was never run against it. The glossary row exists now; the meaning-overlap test above is what catches the next term that isn't in it yet.
@@ -76,19 +76,19 @@ Same (a) drift-in-meaning failure as the `front-facing`/`API` cases above, in th
 
 ### 32. Anti-Fabrication Discipline (TBD > invented specifics)
 
-**Problem:** AI text is overconfident. Thai text in particular pads with invented file paths, branch names, ticket IDs, version numbers, dates, and metrics to look concrete. **Internal docs ที่สอน workflow ผิด = technical debt ที่คนละคนต้องมาแก้ทีหลัง** โดยเฉพาะ onboarding doc เพราะ new hire ไม่มี mental model ตรวจสอบ จะเชื่อและทำตาม.
+**Problem:** AI text is overconfident. Thai text in particular pads with invented file paths, branch names, ticket IDs, version numbers, dates, and metrics to look concrete. **Internal docs that teach the wrong workflow = technical debt someone else fixes later**, especially onboarding docs, because a new hire has no mental model to check against and will trust and follow them.
 
 **3 red flags:**
 
-(a) **Candidate-path fabrication**: ไฟล์ที่ "น่าจะอยู่" ใต้ `src/...` แต่ไม่ได้ verify:
+(a) **Candidate-path fabrication**: a file that "probably lives" under `src/...` but was never verified:
 > ❌ `webhook middleware ใหม่: src/presentation/middleware/rate-limiter.ts`
 > ✅ `webhook middleware ใหม่ (path จะ confirm ใน PR diff)`
 
-(b) **Invented metrics / load numbers**: เลข load, latency, threshold ที่ยังไม่ได้ run:
+(b) **Invented metrics / load numbers**: load, latency, threshold figures that were never run:
 > ❌ `burst test 500 req/min โควต้า 100/min → 400 queued ใน 1s`
 > ✅ `burst test staging ผ่าน ตัวเลข load จะใส่หลัง run จริง`
 
-(c) **Fake SLA / dates / versions**: เวอร์ชัน firmware, วัน rollout, เวลา rollback ที่ดูเหมือนจริง:
+(c) **Fake SLA / dates / versions**: firmware versions, rollout dates, rollback times that look real:
 > ❌ `rely on camera firmware v2.1+ (2026-06-20 rollout)`
 > ✅ `camera firmware dependency รอ confirm จาก camera team`
 > ❌ `rollback ใช้เวลา 2-5 นาที`
@@ -102,62 +102,62 @@ Same (a) drift-in-meaning failure as the `front-facing`/`API` cases above, in th
 `[N]` above is a placeholder for the real count from the source — never copy a number out of this example verbatim. A worked example of this exact template with the placeholder filled by an invented "4" leaked into `SKILL.md`'s calque table once already (fixed 2026-07-27); this note exists so the same fabricated number doesn't get reintroduced by a future edit that reads this line as literal data instead of shape.
 
 **PR description structure (TBD-disciplined):**
-- `## สรุป` (1 ย่อหน้า)
+- `## สรุป` (1 paragraph)
 - `## ทำอะไร` (bullet)
-- `## โค้ด` (file path จาก diff เท่านั้น, ถ้าไม่มี TBD)
-- `## ทดสอบแล้ว` (ผลจริงเท่านั้น)
+- `## โค้ด` (file paths from the diff only; otherwise TBD)
+- `## ทดสอบแล้ว` (real results only)
 - `## Risk`
-- `## Related` (ticket/branch จริง)
+- `## Related` (real ticket/branch)
 
 ### 32.1 Anti-Fabrication 3-Tier Tree (v2.2)
 
-**Default = TIER 1 (DROP).** ใช้ TIER 2 (HEDGE) เฉพาะเมื่อผู้อ่านต้องการสัญญาณ แต่คุณยัง verify ไม่ได้. ใช้ TIER 3 (CITE-VERIFIABLE) เมื่อผ่านการตรวจจริง.
+**Default = TIER 1 (DROP).** Use TIER 2 (HEDGE) only when the reader needs the signal but you still cannot verify. Use TIER 3 (CITE-VERIFIABLE) once it has actually been checked.
 
-| Tier | Action | ใช้เมื่อ | ตัวอย่าง |
-|------|--------|---------|---------|
+| Tier | Action | Use when | Example |
+|------|--------|----------|---------|
 | **T1 DROP** | ตัดทิ้งทันที, ไม่แม้แต่ hedge | fact ที่ตรวจไม่ได้, ผลกระทบสูง | ❌ `"Google 2024 Codex 55% เร็วขึ้น"` → ✅ ไม่พูดถึงเลย |
 | **T2 HEDGE** | เขียน claim + marker เตือนผู้อ่าน verify | claim ที่ "เคยได้ยินมา" แต่ยังไม่ verify | `"อ้างกันว่า Codex 55% (ยังไม่ได้ verify)"` |
 | **T3 CITE-VERIFIABLE** | claim + แหล่งที่ตรวจได้ (URL / paper / log) | fact ที่ตรวจแล้วจริง | `"Codex eval (Wang et al. 2024, arxiv:2404.xxxxx)"` |
 
-**Hedge budget (hard rule):** คนจริงเขียน ≤1 hedge per clause. ถ้าเขียน >1 hedge ใน clause เดียว → drop เป็น T1 แทน.
+**Hedge budget (hard rule):** real people write ≤1 hedge per clause. More than 1 hedge in one clause → drop to T1 instead.
 
 ❌ `"ผมคิดว่าน่าจะประมาณว่า 55% ครับ ถ้าจะให้แน่ใจก็ต้อง verify"` — 3 hedges ใน 1 clause = T1
 ✅ `"Codex eval 55% (Wang et al. 2024, arxiv:2404.xxxxx)"` — T3 หรือ ไม่พูดถึง
 
-**Honest-broker preamble (cut to claim):** ห้ามขึ้นประโยค `ผมไม่โทษเครื่องมือ แต่...` / `ต้องบอกว่า...` / `จริงๆ แล้ว...` ก่อน claim. ไปที่ claim เลย.
+**Honest-broker preamble (cut to claim):** never open with `ผมไม่โทษเครื่องมือ แต่...` / `ต้องบอกว่า...` / `จริงๆ แล้ว...` before the claim. Go straight to the claim.
 
 ❌ `"ผมไม่โทษเครื่องมือนะ แต่ Codex เคย benchmark 55% ไว้"` — 50 tokens preamble
 ✅ `"Codex eval 55% (Wang et al. 2024, arxiv:2404.xxxxx)"` — 8 tokens
 
 ### 32.2 Red-Flag Patterns Catalog (v2.2)
 
-Pattern ที่บ่งบอกว่า AI กำลัง fabricate โดยไม่รู้ตัว — drop ทันที:
+Patterns that show AI is fabricating without knowing it; drop on sight:
 
-1. **Path confidence without diff**: `"src/presentation/middleware/rate-limiter.ts"` แต่ไม่ได้ grep ไฟล์
-2. **Round numbers without source**: `"55% faster"`, `"2-5 นาที"`, `"500 req/min"` ที่ดูสวยเกินไป
-3. **Date precision without calendar check**: `"2026-06-20 rollout"` ที่ไม่ได้เช็ค calendar
-4. **Version pinning without release note**: `"v2.1+ (2026-Q2 release)"` ที่ไม่มี changelog
-5. **Authoritative source misattribution**: `"Google 2024 Codex eval"`, `"Stanford 2023 study"`, `"MIT 2024 report"` ที่จำ URL ไม่ได้
-6. **Quote fabrication**: `"Steve Jobs เคยพูดว่า..."` ที่ไม่มี source
-7. **Library API hallucination**: `pandas.DataFrame.diff()` ที่จำ signature ผิด
-8. **Self-consistent but wrong narratives**: เล่าเรื่องที่ดู logical แต่ทุก detail ผิด
-9. **Acronym expansion invented**: `CRUD = Create, Read, Update, Delete` (ถูก แต่ AI ชอบ over-explain), `YAML = Yet Another Markup Language` (ผิด — จริงๆ recursive)
-10. **Generic company name + generic claim**: `"บริษัท Fortune 500 แห่งหนึ่งพบว่า..."` — ไม่มีชื่อจริง ไม่นับ
+1. **Path confidence without diff**: `"src/presentation/middleware/rate-limiter.ts"` with no grep of the file
+2. **Round numbers without source**: `"55% faster"`, `"2-5 นาที"`, `"500 req/min"` that look too neat
+3. **Date precision without calendar check**: `"2026-06-20 rollout"` with no calendar check
+4. **Version pinning without release note**: `"v2.1+ (2026-Q2 release)"` with no changelog
+5. **Authoritative source misattribution**: `"Google 2024 Codex eval"`, `"Stanford 2023 study"`, `"MIT 2024 report"` with no recallable URL
+6. **Quote fabrication**: `"Steve Jobs เคยพูดว่า..."` with no source
+7. **Library API hallucination**: `pandas.DataFrame.diff()` with a misremembered signature
+8. **Self-consistent but wrong narratives**: a story that looks logical but every detail is wrong
+9. **Acronym expansion invented**: `CRUD = Create, Read, Update, Delete` (correct, but AI loves to over-explain), `YAML = Yet Another Markup Language` (wrong; it is actually recursive)
+10. **Generic company name + generic claim**: `"บริษัท Fortune 500 แห่งหนึ่งพบว่า..."`; no real name, does not count
 
-**Fast verification (ก่อนเขียน):**
-- URL → `WebFetch` หรือ `WebSearch` ตรวจ
+**Fast verification (before writing):**
+- URL → check with `WebFetch` or `WebSearch`
 - Paper → arxiv/scholar search
-- API → `context7` MCP หรือ official docs
-- File path → `Glob`/`Grep` ตรวจ
+- API → `context7` MCP or official docs
+- File path → check with `Glob`/`Grep`
 - Date → calendar
 - Quote → original source (interview, paper, book)
 
 ### 32.3 Cite-as-Published Convention (v2.2)
 
-เมื่ออ้างอิงจริง (T3) — ใช้ format ที่ผู้อ่าน verify ต่อได้:
+When citing for real (T3), use a format the reader can verify onward:
 
-| ประเภท | Format | ตัวอย่าง |
-|--------|--------|---------|
+| Type | Format | Example |
+|------|--------|---------|
 | Paper | `Author et al. (Year) [link/doi]` | `"Wang et al. (2024) arxiv:2404.12345"` |
 | Blog | `Title — Author, Date` | `"Postgres hypertables — Timescale, 2024-11"` |
 | RFC/Standard | `RFC NNNN / ISO NNNN` | `"RFC 7231 (HTTP semantics)"` |
@@ -169,10 +169,10 @@ Pattern ที่บ่งบอกว่า AI กำลัง fabricate โด
 
 ### 32.4 Thai Hedge Vocabulary (v2.2)
 
-Hedge ภาษาไทยที่ใช้ได้ — เรียงจาก strong → weak:
+Thai hedges that work, ordered strong → weak:
 
-| Strength | Thai | ใช้เมื่อ |
-|----------|-----|---------|
+| Strength | Thai | Use when |
+|----------|------|----------|
 | Strong | `"ผมไม่แน่ใจ"` | claim ที่ยังไม่ verify, แต่จำเป็นต้องพูดถึง |
 | Strong | `"ยังไม่ได้ verify"` | claim ที่ "เคยได้ยิน" แต่ยังไม่ได้ตรวจ |
 | Medium | `"น่าจะ"` | estimate ที่มี data รองรับบางส่วน |
@@ -183,14 +183,14 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 | Avoid | `"ดูเหมือนว่า"` | ใช้บ่อยเกิน = AI tell |
 | Avoid | `"น่าสนใจที่ว่า"` | ใช้บ่อยเกิน = AI tell |
 
-**ปกติคนไทยเขียน ≤1 hedge per clause.** ≥2 = AI.
+**Thai writers normally use ≤1 hedge per clause.** ≥2 = AI.
 
 ### 32.5 Citation Conventions — Thai Internal Doc (v2.2)
 
-ใน internal Thai doc ใช้ pattern:
+In an internal Thai doc use this pattern:
 
-| ประเภท | Format | ตัวอย่าง |
-|--------|--------|---------|
+| Type | Format | Example |
+|------|--------|---------|
 | Jira | `TP-XXX` (verify ใน Jira ก่อน) | `"ดู TP-549"` |
 | PR | `repo#PR_NUMBER` (verify ใน GitHub) | `"acme-api#64"` |
 | Commit | short SHA + message | `"a1b2c3d — fix rate-limiter"` |
@@ -202,10 +202,10 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 
 ### 32.6 Epistemic Frame — Self-Aware Uncertainty (v2.2)
 
-แยกให้ออกระหว่าง "ไม่รู้" กับ "รู้แต่ไม่ได้ verify":
+Tell "ไม่รู้" (do not know) apart from "รู้แต่ไม่ได้ verify" (know, but unverified):
 
-| Frame | ใช้เมื่อ | Pattern |
-|-------|---------|---------|
+| Frame | Use when | Pattern |
+|-------|----------|---------|
 | **Unknown** | ไม่เคยเจอ case นี้ | `"ผมไม่เคยเจอเคสนี้"` |
 | **Unverified** | เคยได้ยิน แต่ยังไม่ได้ verify | `"ผมเคยอ่านว่า... แต่ยังไม่ได้ verify"` |
 | **Hedged estimate** | มี data บางส่วน | `"จาก data ที่เห็น น่าจะประมาณ X"` |
@@ -216,47 +216,47 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 
 ### 32.7 Name-Dropping Discipline (v2.2)
 
-ห้าม name-drop brand/company/paper เพื่อ authority ถ้า verify ไม่ได้:
+Never name-drop a brand/company/paper for authority when it cannot be verified:
 
 ❌ `"Google, Microsoft, และ MIT ต่างก็ศึกษา..."` — 3 names ไม่มี paper
 ❌ `"ตามที่ Stanford 2023 study พบ..."` — paper ที่จำไม่ได้
 ✅ `"Wang et al. 2024 (arxiv:2404.xxxxx) — Codex 55% บน HumanEval"`
 
-**ถ้าจะ name-drop ต้อง:**
-1. มี paper/URL/link
-2. หรือเป็น "claim ที่เคยได้ยิน" + hedge ชัด
+**If you name-drop, you need:**
+1. A paper/URL/link
+2. Or a "claim I once heard" framing + a clear hedge
 
 ### 32.8 Royal Anti-Pattern (v2.2)
 
-คำลงท้ายราชาศัพท์ (หม่อม, พระ, ฯลฯ) ใน informal register = AI tell:
+Royal-register endings (`หม่อม`, `พระ`, etc.) in an informal register = AI tell:
 
 ❌ `"หวังว่าจะเป็นประโยชน์ต่อท่านผู้อ่าน"` — ไม่มีใครเขียนแบบนี้ใน Slack
 ✅ `"หวังว่าพอเป็นประโยชน์"` — natural register
 
-**Rule:** match register → royal form. Chat/standup = ไม่มี royal. UI = ไม่มี royal. Essay = ไม่มี royal ยกเว้น address monarch/อ้างอิงพระราชดำรัช.
+**Rule:** match register → royal form. Chat/standup = no royal. UI = no royal. Essay = no royal except when addressing the monarch or quoting a royal speech.
 
 ### 32.9 Hallucination Context Switch (v2.2)
 
-เมื่อ AI "context switch" จาก claim ที่ verify ได้ → claim ที่ verify ไม่ได้ → drop ทั้ง clause:
+When AI "context switches" from a verifiable claim → an unverifiable one → drop the whole clause:
 
 ❌ `"Postgres trigger ใช้ `pg_notify` แล้ว Redis เคย benchmark 55% บน HumanEval"`
-   — `pg_notify` verify ได้, "55% HumanEval" verify ไม่ได้, **drop ทั้ง clause**
+   — `pg_notify` is verifiable, "55% HumanEval" is not, **drop the whole clause**
 
 ✅ `"Postgres trigger ใช้ `pg_notify` ตามที่คุยกับ P'X (Slack 2026-06-02)"`
-   — verify ได้ทั้งหมด
+   — all verifiable
 
 ### 32.10 Anti-Fabrication Cheat Sheet (v2.2)
 
-**ก่อนเขียน fact ใดๆ → check 3 คำถาม:**
-1. **Verify ได้ไหม?** → ถ้าไม่: T1 DROP
-2. **มี source ไหม?** → ถ้าไม่: T2 HEDGE หรือ T1
-3. **ผู้อ่าน verify ต่อได้ไหม?** → ถ้าไม่: T1
+**Before writing any fact → check 3 questions:**
+1. **Can it be verified?** → if not: T1 DROP
+2. **Is there a source?** → if not: T2 HEDGE or T1
+3. **Can the reader verify it onward?** → if not: T1
 
-**Default = T1.** เมื่อใดที่ลังเล → T1.
+**Default = T1.** Whenever in doubt → T1.
 
 ### 33. Connective Density (Thai Connector Cluster)
 
-**Problem:** AI Thai text ชอบใช้ formal connector ติดกันบ่อยเกินไป จนขาด rhythm ของ natural speech/writing.
+**Problem:** AI Thai text stacks formal connectors back to back until the rhythm of natural speech/writing is gone.
 
 **Red-flag connectors (v2.2):**
 
@@ -278,34 +278,34 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 
 ### 34. Lexical Budget — Same Word, Not Synonym Spam
 
-**Problem:** AI text variety-hacks โดยใช้ synonym ของคำเดียวกัน 2-3 ครั้งในย่อหน้าเดียว คนจริงเขียนคำเดิม.
+**Problem:** AI text variety-hacks by using 2-3 synonyms of the same word in one paragraph. Real people repeat the word.
 
-**Rule:** ใช้คำเดิมซ้ำได้ — อย่า "variety-hack" ด้วย synonym ที่ดูแปลก.
+**Rule:** repeating the same word is fine; do not "variety-hack" with odd synonyms.
 
 ❌ `"ระบบมีปัญหา (system issue) เพราะ platform ล่ม (down) และ infrastructure ล้มเหลว (failed)"`
 ✅ `"ระบบล่ม สาเหตุน่าจะมาจาก infra"`
 
-**Thai variant:** `"ระบบล่ม" / "ระบบ down" / "platform เข้าไม่ได้"` — ใช้ 1-2 ครั้ง, ไม่ทั้ง 3 ในย่อหน้าเดียว
+**Thai variant:** `"ระบบล่ม" / "ระบบ down" / "platform เข้าไม่ได้"`: use 1-2 of them, not all 3 in one paragraph
 
 ### 35. Topic-First vs Background-First (Standup Register)
 
-**Problem:** AI เริ่มย่อหน้าด้วย background/context ก่อนเข้า topic. คนจริงเริ่มที่ topic.
+**Problem:** AI opens a paragraph with background/context before the topic. Real people start at the topic.
 
 ❌ `"เมื่อวานทำงานหลายอย่าง รวมถึง TP-549 ที่ต้องแก้ measurement design และ merge PR #36 เข้า develop วันนี้เลย refocus ที่ TP-549"`
-   — background 3 clauses, topic ท้าย
+   — 3 clauses of background, topic last
 
 ✅ `"TP-549 measurement design เริ่มแล้ว PR #36 merge แล้ว"`
-   — topic first, แล้ว detail
+   — topic first, then detail
 
 **Standup order (v2.2):**
-1. **✅ Done** (เรียงตาม priority: critical → nice)
-2. **🎯 Next** (สิ่งที่จะทำวันนี้/พรุ่งนี้)
-3. **🚧 Blocker** (รอใคร/รออะไร)
-4. **🙋 Ask** (ต้องการความเห็น/คำตอบ)
+1. **✅ Done** (ordered by priority: critical → nice)
+2. **🎯 Next** (what you will do today/tomorrow)
+3. **🚧 Blocker** (waiting on whom/what)
+4. **🙋 Ask** (need an opinion/answer)
 
 ### 36. Marketing Calques (UI/Notification Register)
 
-**Problem:** AI UI text ใช้ marketing calque ที่อ่านแล้วไม่รู้จะทำอะไร.
+**Problem:** AI UI text uses marketing calques that leave the user unsure what to do.
 
 **Top marketing calques (v2.2):**
 
@@ -320,25 +320,25 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 | `"ก้าวสู่"` | drop |
 | `"เปิดรับ (ข้อเสนอแนะ)"` | `"รับ feedback"` |
 
-**UI block max 3 short sentences.** ไม่มี emoji marketing.
+**UI block max 3 short sentences.** No marketing emoji.
 
 ### 36.1 UI-Actual vs UI-Aspirational (v2.2)
 
-แยกให้ออก:
-- **UI-actual**: บอกสิ่งที่เกิดขึ้น + ให้ผู้ใช้ทำอะไรต่อ
-- **UI-aspirational**: บอกว่าระบบ "ดี" แต่ไม่ช่วยให้ผู้ใช้ทำอะไร
+Tell them apart:
+- **UI-actual**: says what happened + what the user does next
+- **UI-aspirational**: says the system is "good" but does not help the user do anything
 
 ❌ `"เรามุ่งมั่นมอบประสบการณ์ที่ดีที่สุด"` (UI-aspirational)
 ✅ `"ชำระเงินไม่สำเร็จ ลองใหม่อีกครั้ง หรือเช็คยอดเงิน"` (UI-actual)
 
 ### 37. Nominalization Avoidance
 
-**Problem:** AI แปลง verb เป็น noun เพื่อ "ฟังดูเป็นทางการ" — แต่คนจริงใช้ verb.
+**Problem:** AI turns verbs into nouns to "sound formal"; real people use the verb.
 
 ❌ `"การดำเนินการปรับปรุงประสิทธิภาพ"` — nominalization overload
 ✅ `"ปรับให้เร็วขึ้น"` — verb-first
 
-**Common Thai nominalizations ที่ต้องระวัง:**
+**Common Thai nominalizations to watch:**
 - `"การดำเนินการ"` → `"ทำ"` / drop
 - `"การปรับปรุง"` → `"ปรับ"`
 - `"การพัฒนา"` → `"พัฒนา"` (already a verb)
@@ -347,12 +347,12 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 
 ### 38. Code-Switching Tells (Mixed Thai/English)
 
-**Problem:** AI ใช้ English term แบบ "เพราะฟังดูเก่ง" แต่คนจริงใช้เพราะจำเป็น.
+**Problem:** AI uses an English term "because it sounds smart"; real people use it because they need it.
 
-**Rule:** ใช้ English เมื่อ:
-1. **Term ที่ใช้ในงานจริง** (`merge`, `deploy`, `staging`, `commit`, `PR`, `API`)
+**Rule:** use English when:
+1. **The term is used in real work** (`merge`, `deploy`, `staging`, `commit`, `PR`, `API`)
 2. **Library/framework name** (`React`, `Bun`, `Postgres`, `Tailwind`)
-3. **Concept ที่ไทยไม่มี/แปลแล้วเพี้ยน** (`webhook`, `middleware`, `race condition`)
+3. **The concept has no Thai word, or the translation drifts** (`webhook`, `middleware`, `race condition`)
 
 ❌ `"ระบบมี redundant ของข้อมูล"` — "redundant" ที่ไม่จำเป็น
 ✅ `"ข้อมูลซ้ำซ้อน"`
@@ -375,11 +375,11 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 #### 39.1 Register A — Chat/LINE
 
 **Tells:**
-- `555` (laughter) ≥1 ครั้ง
-- Reaction emoji (`👍`, `🙏`, `😂`) ปน
-- Particle: `ค่ะ` (หญิง) / `ครับ` (ชาย) / `จ้า` (หญิง informal) / no particle (มั่น)
-- 1-10 คำ/ข้อความ
-- ตัวย่อ: `อ่อ`, `จ้า`, `จริงดิ`, `555+`, `เหรอ`, `คับ` (informal ของ `ครับ`)
+- `555` (laughter) at least once
+- Reaction emoji (`👍`, `🙏`, `😂`) mixed in
+- Particle: `ค่ะ` (female) / `ครับ` (male) / `จ้า` (female, informal) / no particle (assertive)
+- 1-10 words per message
+- Abbreviations: `อ่อ`, `จ้า`, `จริงดิ`, `555+`, `เหรอ`, `คับ` (informal `ครับ`)
 
 ❌ `"สวัสดีค่ะ ดิฉันหวังว่าข้อความนี้จะเป็นประโยชน์ค่ะ"` — formal, AI
 ✅ `"สวัสดีค่ะ พอดีมีเรื่องอยากถาม"` — natural chat
@@ -387,9 +387,9 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 #### 39.2 Register B — Standup/PR/Commit
 
 **Tells:**
-- ไม่มี particle (`ครับ`/`ค่ะ`) ทุกบรรทัด
-- ไม่มี emoji ใน PR description (commit = `type(scope): message`)
-- คำสั้น: `ผ่าน`, `รอ`, `merged`, `shipped`, `rolled back`, `WIP`
+- No particle (`ครับ`/`ค่ะ`) on every line
+- No emoji in the PR description (commit = `type(scope): message`)
+- Short words: `ผ่าน`, `รอ`, `merged`, `shipped`, `rolled back`, `WIP`
 - Verbatim repo/PR/branch names
 - Filter scope: dev own work
 
@@ -399,12 +399,12 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 #### 39.3 Register C — UI/Error/Notification
 
 **Tells:**
-- 1-3 ประโยค ต่อ block
-- ≤25 คำ
-- One opener with `ค่ะ/ครับ` เท่านั้น
+- 1-3 sentences per block
+- ≤25 words
+- One opener with `ค่ะ/ครับ` only
 - Action verb + 1 alternative (`ลอง X หรือ Y`)
 - Status word first: `"ชำระเงินไม่สำเร็จ"`, `"บันทึกแล้ว"`, `"ยกเลิกเรียบร้อย"`
-- ไม่มี "หวังว่า", "ขออภัย", "แจ้งให้ทราบ", "ยินดีให้ความช่วยเหลือ"
+- No "หวังว่า", "ขออภัย", "แจ้งให้ทราบ", "ยินดีให้ความช่วยเหลือ"
 
 ❌ `"ขออภัยในความไม่สะดวกค่ะ เราจะพยายามปรับปรุงให้ดีขึ้น"` — AI
 ✅ `"ชำระเงินไม่สำเร็จ ลองใหม่อีกครั้ง หรือเช็คยอดเงินค่ะ"` — UI-actual
@@ -412,11 +412,11 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 #### 39.4 Register D — Prose/Blog/Strategy/Essay
 
 **Tells:**
-- 3-30 คำ/ประโยค สลับ rhythm
+- 3-30 words per sentence, alternating rhythm
 - Personal aside (`ผมเคย`, `ผมรู้สึกว่า`, `ผมไม่แน่ใจว่า`)
-- Concrete image แทน abstraction
-- ไม่มี "หวังว่าจะเป็นประโยชน์" closer
-- ไม่มี "อนาคตสดใส", "ก้าวต่อไปจะเป็นการเดินทางสู่ความเป็นเลิศ"
+- Concrete image instead of abstraction
+- No "หวังว่าจะเป็นประโยชน์" closer
+- No "อนาคตสดใส", "ก้าวต่อไปจะเป็นการเดินทางสู่ความเป็นเลิศ"
 
 ❌ `"ในยุคปัจจุบัน AI กำลังเปลี่ยนแปลงโลกอย่างมาก ซึ่งส่งผลกระทบต่ออุตสาหกรรมต่างๆ"`
    — formal connector spam, generic claim
@@ -426,7 +426,7 @@ Hedge ภาษาไทยที่ใช้ได้ — เรียงจา
 
 ### 40. AI-Leaked Thai Closers (v2.2 — Comprehensive)
 
-**Closers to drop ทุก register:**
+**Closers to drop in every register:**
 
 | Closer | Register | Replace with |
 |--------|----------|--------------|

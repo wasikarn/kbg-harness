@@ -5,6 +5,22 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.27] — 2026-09-07
+
+### Changed
+
+- `tech-humanize`: instruction prose written in Thai across its five files is now English
+  (162 lines, one-for-one); every Thai cue, example draft, glossary and calque cell stays
+  byte-identical, since that is the skill's subject. Description drops its Thai trigger phrase.
+  A fresh-context validator confirmed no rule changed meaning, no data cell changed, headings and
+  anchors intact, zero new em dashes.
+
+### Fixed
+
+- `tech-humanize/references.md` typography rule named the wrong mark: `์` is the silent mark
+  (การันต์), not ไม้หันอากาศ, and the cited words did not contain it. Rule now states the RTGS
+  no-tone-mark point (`เซสชัน`) and where the silent mark actually appears (`ซอฟต์แวร์`).
+
 ## [1.1.26] — 2026-09-07
 
 ### Changed
