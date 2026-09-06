@@ -5,6 +5,15 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.25] — 2026-09-07
+
+### Changed
+
+- English only in skill files (operator rule): `deep-audit` writes Rule 14's marker as
+  `insufficient evidence`; `ideate` and `post-mortem` drop their Thai trigger phrases.
+  `tech-humanize` keeps its Thai content as subject matter. Rule recorded in
+  `docs/reference/skill-authoring-conventions.md`.
+
 ## [1.1.24] — 2026-09-07
 
 ### Changed

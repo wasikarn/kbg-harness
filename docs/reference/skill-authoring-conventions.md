@@ -10,6 +10,10 @@ matt's writing heuristic; Anthropic's "progressive disclosure" is a 3-level runt
 mechanism (metadata always, SKILL.md on trigger, bundled files on read). Same words, different
 question; do not conflate them.
 
+**English only in skill files** (operator rule, 2026-09-07): no Thai words, trigger phrases, or
+markers in any `skills/**/*.md`; Rule 14's Thai marker is written `insufficient evidence` inside a
+skill. Exception: `tech-humanize`, whose Thai content is the subject matter.
+
 **Description cap: 25 words, third person.** This is mh's own token-budget rule (skill and agent
 descriptions load on every Task spawn), not matt's. Check 20 WARNs past 1536 chars; check 43
 tracks the cumulative listing budget; check 05 WARNs when a routing-length description has no

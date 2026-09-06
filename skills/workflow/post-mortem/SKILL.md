@@ -12,7 +12,7 @@ effort: high
 
 Draft the canonical engineering record of a fixed bug. This is the document that answers "what happened and why" for future engineers and reviewers.
 
-**When to use / not:** use after `mattpocock-skills:diagnosing-bugs`; say "เขียน post-mortem/บันทึกบั๊ก".
+**When to use / not:** use after `mattpocock-skills:diagnosing-bugs`; say "write a post-mortem".
 Don't use for in-progress incidents.
 
 ## Core Principles

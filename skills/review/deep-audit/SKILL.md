@@ -39,7 +39,7 @@ pass is 7.0 or more with no dimension under 5. Same rubric every run, so runs co
 
 Evidence is read in the operating-model order: deterministic result, then this run's
 trajectory, then rollback history, then model confidence last. A dimension with no evidence is
-marked **ข้อมูลไม่เพียงพอ**, left out of the total, and named in the report for the operator to
+marked **insufficient evidence**, left out of the total, and named in the report for the operator to
 decide; a guessed score is worse than none (Rule 14).
 
 Claim accuracy is scored on whether the claim was true when made; later evidence that makes it
@@ -103,7 +103,7 @@ reason and a confidence level, stated plainly. Then:
 3. Changes made, each with its failure class
 4. Verification evidence (commands and exit codes)
 5. Final score and before → after
-6. Remaining risks and **ข้อมูลไม่เพียงพอ** dimensions
+6. Remaining risks and **insufficient evidence** dimensions
 
 The report is evidence-backed proof of whether the work improved, written for a reader who
 did not watch the session.
