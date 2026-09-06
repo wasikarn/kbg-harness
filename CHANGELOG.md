@@ -18,9 +18,9 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
 ### Changed
 
-- `docs/reference/codex-integration-map.md`: the silent-refusal gotcha now records what was
-  and was not reproduced locally (quota and provider failures exit 1 loudly; the refusal case
-  itself is still borrowed evidence, retry after 2026-09-14 when the Codex quota resets).
+- `docs/reference/codex-integration-map.md`: the silent-refusal gotcha is now reproduced
+  locally (codex-cli 0.153.4): a global `AGENTS.md` flow rule yields exit 0 + empty diff +
+  polite refusal, the opt-out preamble lifts it, and quota/provider failures exit 1 loudly.
 
 ## [1.1.12] — 2026-09-06
 
