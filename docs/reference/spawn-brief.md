@@ -19,8 +19,11 @@ Constraints: stage by explicit path only, never stash/reset/checkout/add -A; del
 return `NEEDS-DECISION <question>` instead of guessing; cite one checkable fact per claim.
 ```
 
-When the brief goes to Codex (`codex:rescue` or a bare `codex exec`), add one line naming the
-reasoning effort: `REASONING: low|medium|high|xhigh`. Omitting it runs the operator's configured
-default and must be flagged in the report. Effort is the dispatcher's call, never the lane's.
+When the brief goes to Codex (`/codex:rescue`), name the reasoning effort as an invocation flag,
+`--effort <none|minimal|low|medium|high|xhigh>` (the set `codex@openai-codex` 1.0.6 validates), never
+as a line inside the task text: the rescue agent strips runtime flags from the prompt and a
+prose `REASONING:` line reaches nothing. Omitting the flag runs the operator's configured default;
+say so when you relay the result. Effort is the dispatcher's call, never the lane's. Empty-diff
+handling: `docs/reference/codex-integration-map.md`, "Silent-refusal gotcha".
 
 A validator returns `{pass, findings[], scope_ok, unexpected_files[]}` and nothing else.
