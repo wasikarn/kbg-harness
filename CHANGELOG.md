@@ -5,6 +5,18 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.19] — 2026-09-06
+
+### Fixed
+
+- Check 72 tests, from the first live `mh:test-gap-analyzer` run: the good-side assertion was
+  satisfied by a crash or a fail-open INFO branch because `run_check` swallows the exit code.
+  `run_check` now keeps the audit text in `OUT`, and a new `expect_silent_match` asserts the
+  positive message ("matches the installed plugin"). The production discovery path (glob over
+  `$HOME/.claude/plugins/cache/openai-codex/codex/*/`, newest by `sort -V`) is exercised with
+  a fake `HOME` holding 1.0.9 and 1.0.10, the older with a smaller set so a wrong pick fires;
+  and a `check-72-bad-effort-missing` fixture proves a doc with no `--effort <...>` set WARNs.
+
 ## [1.1.18] — 2026-09-06
 
 ### Added

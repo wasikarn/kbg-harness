@@ -24,7 +24,7 @@ else
   elif [ "$_codex_plugin_set" != "$_codex_doc_set" ]; then
     warn "Codex effort set drifted: spawn-brief.md says [${_codex_doc_set% }], installed plugin validates [${_codex_plugin_set% }] ($_codex_companion) -- update the doc"
   else
-    info "Codex effort set in spawn-brief.md matches the installed plugin [${_codex_plugin_set% }]"
+    info "Codex effort set in spawn-brief.md matches the installed plugin [${_codex_plugin_set% }] ($_codex_companion)"
   fi
   unset _codex_plugin_set _codex_doc_set
 fi

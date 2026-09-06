@@ -20,9 +20,11 @@ bad()  { fail=$((fail + 1)); echo "  FAIL: $1" >&2; }
 CRIT_FOUND=0
 WARN_FOUND=0
 INFO_FOUND=0
+OUT=""
 run_check() {
   local id="$1" root="$2" out c w i
   out=$(bash "$AUDIT" "$root" --only "$id" 2>/dev/null || true)
+  OUT="$out"
   c=$(printf '%s\n' "$out" | sed -n 's/^Critical: //p')
   w=$(printf '%s\n' "$out" | sed -n 's/^Warnings: //p')
   i=$(printf '%s\n' "$out" | sed -n 's/^Info: *//p')
@@ -35,6 +37,11 @@ expect_silent() {
   run_check "$1" "$FIX/$2"
   if [ "$CRIT_FOUND" -eq 0 ] && [ "$WARN_FOUND" -eq 0 ]; then ok "check-$1 $2 silent"
   else bad "check-$1 $2 not silent (crit=$CRIT_FOUND warn=$WARN_FOUND)"; fi
+}
+expect_silent_match() {
+  run_check "$1" "$FIX/$2"
+  if [ "$CRIT_FOUND" -eq 0 ] && [ "$WARN_FOUND" -eq 0 ] && printf '%s\n' "$OUT" | /usr/bin/grep -qE "$3"; then ok "check-$1 $2 silent and reports '$3'"
+  else bad "check-$1 $2 not silent or missing '$3' (crit=$CRIT_FOUND warn=$WARN_FOUND)"; fi
 }
 expect_warn() {
   run_check "$1" "$FIX/$2"
@@ -124,8 +131,17 @@ mkdir -p "$CODEX_TMP/cache/scripts"
 printf 'const VALID_REASONING_EFFORTS = new Set(["none", "minimal", "low", "medium", "high", "xhigh"]);\n' > "$CODEX_TMP/cache/scripts/codex-companion.mjs"
 export MH_CODEX_CACHE_DIR="$CODEX_TMP/cache"
 expect_warn   72 check-72-bad-effort-drift
-expect_silent 72 check-72-good-effort-set
+expect_warn   72 check-72-bad-effort-missing
+expect_silent_match 72 check-72-good-effort-set 'matches the installed plugin'
 unset MH_CODEX_CACHE_DIR
+# Without the override the check must find the newest versioned cache dir itself (sort -V:
+# 1.0.10 beats 1.0.9); the older dir carries a smaller set so a wrong pick fires a false WARN.
+_c72_home="$CODEX_TMP/home"
+for _v in 1.0.9 1.0.10; do mkdir -p "$_c72_home/.claude/plugins/cache/openai-codex/codex/$_v/scripts"; done
+printf 'const VALID_REASONING_EFFORTS = new Set(["low", "medium", "high"]);\n' > "$_c72_home/.claude/plugins/cache/openai-codex/codex/1.0.9/scripts/codex-companion.mjs"
+cp "$CODEX_TMP/cache/scripts/codex-companion.mjs" "$_c72_home/.claude/plugins/cache/openai-codex/codex/1.0.10/scripts/codex-companion.mjs"
+HOME="$_c72_home" expect_silent_match 72 check-72-good-effort-set 'codex/1\.0\.10/'
+HOME="$_c72_home" expect_warn 72 check-72-bad-effort-drift
 
 echo ""
 echo "self-test: $pass passed, $fail failed"
