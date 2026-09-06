@@ -128,7 +128,8 @@ def _mid_merge():
 # mentions do not trip it; the flag scan is quote-aware so a separator inside a
 # quoted prompt does not end it early. re.MULTILINE: a line inside an
 # interpreter-fed heredoc body is its own statement.
-# ponytail: `cat <<EOF | bash` bodies are stripped as inert and not scanned.
+# ponytail: `cat <<EOF | bash` bodies are stripped as inert and not scanned,
+# add heredoc-body scanning if a nested-spawn bypass via heredoc is ever demonstrated.
 _SPAWN_ANCHOR_RE = re.compile(
     r"(?:^|[|;&(]|&&|\|\|)\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:\S*/)?claude\b",
     re.MULTILINE,
@@ -170,7 +171,8 @@ def delete_hint():
             "delete, or install one (macOS: brew install trash; Linux: trash-cli)")
 
 # Tokenize respecting quotes so quoted free text stays one token.
-# ponytail: no command-substitution unwrapping (bash -c / eval get one level) -- habit-guard, not sandbox.
+# ponytail: no command-substitution unwrapping (bash -c / eval get one level) -- habit-guard, not sandbox,
+# add recursive unwrapping if a real bypass nests bash -c/eval more than one level deep.
 # Newlines are command separators in bash but shlex eats them as whitespace,
 # so a literal ";" is inserted after each real newline. A backslash-newline is
 # a line continuation: both chars are removed entirely so the next token joins
