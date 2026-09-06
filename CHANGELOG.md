@@ -5,6 +5,19 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.24] — 2026-09-07
+
+### Changed
+
+- `mh:deep-audit` rewritten (7.2 KB → 5.6 KB): scope comes from git, not from a compacted
+  session's memory; a fixed five-dimension weighted rubric with a stated pass threshold so runs
+  compare; evidence order and `ข้อมูลไม่เพียงพอ` handling match the operating model and Rule 14
+  (an unscorable dimension is left out of the total, never scored 0); the gap hunt is a
+  read-only fresh-context checker in the spawn-brief shape returning the Rule 13 validator
+  object, because the maker never grades its own work; every fix names its Rule 4 failure
+  class. Positive phrasing throughout, one worked example dropped, verdict stated once. The
+  rewrite itself went through that validator: 1 HIGH, 2 MEDIUM, 4 LOW findings, all fixed.
+
 ## [1.1.23] — 2026-09-07
 
 ### Added

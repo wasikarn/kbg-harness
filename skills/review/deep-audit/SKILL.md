@@ -5,132 +5,105 @@ model: inherit
 effort: xhigh
 ---
 
-Drill down, verify, and audit **everything implemented or changed in this session**.
+Audit everything implemented or changed in this session as if someone else built it. The
+session output is a set of claims; each one is true only once evidence outside the model's own
+memory says so.
 
-Do not assume the current implementation is correct. Treat the entire session output as something that must be independently verified.
+## 1. Reconstruct scope from the tree, not from memory
 
-### **Objectives**
+Scope is what git shows, since a compacted session remembers a retelling, not the work. Find
+the session's first commit from the reflog or the session start time, then list:
 
-1.  **Reconstruct the current state**
+```bash
+git log --oneline --since="<session start>"        # or <first-sha>^..HEAD
+git diff <first-sha>^..HEAD --stat; git status --porcelain
+```
 
-    -   Review all relevant files, changes, decisions, and implementation made in this session.
-    -   Trace how the pieces work together end-to-end.
-    -   Identify assumptions, implicit behavior, edge cases, and areas that were not explicitly verified.
+Uncommitted-only work is the diff alone. Add files edited outside git (memory store, settings,
+sibling repos) by name. Then read the diff and trace how the pieces work together end to end,
+noting assumptions, implicit behaviour, and anything the session claimed but never ran. Done
+when every changed file is listed with the session's claim about it and your own note on it.
 
-2.  **Perform a deep audit**
-    Audit for:
+## 2. Score the baseline on the fixed rubric
 
-    -   Correctness
-    -   Completeness
-    -   Consistency
-    -   Edge cases
-    -   Failure modes
-    -   Hidden assumptions
-    -   Regression risks
-    -   Unnecessary complexity
-    -   Missing validation / quality gates
-    -   Gaps between intended behavior and actual implementation
-    -   Opportunities to improve precision, reliability, maintainability, and clarity
+Score each dimension 0–10 from evidence and take the weighted average (weights sum to 10);
+pass is 7.0 or more with no dimension under 5. Same rubric every run, so runs compare.
 
-3.  **Establish a measurable baseline**
-    Before making improvements, assign a quantitative score to the current state.
+| dimension | weight | evidence that earns the score |
+|---|---|---|
+| Correctness | 3 | tests, checks, or a reproduced command exit code |
+| Completeness | 2 | every item of the request traced to a file or an explicit "left out" |
+| Claim accuracy | 2 | each claim in commits, docs, and replies re-run or re-read |
+| Regression safety | 2 | gauntlet or equivalent green; sibling callers of changed code checked |
+| Simplicity | 1 | no abstraction, file, or line without a caller or a reader |
 
-    Define a clear scoring rubric and score each relevant dimension separately, then calculate an overall score.
+Evidence is read in the operating-model order: deterministic result, then this run's
+trajectory, then rollback history, then model confidence last. A dimension with no evidence is
+marked **ข้อมูลไม่เพียงพอ**, left out of the total, and named in the report for the operator to
+decide; a guessed score is worse than none (Rule 14).
 
-    The score must be based on observable evidence from the code, tests, verification results, or other concrete artifacts --- **not subjective confidence**.
+Claim accuracy is scored on whether the claim was true when made; later evidence that makes it
+true is separate current-state work.
 
-4.  **Find improvement opportunities**
-    Identify the highest-impact weaknesses and prioritize them by:
-    -   Severity
-    -   Impact
-    -   Likelihood
-    -   Confidence
-    -   Effort to fix
+## 3. Hunt gaps with a fresh-context checker
 
-    **Zero or few findings is a valid outcome of this step, not evidence the pass was too shallow.**
-    Do not manufacture findings — filler nits, speculative "consider using X," or a hypothetical
-    edge case with no concrete trigger — to give step 5 something to fix. This matches the standard
-    already held elsewhere in this fleet: `agents/blind-spot-hunter.md`'s severity-earning discipline
-    (every finding ships with a trace to its earned severity). An already-high baseline score
-    is a legitimate baseline. This doesn't relax the Critical Rule below — if the score genuinely
-    doesn't improve, say so explicitly; it just means "nothing worth fixing" and "under-audited" are
-    not the same finding, and only evidence tells them apart.
-5.  **Confirm, then implement improvements**
+The maker never grades its own work (`docs/reference/operating-model.md`). Dispatch one
+read-only fresh-context agent (`Explore`, or a review agent when the work fits one) in the
+`docs/reference/spawn-brief.md` shape, with the scope list and notes from step 1 and this brief:
+assume the session is complacent; find what it missed
+across correctness, edge cases, failure modes, hidden assumptions, regressions, missing checks,
+consistency between files (doc versus code, two docs disagreeing), and drift between intent and
+code; every finding cites one checkable fact (a path, a command,
+a line). It returns `{pass, findings[], scope_ok, unexpected_files[]}`.
 
-    Before editing any file, present the prioritized findings from step 4 and confirm with a
-    single **AskUserQuestion**:
-    - `Apply all fixes now (best when the findings are low-risk and match the session's scope)` — proceed
-    - `Apply only some (best when a finding is out of scope or needs a separate decision)` — ask which, then proceed with that subset
-    - `Skip fixes, report findings only (best when this is a review-only pass)` — stop here; Final Output's Changes Made section stays empty
+Reconcile its findings with your own. A finding survives only with a concrete trigger; a
+speculative "consider X" is dropped. Rank survivors by severity, impact, likelihood, confidence,
+and effort. Zero survivors is a valid result: an already-high baseline is a legitimate baseline,
+and only evidence separates "nothing worth fixing" from "under-audited".
 
-    **Self-consistency**: if applying fixes is the only way to satisfy an instruction already given
-    explicitly this same turn (e.g. the user said "audit and fix"), skip the ask — that instruction
-    already is the confirmation, and re-asking spends a turn on a question already settled. Never
-    skip toward "apply all" on an implied or carried-over authorization from earlier in the
-    session — only an explicit same-turn instruction is safe to auto-select on.
+## 4. Confirm, then fix
 
-    Make the necessary changes to address the identified weaknesses.
+Present the ranked findings and confirm with one **AskUserQuestion**:
 
-    Do not make cosmetic changes just to increase the score. Every change must have a concrete quality rationale.
+- `Apply all fixes now` (findings low-risk and inside the session's scope)
+- `Apply only some` (a finding is out of scope or needs its own decision); ask which
+- `Skip fixes, report findings only` (review-only pass); go to step 6 with the baseline as both scores
 
-6.  **Re-verify everything**
-    If step 5 ended on "skip fixes, report findings only," skip straight to Final Output with the
-    baseline score standing as both before and after score. Otherwise, after making changes:
-    -   Re-run relevant tests and checks.
-    -   Re-audit affected areas.
-    -   Check for regressions — including ones the fix itself just introduced, not only
-        pre-existing weaknesses. If a self-inflicted regression is cheap to close (e.g. an
-        unbounded collection that now needs an eviction policy), fix it in the same pass
-        instead of just naming it as a remaining risk. Then check that fix's own mechanism
-        for a new regression before scoring the affected dimension as resolved — a fix for
-        one problem (e.g. adding eviction) can silently reopen a different one (e.g. an
-        evicted entry resets its own rate-limit history), and a test that merely documents
-        the new behavior as a passing case can hide this instead of catching it.
-    -   Verify that the original problems were actually resolved.
-7.  **Re-score using the exact same rubric**\
-    Apply the **same scoring criteria and methodology** used for the baseline.
+Skip the ask only when the same turn already said "audit and fix"; an earlier or implied
+authorization is not that.
 
-    Report:
+Each fix names its failure class (Rule 4: missing_context, bad_tool_contract, missing_guardrail,
+weak_verification) and lands test-first where a test can express it. Every change carries a
+quality rationale; a change that only moves the score is left out.
 
-    -   Before score
-    -   After score
-    -   Absolute improvement
-    -   Percentage improvement
-    -   Which dimensions improved
-    -   Which dimensions did not improve
-    -   Any remaining risks or gaps
+## 5. Re-verify
 
-    If a dimension's baseline score is zero, or the overall baseline is at or near zero, a percentage-improvement figure computed from it is a mathematical artifact that can read as stronger evidence than it is. In that case, report the absolute delta and say plainly that a percentage isn't meaningful — don't silently omit the percentage field, and don't publish a large ratio without that caveat.
+- Re-run the tests and checks the fixes touch, plus the repo gate (`scripts/run-gauntlet.sh` or
+  the project's equivalent).
+- Check each fix's own mechanism for a new regression before scoring its dimension resolved: a
+  fix for one problem can reopen another, and a test that only documents the new behaviour
+  hides that. Close a self-inflicted regression in the same pass when it is cheap.
+- A fix touching 2+ files or a test gets the fresh-context validator again (Rule 13).
 
-### **Critical Rule**
+## 6. Re-score on the same rubric
 
-**Never claim that something is better merely because it looks better or feels more correct.**
+Report before, after, absolute delta, and percentage, per dimension and overall. When a baseline
+is zero or near it, give the absolute delta and say the percentage is not meaningful.
 
-An improvement is only considered valid when there is measurable evidence showing that the post-change state performs better against the predefined criteria.
+An improvement counts only when post-change evidence beats the baseline on the predefined
+criteria. If the score did not move, say so and say why.
 
-If the score does not improve, say so explicitly and investigate why.
+## Final output
 
-If you cannot measure a dimension reliably, mark it as **unverified** rather than inventing a score.
+Line one is the **Final Verdict**: pass or fail against the threshold in step 2, with the
+reason and a confidence level, stated plainly. Then:
 
-A fix that produces new evidence for a claim that was false when originally made does not make the original claim retroactively true. Score claim-accuracy or narrative-integrity dimensions on whether the claim was true at the time it was made, and report new evidence as separate, current-state work — not as something that resolves the original discrepancy.
+1. Baseline score (per dimension, weighted total)
+2. Findings, with the checker's and your own marked
+3. Changes made, each with its failure class
+4. Verification evidence (commands and exit codes)
+5. Final score and before → after
+6. Remaining risks and **ข้อมูลไม่เพียงพอ** dimensions
 
-### **Final Output**
-
-**Lead with the verdict.** Open the report with a one-line **Final Verdict** headline — pass/fail
-against the rubric, stated plainly — before any supporting detail. A reader should know the
-outcome from the first line, not after reading through the full build-up.
-
-Then provide the concise audit report containing:
-
-1.  **Baseline Score**
-2.  **Findings / Gaps**
-3.  **Changes Made**
-4.  **Verification Evidence**
-5.  **Final Score**
-6.  **Before → After Comparison**
-7.  **Remaining Risks / Unverified Areas**
-8.  **Final Verdict** — restated in full here, with the reasoning behind it
-
-The goal is not to produce a reassuring review.
-
-The goal is to produce **evidence-backed proof of whether the work actually improved**.
+The report is evidence-backed proof of whether the work improved, written for a reader who
+did not watch the session.
