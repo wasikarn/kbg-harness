@@ -72,7 +72,7 @@ PY
   then bad "$c: a grader is malformed"; continue; fi
   ok "$c"
 done
-[ "$n" -eq 10 ] || bad "expected 10 cases, found $n"
+[ "$n" -eq 8 ] || bad "expected 8 cases, found $n"
 
 echo "eval-cases: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

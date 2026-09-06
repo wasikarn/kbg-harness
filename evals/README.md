@@ -1,6 +1,6 @@
 # Review-agent evals
 
-Ten cases for the five review agents, in Claude Code's native `claude plugin eval` layout: one
+Eight cases for the four review agents, in Claude Code's native `claude plugin eval` layout: one
 planted-defect case and one clean control per agent, the same fires/silent pairing
 `tests/skills/harness-audit/known-bad/` uses for audit checks. Each case is
 `prompt.md` (the ask, dispatching the agent by `subagent_type`), `case.yaml` (a

@@ -5,6 +5,16 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.17] — 2026-09-06
+
+### Removed
+
+- `agents/nextjs-reviewer.md` and its two eval cases (`evals/nextjs-reviewer-{planted,clean}`),
+  pulled by operator request. Next.js-specific review has no mh surface now; generic TS review
+  stays with `mattpocock-skills:code-review`. References dropped from `backend-architect`,
+  `operating-model.md`, `agent-authoring-conventions.md`, `evals/README.md`; the static eval
+  test expects 8 cases. README agent count 9 -> 8 and harness-audit check count corrected to 29.
+
 ## [1.1.16] — 2026-09-06
 
 ### Changed

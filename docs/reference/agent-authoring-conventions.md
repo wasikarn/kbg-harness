@@ -6,7 +6,7 @@ pattern-match against. Prose guidance, not a gate; the mechanical checks are nam
 ## 1. Tool scoping: explicit allowlist, least privilege
 
 Every agent declares `tools:` as an explicit allowlist (`harness-audit` check 09, CRIT when
-missing). Read-only reviewers and analysts (`nextjs-reviewer`, `backend-architect`, `code-architect`, `blind-spot-hunter`,
+missing). Read-only reviewers and analysts (`backend-architect`, `code-architect`, `blind-spot-hunter`,
 `silent-failure-hunter`, `requirement-analyst`) get `Read`, `Grep`, `Glob`, and
 usually `Bash` for `git log`/`git diff` inspection (read-only by discipline, not by tool grant);
 never `Write`/`Edit` (check 32). Mutating implementers

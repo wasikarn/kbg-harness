@@ -52,10 +52,10 @@ score not feel. `git-hooks/pre-commit` refuses a `docs/METHODOLOGY.md` over 4096
 
 ## What it ships
 
-- **Skills:** `mh:harness-audit` (28 structural checks), `mh:memory-lint`, `mh:cost-report`,
+- **Skills:** `mh:harness-audit` (29 structural checks), `mh:memory-lint`, `mh:cost-report`,
   `mh:deep-audit`, `mh:ideate`, `mh:post-mortem`, `mh:tech-humanize`.
-- **Agents (9):** backend-architect, blind-spot-hunter, code-architect, ideate-critic,
-  nextjs-reviewer, performance-optimizer, plan-reviewer, requirement-analyst,
+- **Agents (8):** backend-architect, blind-spot-hunter, code-architect, ideate-critic,
+  performance-optimizer, plan-reviewer, requirement-analyst,
   silent-failure-hunter. Generic TS review and security review go to
   `mattpocock-skills:code-review` and native `/security-review` instead — reviewers here are
   read-only and never grant `Agent`.

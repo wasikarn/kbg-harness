@@ -135,8 +135,7 @@ attempt now re-checks `status` after the first transaction's commit, sees `'char
 
 ## Reference
 
-Framework/DB implementation detail: context7 library docs, `nextjs-reviewer` (Next.js App Router route handlers/Server Actions as the
-backend surface). Vulnerability-level
+Framework/DB implementation detail: context7 library docs. Vulnerability-level
 security: hand off to native `/security-review`. Code-level error-handling audit backing the
 Reliability Posture checklist above: `silent-failure-hunter`. Tactical fix once a scalability
 bottleneck is identified here: `performance-optimizer`. General (non-backend-systems) feature
