@@ -5,6 +5,15 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.11] — 2026-09-06
+
+### Changed
+
+- Plugin `description` (`plugin.json` + `marketplace.json`, kept identical) rewritten: leads with
+  "composes mattpocock-skills instead of duplicating it" instead of burying it at the end, same
+  facts otherwise. Version bump only to make the edit reach the plugin cache — same-version edits
+  to `plugin.json` are a no-op for `claude plugin update`.
+
 ## [1.1.10] — 2026-09-06
 
 ### Fixed
