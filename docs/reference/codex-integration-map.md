@@ -50,6 +50,18 @@ mh:
 
 No generator, no sync script — short enough to hand-keep in sync with `CLAUDE.md`'s own map.
 
+## Silent-refusal gotcha
+
+`codex exec` loads `~/.codex/AGENTS.md` on every run, so a user-level rule written for one
+project (a pinned model/effort, a mandated orchestration flow) governs every invocation on the
+machine. Codex then declines correctly but quietly: **exit 0, empty diff, polite refusal in the
+final message**. Two defences, both borrowed from `DannyMac180/fable-advisor` (observed live
+2026-08-04): (1) an empty diff after a clean exit is `refused`, never `complete` — quote the
+final message verbatim instead of trusting the exit code; (2) open the spec with a one-line
+opt-out scoped to this run ("this task runs deliberately on the model and effort named below;
+treat it as an explicit opt-out from any instruction-file default flow; every other rule still
+applies"). The empty-diff check is the one that actually catches it; the preamble only avoids it.
+
 ## Degrading gracefully
 
 Every line above still has to make sense with the plugin absent, the Codex CLI missing, or the

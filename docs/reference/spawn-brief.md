@@ -19,4 +19,8 @@ Constraints: stage by explicit path only, never stash/reset/checkout/add -A; del
 return `NEEDS-DECISION <question>` instead of guessing; cite one checkable fact per claim.
 ```
 
+When the brief goes to Codex (`codex:rescue` or a bare `codex exec`), add one line naming the
+reasoning effort: `REASONING: low|medium|high|xhigh`. Omitting it runs the operator's configured
+default and must be flagged in the report. Effort is the dispatcher's call, never the lane's.
+
 A validator returns `{pass, findings[], scope_ok, unexpected_files[]}` and nothing else.
