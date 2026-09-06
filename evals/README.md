@@ -23,5 +23,6 @@ claude plugin eval . --scaffold --tag silent-failure-hunter --runs 1 --no-publis
 
 `--scaffold` is required: the fixtures live in each case's `scaffold_script`.
 `tests/evals/test-eval-cases.sh` checks the cases statically (files present, scaffold scripts run
-and produce the fixture files, regex graders compile) so the suite stays loadable while the
-runner is gated. Results land in `evals/results/`, gitignored.
+and produce the fixture files, regex graders compile, and each `contract.md` / `clean.md` regex
+matches a verdict sample in the shape the agent actually emits: bare, bold, or after a
+`Verdict:` label) so the suite stays loadable while the runner is gated. Results land in `evals/results/`, gitignored.

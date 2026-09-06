@@ -50,8 +50,9 @@ commit and one push running zero gates. Verify with `test -d "$(git config core.
   loadability) trusts only `~/.claude/plugins/cache/<marketplace>/mh/<version>/agents/`, and the
   marketplace pulls from GitHub, so the cache cannot contain a file that has not been pushed.
   Pre-commit needs 0 CRIT. Copy the new `agents/*.md` into the currently loaded cache dir by
-  hand before committing; the next `claude plugin update` replaces that dir anyway, and the
-  agent is usable after the next restart without waiting for it (2026-09-06, v1.1.18).
+  hand before committing; the next `claude plugin update` loads a fresh versioned dir anyway
+  (the old dir and its hand copy stay behind, harmless), and the agent is usable after the
+  next restart without waiting for it (2026-09-06, v1.1.18).
 - **The plugin runs every hook machine-wide.** A gate crash locks out every session that has
   `mh@wasikarn` enabled, not just sessions in this repo. A missing sibling `.py` or lib module
   must fail open with a diagnostic, never exit non-zero.

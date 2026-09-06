@@ -12,6 +12,7 @@ context:
         return round(price_cents * (100 - pct) / 100)
     FIXTURE_EOF
     mkdir -p tests
+    : > tests/__init__.py
     cat > tests/test_discount.py <<'FIXTURE_EOF'
     import pytest
 

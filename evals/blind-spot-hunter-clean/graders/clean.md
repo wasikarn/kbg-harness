@@ -1,7 +1,6 @@
 ---
 type: regex
-pattern: '(^|\n)\s*CLEAN\b'
-flags: i
+pattern: '(^|\n)[\s*_`#-]*(?:[Vv]erdict[\s*_:`]*)?CLEAN\b'
 match: contains
 target: last_message
 ---

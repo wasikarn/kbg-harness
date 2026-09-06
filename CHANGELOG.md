@@ -5,6 +5,33 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.22] — 2026-09-07
+
+### Fixed
+
+- Eval graders (`mh:deep-audit` finding): the `contract.md` / `clean.md` regexes for
+  `blind-spot-hunter`, `silent-failure-hunter`, `test-gap-analyzer`, and `type-design-analyzer`
+  anchored the verdict at line start, and all three live runs on 2026-09-06 wrote it bold or
+  after a `Verdict:` label (`**Verdict:** \`4 GAPS, highest 6/10\``, `**6 CONCERNS ...**`,
+  `## Verdict` then `**1 MEDIUM, 2 LOW**`), so every one of those eight cases would have failed
+  on shape alone once the runner opens. The twelve patterns now allow markdown decoration and
+  the label and drop `flags: i` (tokens are uppercase by contract, so a bullet such as
+  `- Covered: ...` cannot pass; validator finding); `tests/evals/test-eval-cases.sh` proves
+  each contract/clean regex against an
+  observed verdict sample per case (the old patterns fail that proof 8/12).
+- `test-gap-analyzer` fixtures write `tests/__init__.py` so a plain `pytest` from the workspace
+  root imports `src/` (it failed at collection before; only `python -m pytest` passed), and an
+  agent that runs the clean suite sees it green.
+- README "How it works" keeps the operating-model qualifier: reviewers return findings, not a
+  verdict by fiat (every review agent does end with a verdict line). `repo-gotchas.md`:
+  `claude plugin update` adds a versioned cache dir, it does not replace the one that holds the
+  hand-copied agent.
+
+### Added
+
+- `NOTICE`: Apache-2.0 section 4 notice for the two agents adapted from `pr-review-toolkit`
+  (`pr-test-analyzer.md`, `type-design-analyzer.md`); the repo itself stays MIT, and check 70 keeps NOTICE in its allowlist.
+
 ## [1.1.21] — 2026-09-06
 
 ### Added

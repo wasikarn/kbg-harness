@@ -1,7 +1,6 @@
 ---
 type: regex
-pattern: '(^|\n)\s*SOUND\b'
-flags: i
+pattern: '(^|\n)[\s*_`#-]*(?:[Vv]erdict[\s*_:`]*)?SOUND\b'
 match: contains
 target: last_message
 ---

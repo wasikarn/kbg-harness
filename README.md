@@ -12,7 +12,7 @@ Three ideas hold it up; everything else is a consequence. (1) **Deny the irrecov
 computationally, advise on the rest**: a short PreToolUse deny list is the only place a rule is
 a guarantee; every other rule is honest about being advice. (2) **The maker never grades its
 own work**: a builder that touched more than one file gets a fresh-context validator, reviewer
-agents are read-only and return findings rather than a verdict, and the audit checks and review
+agents are read-only and return findings, not a verdict by fiat, and the audit checks and review
 agents are themselves proven against planted-defect fixtures. (3) **Score, not feel**: a
 decision the triad flags carries criteria, weights, a number, and a confidence; insufficient
 data blocks on the operator instead of a guessed score. The model never starts work on its

@@ -1,7 +1,6 @@
 ---
 type: regex
-pattern: '(^|\n)\s*COVERED\b'
-flags: i
+pattern: '(^|\n)[\s*_`#-]*(?:[Vv]erdict[\s*_:`]*)?COVERED\b'
 match: contains
 target: last_message
 ---

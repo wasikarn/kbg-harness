@@ -1,0 +1,11 @@
+mh is MIT-licensed (see LICENSE). The following files are adapted from third-party work and
+carry this notice under Apache License 2.0 section 4:
+
+- agents/test-gap-analyzer.md and agents/type-design-analyzer.md are adapted from
+  plugins/pr-review-toolkit/agents/pr-test-analyzer.md and
+  plugins/pr-review-toolkit/agents/type-design-analyzer.md in
+  https://github.com/anthropics/claude-plugins-official, licensed under the Apache License,
+  Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0). Both files were substantially
+  modified on 2026-09-06 (mh v1.1.18): new descriptions, read-only tool allowlist, Prompt
+  Defense Baseline, evidence gate, scope-vs-neighbors section, and a closed-vocabulary verdict
+  line. The analysis process and rating axes follow the originals.

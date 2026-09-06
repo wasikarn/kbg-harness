@@ -49,10 +49,28 @@ PY
 
   # every grader has column-0 frontmatter with a type (the runner skips a grader
   # whose fence is indented, silently -- caught by a validator 2026-09-06), and
-  # every regex grader's pattern compiles.
-  if ! python3 - "$d/graders" <<'PY'
+  # every regex grader's pattern compiles. contract.md / clean.md must also match a
+  # verdict line in the shape the agent actually emits: all three live runs on
+  # 2026-09-06 wrote it bold or after a `Verdict:` label, which a bare `(^|\n)\s*`
+  # anchor rejects (deep-audit finding, v1.1.22).
+  case "$c" in
+    blind-spot-hunter-planted|silent-failure-hunter-planted) sample=$'## Verdict\n\n**1 MEDIUM, 2 LOW**' ;;
+    blind-spot-hunter-clean|silent-failure-hunter-clean)     sample=$'## Verdict\n\n**CLEAN**' ;;
+    test-gap-analyzer-planted)    sample=$'**Verdict:** `4 GAPS, highest 6/10`' ;;
+    test-gap-analyzer-clean)      sample=$'**Verdict:** `COVERED`' ;;
+    type-design-analyzer-planted) sample=$'**6 CONCERNS across 4 types, lowest Encapsulation 4/10**' ;;
+    type-design-analyzer-clean)   sample=$'**SOUND**' ;;
+    plan-reviewer-planted)        sample='verdict: needs-revision' ;;
+    plan-reviewer-clean)          sample=$'findings: []\nverdict: production-ready' ;;
+    requirement-analyst-planted)  sample='verdict: needs-clarification' ;;
+    requirement-analyst-clean)    sample='verdict: ready' ;;
+    *) sample='' ;;
+  esac
+  [ -n "$sample" ] || { bad "$c: no verdict sample in test-eval-cases.sh (add one to the case list)"; continue; }
+  if ! python3 - "$d/graders" "$sample" <<'PY'
 import sys, os, re
 bad = 0
+sample = sys.argv[2]
 for f in sorted(os.listdir(sys.argv[1])):
     s = open(os.path.join(sys.argv[1], f)).read()
     m = re.match(r"---\n([\s\S]*?)\n---\n", s)
@@ -64,9 +82,14 @@ for f in sorted(os.listdir(sys.argv[1])):
     if not p:
         print(f"  no pattern in {f}"); bad = 1; continue
     try:
-        re.compile(p.group(1))
+        rx = re.compile(p.group(1))
     except re.error as e:
-        print(f"  bad regex in {f}: {e}"); bad = 1
+        print(f"  bad regex in {f}: {e}"); bad = 1; continue
+    if f in ("contract.md", "clean.md"):
+        fl = re.search(r"^flags: (\w+)$", m.group(1), re.M)
+        flags = re.I if fl and "i" in fl.group(1) else 0
+        if not re.search(p.group(1), sample, flags):
+            print(f"  {f}: pattern rejects the observed verdict shape {sample!r}"); bad = 1
 sys.exit(bad)
 PY
   then bad "$c: a grader is malformed"; continue; fi
