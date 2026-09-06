@@ -43,12 +43,12 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
 ### Added
 
-- Evals for `post-mortem` (18 cases total): a complete case on a scaffolded git repo with the
+- Evals for `post-mortem` (20 cases total): a complete case on a scaffolded git repo with the
   fix commit and regression test, and a missing-input case that must stop and ask for the
   validation input instead of drafting or running the tests itself. The loader test learns
   a `not_contains` contract grader (the sample must not match) and checks the slash-command
   invocation, since a `disable-model-invocation` skill cannot be reached by the Skill tool.
-||||||| parent of 372ab31a (refactor(memory-lint): four-step loop with done-when lines, authoring rules, vendor re-check of the memory cap; two eval cases (planted store, clean control) with loader proof; gauntlet lint skips known-bad fixtures; v1.1.31)
+
 ## [1.1.30] — 2026-09-07
 
 ### Added
@@ -82,7 +82,6 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
   (2026-09-07): `claude plugin validate` checks manifest fields and agent frontmatter parse
   only, and `/skill-doctor` is a usage and context-cost report, so no audit check overlaps a
   vendor surface.
-||||||| parent of 21a599db (refactor(post-mortem): fleet-shape rewrite (rules, five steps with Done-when, failure modes), skip archive ask when destination given, evals: complete + missing-input cases; v1.1.31)
 
 ## [1.1.29] — 2026-09-07
 
