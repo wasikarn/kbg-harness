@@ -60,6 +60,11 @@ door, wide blast radius) or the user asked for a ranking. Routine calls get one 
 reason. Insufficient data is marked `ข้อมูลไม่เพียงพอ` and blocked on the operator; a guessed
 score is worse than none.
 
+Evidence is read in order: deterministic results first (a test exit code, a grep count), then
+the trajectory of this run, then how often work from this source has been rolled back before,
+and the model's own confidence last. Confidence is the weakest input because it is the only one
+the model controls.
+
 ## What this plugin deliberately does not do
 
 - No autonomous loop: the model never starts work on its own; every wave begins with a human.

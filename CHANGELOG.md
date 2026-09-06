@@ -5,6 +5,18 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.20] — 2026-09-06
+
+### Changed
+
+- Three lines borrowed from Hanako's "Loops and Graphs" (2026-08-23) after a duplication
+  check found the rest already in doctrine: METHODOLOGY Rule 13 says where to look after the
+  third failed validator round (the plan, not the unit); `spawn-brief.md` says what a fixer
+  receives (the validator's findings verbatim, FILES YOU OWN narrowed to the files they name);
+  `operating-model.md` §3 orders gate evidence with the model's own confidence last. The
+  article's learning edge (accepted results becoming constraints in later briefs) is named
+  and not built: it is the orchestration layer this plugin declines to own.
+
 ## [1.1.19] — 2026-09-06
 
 ### Fixed

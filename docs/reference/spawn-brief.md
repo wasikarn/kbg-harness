@@ -27,3 +27,5 @@ say so when you relay the result. Effort is the dispatcher's call, never the lan
 handling: `docs/reference/codex-integration-map.md`, "Silent-refusal gotcha".
 
 A validator returns `{pass, findings[], scope_ok, unexpected_files[]}` and nothing else.
+A fixer brief carries those findings verbatim and narrows FILES YOU OWN to the files the
+findings name; a returned unit that may touch anything grows into a diff nobody reviewed.
