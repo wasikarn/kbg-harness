@@ -1,13 +1,13 @@
 # Agent authoring conventions
 
-What the 9-agent fleet actually does, made explicit so a new agent has something accurate to
+What the 10-agent fleet actually does, made explicit so a new agent has something accurate to
 pattern-match against. Prose guidance, not a gate; the mechanical checks are named per item.
 
 ## 1. Tool scoping: explicit allowlist, least privilege
 
 Every agent declares `tools:` as an explicit allowlist (`harness-audit` check 09, CRIT when
 missing). Read-only reviewers and analysts (`backend-architect`, `code-architect`, `blind-spot-hunter`,
-`silent-failure-hunter`, `requirement-analyst`) get `Read`, `Grep`, `Glob`, and
+`silent-failure-hunter`, `requirement-analyst`, `test-gap-analyzer`, `type-design-analyzer`) get `Read`, `Grep`, `Glob`, and
 usually `Bash` for `git log`/`git diff` inspection (read-only by discipline, not by tool grant);
 never `Write`/`Edit` (check 32). Mutating implementers
 (`performance-optimizer`) add `Write`/`Edit`. **`Agent` is never granted** (check 41): a

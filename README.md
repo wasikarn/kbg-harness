@@ -6,6 +6,18 @@ Claude Code and the plugins it sits next to (`ponytail`, `diagram-design`, `qmd`
 do: 6 deny/ask gates, a 4 KB methodology injected at session start, and a small set of skills and
 agents that earned their place.
 
+## How it works
+
+Three ideas hold it up; everything else is a consequence. (1) **Deny the irrecoverable set
+computationally, advise on the rest**: a short PreToolUse deny list is the only place a rule is
+a guarantee; every other rule is honest about being advice. (2) **The maker never grades its
+own work**: a builder that touched more than one file gets a fresh-context validator, reviewer
+agents are read-only and return findings rather than a verdict, and the audit checks and review
+agents are themselves proven against planted-defect fixtures. (3) **Score, not feel**: a
+decision the triad flags carries criteria, weights, a number, and a confidence; insufficient
+data blocks on the operator instead of a guessed score. The model never starts work on its
+own. Detail and the full deny table: `docs/reference/operating-model.md`.
+
 ## Install
 
 ```text
@@ -54,11 +66,16 @@ score not feel. `git-hooks/pre-commit` refuses a `docs/METHODOLOGY.md` over 4096
 
 - **Skills:** `mh:harness-audit` (29 structural checks), `mh:memory-lint`, `mh:cost-report`,
   `mh:deep-audit`, `mh:ideate`, `mh:post-mortem`, `mh:tech-humanize`.
-- **Agents (8):** backend-architect, blind-spot-hunter, code-architect, ideate-critic,
-  performance-optimizer, plan-reviewer, requirement-analyst,
-  silent-failure-hunter. Generic TS review and security review go to
+- **Agents (10):** backend-architect, blind-spot-hunter, code-architect, ideate-critic,
+  performance-optimizer, plan-reviewer, requirement-analyst, silent-failure-hunter,
+  test-gap-analyzer, type-design-analyzer (the last two adapted from Anthropic's
+  `pr-review-toolkit`, Apache-2.0; three of its other agents duplicate native `/code-review`,
+  `/simplify`, and `mh:silent-failure-hunter`, and `comment-analyzer` was skipped as low value here). Generic TS review and security review go to
   `mattpocock-skills:code-review` and native `/security-review` instead — reviewers here are
   read-only and never grant `Agent`.
+- **Evals:** `evals/` holds a planted-defect case and a clean control for each of the six review
+  agents in `claude plugin eval`'s native layout; `tests/evals/test-eval-cases.sh` keeps them
+  loadable while the runner is early-access gated (`evals/README.md`).
 - **Stop hooks:** `cost-tracker.sh` (per-session token cost to `~/.local/share/kbg/metrics/costs.jsonl`),
   `memory-audit-commit.sh` (commits a git-backed memory store, opt-in).
 - **Optional pairing:** `codex@openai-codex`, installed separately and routed to by name for a

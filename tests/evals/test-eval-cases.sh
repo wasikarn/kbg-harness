@@ -42,7 +42,7 @@ PY
   [ -s "$ws/scaffold.sh" ] || { bad "$c: scaffold_script empty"; continue; }
   if ! (cd "$ws" && bash scaffold.sh >/dev/null 2>&1); then bad "$c: scaffold_script failed"; continue; fi
   missing=0
-  for f in $(/usr/bin/grep -oE '`[A-Za-z0-9_./-]+\.(py|md|tsx|json)`' "$d/prompt.md" | tr -d '`' | sort -u); do
+  for f in $(/usr/bin/grep -oE '`[A-Za-z0-9_./-]+\.(py|md|ts|tsx|json)`' "$d/prompt.md" | tr -d '`' | sort -u); do
     [ -f "$ws/$f" ] || { bad "$c: scaffold did not write $f"; missing=1; }
   done
   [ "$missing" -eq 0 ] || continue
@@ -72,7 +72,7 @@ PY
   then bad "$c: a grader is malformed"; continue; fi
   ok "$c"
 done
-[ "$n" -eq 8 ] || bad "expected 8 cases, found $n"
+[ "$n" -eq 12 ] || bad "expected 12 cases, found $n"
 
 echo "eval-cases: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

@@ -41,8 +41,8 @@ task-completion self-grading tops out near chance). So:
   that ships the work by fiat.
 - `harness-audit` checks 04, 05, 20, 22, 28, 29, 70, 71, 72 are proven against known-bad fixtures in
   `tests/skills/harness-audit/`; the rest are smoke-tested only.
-- The four review agents (`plan-reviewer`, `blind-spot-hunter`, `silent-failure-hunter`,
-  `requirement-analyst`) have a planted-defect case and a clean control each
+- The six review agents (`plan-reviewer`, `blind-spot-hunter`, `silent-failure-hunter`,
+  `requirement-analyst`, `test-gap-analyzer`, `type-design-analyzer`) have a planted-defect case and a clean control each
   under `evals/`, in `claude plugin eval`'s native layout, graded on their own Output Format
   (`evals/README.md`). The runner is early-access gated; `tests/evals/test-eval-cases.sh` keeps
   the cases loadable until it opens.

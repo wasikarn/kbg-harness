@@ -5,6 +5,24 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.18] — 2026-09-06
+
+### Added
+
+- `agents/test-gap-analyzer.md` (behavioral test-coverage gaps, criticality 1-10, verdict
+  `COVERED` / `N GAPS`) and `agents/type-design-analyzer.md` (encapsulation, invariant
+  expression, usefulness, enforcement rated 1-10 each, verdict `SOUND` / `N CONCERNS`).
+  Adapted from `anthropics/claude-plugins-official` `pr-review-toolkit` (Apache-2.0) after a
+  duplication check: that plugin's `code-reviewer`, `code-simplifier`, and
+  `silent-failure-hunter` overlap native `/code-review`, `/simplify`, and the existing
+  `mh:silent-failure-hunter`; `comment-analyzer` was skipped as low value here. Both rewritten
+  to mh conventions: 25-word third-person descriptions, read-only tool allowlist, Prompt
+  Defense Baseline, evidence gate, closed-vocabulary verdict line, scope-vs-neighbors section.
+- `evals/{test-gap-analyzer,type-design-analyzer}-{planted,clean}`: four cases in the same
+  planted/clean shape as the rest; the static loader test expects 12 and accepts `.ts` fixtures.
+- `README.md`: a "How it works" section naming the three operating-model ideas with a link to
+  `docs/reference/operating-model.md`, and an Evals bullet under "What it ships".
+
 ## [1.1.17] — 2026-09-06
 
 ### Removed
