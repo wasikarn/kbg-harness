@@ -5,6 +5,17 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.21] — 2026-09-06
+
+### Added
+
+- Check 72 tests close the last two gaps from the `mh:test-gap-analyzer` run: the three
+  fail-open branches (plugin layout changed, doc missing, plugin not installed) are asserted as
+  INFO-only via a new `expect_info_only` helper and a `check-72-info-no-doc` fixture, and
+  normalisation is proven with a reordered-set fixture plus a single-quoted plugin constant.
+- `repo-gotchas.md`: a brand-new agent fails check 03 until the plugin cache has it; copy it
+  into the loaded cache dir before the first commit.
+
 ## [1.1.20] — 2026-09-06
 
 ### Changed

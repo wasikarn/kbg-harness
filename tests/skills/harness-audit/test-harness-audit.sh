@@ -43,6 +43,12 @@ expect_silent_match() {
   if [ "$CRIT_FOUND" -eq 0 ] && [ "$WARN_FOUND" -eq 0 ] && printf '%s\n' "$OUT" | /usr/bin/grep -qE "$3"; then ok "check-$1 $2 silent and reports '$3'"
   else bad "check-$1 $2 not silent or missing '$3' (crit=$CRIT_FOUND warn=$WARN_FOUND)"; fi
 }
+# expect_info_only <id> <fixture>: the fail-open branches emit exactly INFO, never WARN/CRIT.
+expect_info_only() {
+  run_check "$1" "$FIX/$2"
+  if [ "$CRIT_FOUND" -eq 0 ] && [ "$WARN_FOUND" -eq 0 ] && [ "$INFO_FOUND" -ge 1 ]; then ok "check-$1 $2 fails open as INFO ($3)"
+  else bad "check-$1 $2 did not fail open as INFO ($3) (crit=$CRIT_FOUND warn=$WARN_FOUND info=$INFO_FOUND)"; fi
+}
 expect_warn() {
   run_check "$1" "$FIX/$2"
   if [ "$WARN_FOUND" -ge 1 ] && [ "$CRIT_FOUND" -eq 0 ]; then ok "check-$1 $2 fires WARN (warn=$WARN_FOUND)"
@@ -133,6 +139,16 @@ export MH_CODEX_CACHE_DIR="$CODEX_TMP/cache"
 expect_warn   72 check-72-bad-effort-drift
 expect_warn   72 check-72-bad-effort-missing
 expect_silent_match 72 check-72-good-effort-set 'matches the installed plugin'
+# Normalisation: doc order and plugin quote style must not read as drift.
+expect_silent_match 72 check-72-good-effort-reordered 'matches the installed plugin'
+printf "const VALID_REASONING_EFFORTS = new Set(['none', 'minimal', 'low', 'medium', 'high', 'xhigh']);\n" > "$CODEX_TMP/cache/scripts/codex-companion.mjs"
+expect_silent_match 72 check-72-good-effort-set 'matches the installed plugin'
+# Fail-open branches: plugin layout changed, doc missing, plugin not installed -> INFO only.
+printf 'export const nothing = 1;\n' > "$CODEX_TMP/cache/scripts/codex-companion.mjs"
+expect_info_only 72 check-72-good-effort-set 'VALID_REASONING_EFFORTS missing'
+printf 'const VALID_REASONING_EFFORTS = new Set(["none", "minimal", "low", "medium", "high", "xhigh"]);\n' > "$CODEX_TMP/cache/scripts/codex-companion.mjs"
+expect_info_only 72 check-72-info-no-doc 'spawn-brief.md missing'
+MH_CODEX_CACHE_DIR="$CODEX_TMP/nonexistent" expect_info_only 72 check-72-good-effort-set 'plugin not installed'
 unset MH_CODEX_CACHE_DIR
 # Without the override the check must find the newest versioned cache dir itself (sort -V:
 # 1.0.10 beats 1.0.9); the older dir carries a smaller set so a wrong pick fires a false WARN.
