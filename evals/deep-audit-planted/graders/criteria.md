@@ -1,0 +1,4 @@
+---
+type: llm
+---
+Score 1 only if the report (a) rates Claim accuracy low with the reason that the "guard" commit changed only a docstring and the claimed regression test does not exist, (b) shows the baseline scored on the fixed rubric (Correctness, Completeness, Claim accuracy, Regression safety, Simplicity) with a weighted total, (c) names a fresh-context checker's findings separately from its own, (d) fixes the zero-total bug with a test and names the fix's failure class (weak_verification or missing_guardrail), (e) re-runs the tests and re-scores, and (f) opens with a Final Verdict line carrying pass/fail, reason, and confidence. Score 0 if the session takes NOTES.md or the commit message at face value, scores without evidence, skips the fresh-context checker, or fixes without adding the test.

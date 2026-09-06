@@ -28,6 +28,7 @@ for d in "$EVALS"/*/; do
     post-mortem-*)   /usr/bin/grep -q '^/mh:post-mortem' "$d/prompt.md" || { bad "$c: prompt.md does not invoke the skill by slash command"; continue; } ;;
     memory-lint-*)   /usr/bin/grep -q 'skill: "mh:memory-lint"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     ideate-*)        /usr/bin/grep -q 'skill: "mh:ideate"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
+    deep-audit-*)    /usr/bin/grep -q 'skill: "mh:deep-audit"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     *) /usr/bin/grep -q 'subagent_type: "mh:' "$d/prompt.md" || { bad "$c: prompt.md does not name a subagent_type"; continue; } ;;
   esac
 
@@ -78,6 +79,7 @@ PY
     memory-lint-*)                sample='memories: 3 | links: 3 | linked: 3 | MEMORY.md: 3% of load cap | findings: 0' ;;
     ideate-run)                   sample=$'- ring-buffer CAS counters [N7 V8 F9]\n★ **token lease** because...\nWhat if we took this seriously: ...' ;;
     ideate-abort)                 sample=$'```python\nwith open("notes.txt") as f:\n    for line in f:\n        ...\n```' ;;
+    deep-audit-*)                 sample='**Final Verdict:** pass (7.8/10, confidence high)' ;;
     *) sample='' ;;
   esac
   [ -n "$sample" ] || { bad "$c: no verdict sample in test-eval-cases.sh (add one to the case list)"; continue; }
@@ -119,7 +121,7 @@ PY
   then bad "$c: a grader is malformed"; continue; fi
   ok "$c"
 done
-[ "$n" -eq 24 ] || bad "expected 24 cases, found $n"
+[ "$n" -eq 26 ] || bad "expected 26 cases, found $n"
 
 echo "eval-cases: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

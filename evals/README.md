@@ -1,6 +1,6 @@
 # Review-agent and skill evals
 
-Twenty-four cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
+Twenty-six cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
 agents, one planted-defect case and one clean control per agent, the same fires/silent pairing
 `tests/skills/harness-audit/known-bad/` uses for audit checks. Each case is
 `prompt.md` (the ask: an agent case dispatches by `subagent_type`, a skill case invokes by `skill:`), `case.yaml` (a
@@ -52,6 +52,16 @@ file, and the unindexed file indexed), and a clean control that must receive no 
 Bash is not granted by default: run these with `--allow-tools Bash` (the prompt frontmatter lists
 it too).
 
+Two for `deep-audit` (tag `deep-audit`): the scaffold is a small git history that is the
+"session" under audit. In the planted case the second commit and `NOTES.md` claim a zero-total
+guard and a regression test; the commit's diff is a docstring and the suite has no zero-total
+case, so the re-run is green with one test and the claim is false on the diff. The case grades
+the audit's process (git-derived scope, rubric, checker dispatch, test-first fix, re-score), not
+detection difficulty. The clean case makes the same claims truthfully and must come out
+byte-identical. Graders check the skill and a checker agent fired, git and the test runner ran
+(`tool_used: Bash` anchored on the command), the fix and its test landed in the named files, and
+the report opens with the Final Verdict line. Needs `--allow-tools Bash,Edit,Write`.
+
 Run (needs `plugin eval` early access on the account; 2.1.263 prints "currently in early access"
 otherwise):
 
@@ -61,6 +71,7 @@ claude plugin eval . --scaffold --tag silent-failure-hunter --runs 1 --no-publis
 claude plugin eval . --scaffold --tag harness-audit --allow-tools Bash --runs 1 --no-publish
 claude plugin eval . --scaffold --tag memory-lint --allow-tools Bash --runs 1 --no-publish
 claude plugin eval . --scaffold --tag ideate --runs 1 --no-publish     # the run case spawns 6-8 agents
+claude plugin eval . --scaffold --tag deep-audit --allow-tools Bash,Edit,Write --runs 1 --no-publish
 ```
 
 `--scaffold` is required: the fixtures live in each case's `scaffold_script`.

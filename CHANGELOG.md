@@ -5,6 +5,31 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.34] — 2026-09-07
+
+### Added
+
+- Evals for `deep-audit`: the scaffold is a small git history standing in for the audited
+  session. Planted: a commit and a notes file claim a zero-total guard and a regression test that
+  were never written; the re-run is green, and the claim is false on the diff and the suite's
+  contents, so the case grades audit process, not detection difficulty. Clean: the same claims
+  made truthfully; the control must come out byte-identical, proven on file contents so a
+  Write-tool or shell edit cannot dodge an Edit-count grader (validator finding). Graders prove
+  the skill and a checker agent fired, git and the test runner ran (anchored on the Bash
+  command, not the call's description), the fix and its test landed in executable code in the
+  named files, and the report opens with a Final Verdict line carrying pass or fail.
+
+### Changed
+
+- `deep-audit` folds in four lessons the memory store recorded from live runs: re-sweep tracked
+  files instead of trusting a plan's file list (2026-08-25); a test-first fix shows its red run
+  (2026-08-25, mutation-verified fixes); a hook or gate fix in the repo is not yet protecting the
+  running session (2026-08-28); the report names its scope boundary (2026-08-25). Description
+  points first-pass review at native `/code-review` as well. Research (2026-09-07): native
+  `/code-review` reports correctness and cleanup findings on the branch diff and fixes only with
+  `--fix`; neither it nor `/simplify` verifies claims, re-runs tests, or scores, so deep-audit's
+  slot stands.
+
 ## [1.1.33] — 2026-09-07
 
 ### Changed
