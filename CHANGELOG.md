@@ -29,9 +29,10 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
 ### Changed
 
-- `git-hooks/pre-commit`: the shell, Python, and JSON syntax layers skip
-  `tests/skills/harness-audit/known-bad/`, whose files are invalid on purpose; the home-path
-  ban still covers them.
+- `git-hooks/pre-commit` and `scripts/run-gauntlet.sh`: the shell, Python, and JSON syntax
+  layers skip `tests/skills/harness-audit/known-bad/`, whose files are invalid on purpose; the
+  home-path ban still covers them. (The gauntlet half landed in a follow-up commit: it lints
+  tracked files, and the fixtures were untracked when the pre-commit gauntlet run passed.)
 - `harness-audit` SKILL.md: extending-checks section names the fleet fixture pair and the
   self-test command; the green-because-empty failure mode names the new guard. Research
   (2026-09-07): `claude plugin validate` checks manifest fields and agent frontmatter parse

@@ -21,20 +21,23 @@ run_validate() { claude plugin validate . --strict; }
 
 existing() { local f; while IFS= read -r f; do [ -f "$f" ] && printf '%s\n' "$f"; done; return 0; }
 
+# Syntax layers skip the audit's known-bad fixtures, invalid on purpose (same rule as pre-commit).
+lintable() { git ls-files "$@" ':(exclude)tests/skills/harness-audit/known-bad' | existing; }
+
 run_lint() {
   local rc=0 f
   while IFS= read -r f; do
     bash -n "$f" || rc=1
-  done < <(git ls-files '*.sh' 'git-hooks/*' | existing)
+  done < <(lintable '*.sh' 'git-hooks/*')
   if command -v shellcheck >/dev/null; then
-    git ls-files '*.sh' 'git-hooks/*' | existing | xargs shellcheck -S warning || rc=1
+    lintable '*.sh' 'git-hooks/*' | xargs shellcheck -S warning || rc=1
   fi
   while IFS= read -r f; do
     python3 -m py_compile "$f" || rc=1
-  done < <(git ls-files '*.py' | existing)
+  done < <(lintable '*.py')
   while IFS= read -r f; do
     python3 -m json.tool "$f" >/dev/null || { echo "invalid JSON: $f"; rc=1; }
-  done < <(git ls-files '*.json' | existing)
+  done < <(lintable '*.json')
   # Whole-tree home-path ban (pre-commit only sees staged blobs).
   if git ls-files | /usr/bin/grep -vE '^(docs/(research|post-mortems|plans)/|CHANGELOG\.md$)' | existing \
        | xargs LC_ALL=C /usr/bin/grep -alE '/Users/[A-Za-z]|-Users-[A-Za-z]' 2>/dev/null \
