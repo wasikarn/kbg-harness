@@ -73,9 +73,10 @@ score not feel. `git-hooks/pre-commit` refuses a `docs/METHODOLOGY.md` over 4096
   `/simplify`, and `mh:silent-failure-hunter`, and `comment-analyzer` was skipped as low value here). Generic TS review and security review go to
   `mattpocock-skills:code-review` and native `/security-review` instead — reviewers here are
   read-only and never grant `Agent`.
-- **Evals:** `evals/` holds a planted-defect case and a clean control for each of the six review
-  agents in `claude plugin eval`'s native layout; `tests/evals/test-eval-cases.sh` keeps them
-  loadable while the runner is early-access gated (`evals/README.md`).
+- **Evals:** `evals/` holds a planted case and a clean control for each of the six review agents
+  and for the `tech-humanize`, `harness-audit`, `post-mortem`, and `memory-lint` skills, in `claude plugin eval`'s native layout;
+  `tests/evals/test-eval-cases.sh` keeps them loadable while the runner is early-access gated
+  (`evals/README.md`).
 - **Stop hooks:** `cost-tracker.sh` (per-session token cost to `~/.local/share/kbg/metrics/costs.jsonl`),
   `memory-audit-commit.sh` (commits a git-backed memory store, opt-in).
 - **Optional pairing:** `codex@openai-codex`, installed separately and routed to by name for a

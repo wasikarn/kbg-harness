@@ -1,6 +1,6 @@
 ## Action mode (`--auto-archive`)
 
-Mechanical fold of verbose/closed entries per the **A3 rubric** (codified 2026-06-04, [[project_memory_trim_session_2026_06_04]]), plus a **Class D fallback valve** (added 2026-08-07). This engine is the **canonical home of the trim workflow** — the `--trim` aliases below wrap it; there is no separate trim skill.
+Mechanical fold of verbose/closed entries per the **A3 rubric** (codified 2026-06-04, [[project_memory_trim_session_2026_06_04]]), plus a **Class D fallback valve** (added 2026-08-07). This engine is the canonical home of the trim workflow; there is no `--trim` flag and no separate trim skill, only the three `--auto-archive` invocations below.
 
 - **<2KB delta per session for A/B/C** — never collapse the whole store; trim only the worst. Class D is the deliberate exception: it's a last-resort valve for a store shape A/B/C structurally can't catch (many small terse entries, no verbose outlier), so its delta can be larger — confirmed live at -5,039B in one fold, see below.
 - **<30 min elapsed** — if it takes longer, the store is unhealthy in ways trim won't fix
@@ -17,9 +17,9 @@ Mechanical fold of verbose/closed entries per the **A3 rubric** (codified 2026-0
 
 Default for `--auto-archive` is dry-run with confirm prompt; `--yes` skips the prompt (use for CI/scripts). `--json` produces machine-readable output (mode-aware: detector JSON for plain lint, action-plan JSON for `--auto-archive --dry-run`).
 
-### `--trim` mode (plan / apply / status)
+### Trim workflow (plan / apply / status)
 
-The trim workflow is `--auto-archive` under three intents — no separate skill. Run them in order:
+Three `--auto-archive` invocations, run in order:
 
 1. **plan** — `--auto-archive --dry-run --json` → the action plan (what would move, projected before/after size) without touching the store. Never skip straight to apply: drift the plan review and you `mv` entries you meant to keep.
 2. **apply** — `--auto-archive --yes` → executes the reversible `mv`s (collapsed pointers stay grep-able in `_archive/`; never `rm`).

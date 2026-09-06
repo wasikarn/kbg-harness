@@ -5,6 +5,26 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.32] — 2026-09-07
+
+### Added
+
+- Evals for `memory-lint`: a planted store with one finding per detector class that repairs
+  cleanly (dangling link typo, stale pointer, unindexed unreachable file) which the session must
+  fix at the cause and confirm with a second run (`tool_used: Bash` min 2; file graders prove the
+  link was corrected not deleted, the stale pointer removed not satisfied by a new file, and the
+  unindexed file indexed), and a clean control that must receive no Edit or Write. Both scaffolds
+  were linted by hand: 3 findings and 0. Loader test proves the summary-line grader shape.
+
+### Changed
+
+- `memory-lint` SKILL.md rewritten as a four-step loop with done-when lines (run, fix at the
+  cause, trim only through action mode, re-run), the authoring rules the checks assume, and
+  failure modes; dated history moved out. Vendor re-check 2026-09-07 against
+  `code.claude.com/docs/en/memory`: the 200-line / 25 KB cap stands, Claude Code now warns near
+  it itself, and nothing vendor-side resolves wikilinks, orphans, or index drift, so the skill's
+  scope is unchanged. Description reworded to trigger after memory edits, not only near the cap.
+
 ## [1.1.31] — 2026-09-07
 
 ### Changed
@@ -28,6 +48,7 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
   validation input instead of drafting or running the tests itself. The loader test learns
   a `not_contains` contract grader (the sample must not match) and checks the slash-command
   invocation, since a `disable-model-invocation` skill cannot be reached by the Skill tool.
+||||||| parent of 372ab31a (refactor(memory-lint): four-step loop with done-when lines, authoring rules, vendor re-check of the memory cap; two eval cases (planted store, clean control) with loader proof; gauntlet lint skips known-bad fixtures; v1.1.31)
 ## [1.1.30] — 2026-09-07
 
 ### Added

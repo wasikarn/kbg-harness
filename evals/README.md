@@ -1,6 +1,6 @@
 # Review-agent and skill evals
 
-Twenty cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
+Twenty-two cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
 agents, one planted-defect case and one clean control per agent, the same fires/silent pairing
 `tests/skills/harness-audit/known-bad/` uses for audit checks. Each case is
 `prompt.md` (the ask: an agent case dispatches by `subagent_type`, a skill case invokes by `skill:`), `case.yaml` (a
@@ -28,6 +28,7 @@ validation input and must get a question, not a draft. The skill is user-invoked
 is a `trace` regex on the skill's own text rather than `tool_used: Skill`. Two runner facts are
 undocumented and the first live run settles both: whether a slash command in `prompt.md` is
 expanded, and whether `target: trace` is accepted (these are the only two graders using it).
+
 Two for `harness-audit` (tag `harness-audit`): a planted fleet with two CRITs (skill name
 mismatch, missing `tools:` grant) that the session must fix and confirm with a second run
 (`audit-reran.md` is `tool_used: Bash`, min 2; file graders check the fix landed in the named
@@ -36,7 +37,14 @@ is this suite's first use of the key and unverified against the runner, so `flee
 proves the same thing on the file's bytes).
 The scaffolded repo is its own plugin cache (`--plugin-cache .`). Bash is not granted by
 default: run these with `--allow-tools Bash` (the prompt frontmatter also lists it).
-||||||| parent of 21a599db (refactor(post-mortem): fleet-shape rewrite (rules, five steps with Done-when, failure modes), skip archive ask when destination given, evals: complete + missing-input cases; v1.1.31)
+
+Two for `memory-lint` (tag `memory-lint`): a planted store with one repairable finding per
+detector class (typo'd wikilink, stale pointer, unindexed unreachable file) that the session must
+fix at the cause and confirm with a second run (`lint-reran.md` is `tool_used: Bash`, min 2; file
+graders prove the link was corrected not deleted, the stale pointer removed not satisfied by a new
+file, and the unindexed file indexed), and a clean control that must receive no Edit or Write (`store-unchanged.md` proves the index bytes as well).
+Bash is not granted by default: run these with `--allow-tools Bash` (the prompt frontmatter lists
+it too).
 
 Run (needs `plugin eval` early access on the account; 2.1.263 prints "currently in early access"
 otherwise):
@@ -45,6 +53,7 @@ otherwise):
 claude plugin eval . --scaffold --runs 1 --no-publish
 claude plugin eval . --scaffold --tag silent-failure-hunter --runs 1 --no-publish
 claude plugin eval . --scaffold --tag harness-audit --allow-tools Bash --runs 1 --no-publish
+claude plugin eval . --scaffold --tag memory-lint --allow-tools Bash --runs 1 --no-publish
 ```
 
 `--scaffold` is required: the fixtures live in each case's `scaffold_script`.
