@@ -72,7 +72,7 @@ score not feel. `git-hooks/pre-commit` refuses a `docs/METHODOLOGY.md` over 4096
 | 3 Tool gateway | `hooks/hooks.json` PreToolUse entries, one per gate script in `hooks/gates/` (native deny > ask > allow; a gate timeout = allow) |
 | 4 Durable state | native auto-memory owns it; mh adds `skills/meta/memory-lint` + `costs.jsonl` |
 | 5 Evidence gate | `scripts/run-gauntlet.sh` + `skills/meta/harness-audit` + gates `test-integrity` and `task-complete-separation` (maker never grades its own work) |
-| 6 Trace + recovery | `hooks/stop/cost-tracker.sh` + `skills/workflow/post-mortem` |
+| 6 Trace + recovery | Claude Code's own transcript is the run trace (tool calls, context loaded, changes made) — mh doesn't duplicate it. `hooks/stop/cost-tracker.sh` adds cost/token accounting on top; `skills/workflow/post-mortem` is the recovery loop, classifying each fix into the article's own four failure classes |
 
 Source: "Harness Engineering: Build a Reliable AI Agent in 6 Layers" (2026-08-30).
 
