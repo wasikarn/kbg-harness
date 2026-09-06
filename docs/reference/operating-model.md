@@ -63,6 +63,11 @@ score is worse than none.
 ## What this plugin deliberately does not do
 
 - No autonomous loop: the model never starts work on its own; every wave begins with a human.
+  `/goal` and `/loop` are the operator's to type. `/goal`'s evaluator is a session-scoped
+  prompt-based Stop hook on the small fast model; it reads only the transcript and never calls
+  tools (`code.claude.com/docs/en/goal`), so it checks that the stated condition appears met,
+  not that the work is right. It does not replace the Rule 13 fresh-context validator, and it
+  has no native turn cap: the cap is a clause in the condition.
 - No orchestration layer of its own: dispatch shape is one page (`spawn-brief.md`); Claude
   Code's native Agent tool does the rest.
 - No response style of its own: the `ponytail` plugin is the only style layer.

@@ -5,6 +5,17 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.16] — 2026-09-06
+
+### Changed
+
+- `docs/reference/operating-model.md`: `/goal` and `/loop` named as operator-typed, and
+  `/goal`'s evaluator described from the official doc (prompt-based Stop hook on the small
+  fast model, transcript-only, no tool calls, no native turn cap) so nobody reads
+  `/goal ... until tests pass` as the Rule 13 fresh-context validator. Prompted by Addy
+  Osmani's "Practical Loop Engineering" (2026-08-23); every claim checked against
+  `code.claude.com/docs/en/goal` and `/scheduled-tasks` per Rule 3.
+
 ## [1.1.15] — 2026-09-06
 
 ### Added
