@@ -1,58 +1,9 @@
 # matt-harness
 
-A small Claude Code plugin (`mh@wasikarn`) that keeps only what native Claude Code and the
-installed plugins (`mattpocock-skills`, `ponytail`, `diagram-design`, `qmd`) cannot do:
-a short set of deny gates, a 4 KB methodology injected at session start, and a few
-skills and agents that earned their place.
-
-## What it enforces (6 gates, `hooks/hooks.json`)
-
-| gate | effect |
-|---|---|
-| `gate:bash:irrecoverable` | denies `rm -rf`, `find -delete`, `--no-verify`, `push --force`, `reset --hard`, `clean -f`, discarding `restore`/`checkout`, `branch -D`, `stash drop/clear`, `commit --amend`, `dd`, SQL `DROP`, `git add -A` outside a merge, nested `claude` spawns from a subagent |
-| `gate:bash:subagent-git-guard` | denies `git stash`/`reset`/`clean` from a dispatched subagent |
-| `gate:task:complete-separation` | denies a subagent marking its own task complete |
-| `gate:write:test-integrity` | asks before a write that weakens a test |
-| `gate:write:config-guard` | asks before a write to Claude Code settings `hooks`/`enabledPlugins` |
-| `gate:skill:codex-setup-guard` | asks before a model-invoked `--enable-review-gate` call to the paired Codex plugin's `/codex:setup` |
-
-Each gate is its own PreToolUse entry with an 8 s timeout; Claude Code runs matching hooks in
-parallel and merges deny > ask > allow (verified empirically 2026-09-05). A timed-out gate does not
-block.
-
-## What it injects
-
-`docs/METHODOLOGY.md` (under 4 KB) at SessionStart: the decision-sizing triad, interrogate the
-claim, bug fix = failing test first, context economy and delegation (5 agents per wave, fresh
-validator for a dispatched builder's multi-file work, `NEEDS-DECISION` instead of guessing), score not feel.
-`git-hooks/pre-commit` refuses a `docs/METHODOLOGY.md` over 4096 bytes.
-
-## What it ships
-
-- **Skills:** `mh:harness-audit` (28 structural checks), `mh:memory-lint`, `mh:cost-report`,
-  `mh:deep-audit`, `mh:ideate`, `mh:post-mortem`, `mh:tech-humanize`.
-- **Agents (9):** backend-architect, blind-spot-hunter, code-architect, ideate-critic,
-  nextjs-reviewer, performance-optimizer, plan-reviewer, requirement-analyst,
-  silent-failure-hunter. Generic TS review and security review go to
-  `mattpocock-skills:code-review` and native `/security-review`. Reviewers are read-only and never
-  grant `Agent`.
-- **Stop hooks:** `cost-tracker.sh` (per-session token cost to `~/.local/share/kbg/metrics/costs.jsonl`),
-  `memory-audit-commit.sh` (commits a git-backed memory store, opt-in).
-- **Optional pairing:** `codex@openai-codex`, installed separately and routed to by name for a
-  second opinion from a different model family — `docs/reference/codex-integration-map.md`.
-
-## How this plugin maps to a 6-layer harness
-
-| layer | where it lives in mh |
-|---|---|
-| 1 Task contract | `docs/reference/spawn-brief.md` + the `NEEDS-DECISION` sentinel |
-| 2 Context compiler | `docs/METHODOLOGY.md` (4 KB map, size gated in pre-commit) + `CLAUDE.md` |
-| 3 Tool gateway | `hooks/hooks.json` PreToolUse entries, one per gate script in `hooks/gates/` (native deny > ask > allow; a gate timeout = allow) |
-| 4 Durable state | native auto-memory owns it; mh adds `skills/meta/memory-lint` + `costs.jsonl` |
-| 5 Evidence gate | `scripts/run-gauntlet.sh` + `skills/meta/harness-audit` + gates `test-integrity` and `task-complete-separation` (maker never grades own work) |
-| 6 Trace + recovery | `hooks/stop/cost-tracker.sh` + `skills/workflow/post-mortem` |
-
-Source: "Harness Engineering: Build a Reliable AI Agent in 6 Layers" (2026-08-30).
+A Claude Code plugin (`mh@wasikarn`). It adds only what native Claude Code and the plugins it
+sits next to (`mattpocock-skills`, `ponytail`, `diagram-design`, `qmd`) can't already do: 6
+deny/ask gates, a 4 KB methodology injected at session start, and a small set of skills and
+agents that earned their place.
 
 ## Install
 
@@ -73,8 +24,57 @@ claude plugin list                               # both plugins "enabled"
 ```
 
 The plugin ships `defaultEnabled: false`; add `"mh@wasikarn": true` to `settings.json` if
-`enable` did not. Same-version edits never reach the cache: bump `plugin.json` before
+`enable` did not. Same-version edits never reach the cache — bump `plugin.json` before
 `claude plugin update`. Uninstall: `/plugin uninstall mh@wasikarn`.
+
+## The 6 gates (`hooks/hooks.json`)
+
+| gate | effect |
+|---|---|
+| `gate:bash:irrecoverable` | denies `rm -rf`, `find -delete`, `--no-verify`, `push --force`, `reset --hard`, `clean -f`, discarding `restore`/`checkout`, `branch -D`, `stash drop/clear`, `commit --amend`, `dd`, SQL `DROP`, `git add -A` outside a merge, nested `claude` spawns from a subagent |
+| `gate:bash:subagent-git-guard` | denies `git stash`/`reset`/`clean` from a dispatched subagent |
+| `gate:task:complete-separation` | denies a subagent marking its own task complete |
+| `gate:write:test-integrity` | asks before a write that weakens a test |
+| `gate:write:config-guard` | asks before a write to Claude Code settings `hooks`/`enabledPlugins` |
+| `gate:skill:codex-setup-guard` | asks before a model-invoked `--enable-review-gate` call to the paired Codex plugin's `/codex:setup` |
+
+Each is its own PreToolUse entry with an 8 s timeout. Claude Code runs matching hooks in
+parallel and merges deny > ask > allow (verified empirically 2026-09-05); a timed-out gate does
+not block.
+
+## What it injects
+
+`docs/METHODOLOGY.md` (under 4 KB) at SessionStart: the decision-sizing triad, interrogate the
+claim, bug fix = failing test first, context economy and delegation (5 agents per wave, a fresh
+validator for a dispatched builder's multi-file work, `NEEDS-DECISION` instead of guessing),
+score not feel. `git-hooks/pre-commit` refuses a `docs/METHODOLOGY.md` over 4096 bytes.
+
+## What it ships
+
+- **Skills:** `mh:harness-audit` (28 structural checks), `mh:memory-lint`, `mh:cost-report`,
+  `mh:deep-audit`, `mh:ideate`, `mh:post-mortem`, `mh:tech-humanize`.
+- **Agents (9):** backend-architect, blind-spot-hunter, code-architect, ideate-critic,
+  nextjs-reviewer, performance-optimizer, plan-reviewer, requirement-analyst,
+  silent-failure-hunter. Generic TS review and security review go to
+  `mattpocock-skills:code-review` and native `/security-review` instead — reviewers here are
+  read-only and never grant `Agent`.
+- **Stop hooks:** `cost-tracker.sh` (per-session token cost to `~/.local/share/kbg/metrics/costs.jsonl`),
+  `memory-audit-commit.sh` (commits a git-backed memory store, opt-in).
+- **Optional pairing:** `codex@openai-codex`, installed separately and routed to by name for a
+  second opinion from a different model family — see below.
+
+## Architecture: the 6-layer harness
+
+| layer | where it lives in mh |
+|---|---|
+| 1 Task contract | `docs/reference/spawn-brief.md` + the `NEEDS-DECISION` sentinel |
+| 2 Context compiler | `docs/METHODOLOGY.md` (4 KB map, size gated in pre-commit) + `CLAUDE.md` |
+| 3 Tool gateway | `hooks/hooks.json` PreToolUse entries, one per gate script in `hooks/gates/` (native deny > ask > allow; a gate timeout = allow) |
+| 4 Durable state | native auto-memory owns it; mh adds `skills/meta/memory-lint` + `costs.jsonl` |
+| 5 Evidence gate | `scripts/run-gauntlet.sh` + `skills/meta/harness-audit` + gates `test-integrity` and `task-complete-separation` (maker never grades its own work) |
+| 6 Trace + recovery | `hooks/stop/cost-tracker.sh` + `skills/workflow/post-mortem` |
+
+Source: "Harness Engineering: Build a Reliable AI Agent in 6 Layers" (2026-08-30).
 
 ## Optional: pairing with Codex
 
