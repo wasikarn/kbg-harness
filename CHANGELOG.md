@@ -5,6 +5,23 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.13] — 2026-09-06
+
+### Added
+
+- harness-audit check 72: WARN when the `--effort <a|b|c>` set `docs/reference/spawn-brief.md`
+  names for Codex briefs drifts from `VALID_REASONING_EFFORTS` in the installed
+  `codex@openai-codex` plugin's `codex-companion.mjs`; INFO and fail-open when either side is
+  missing. `MH_CODEX_CACHE_DIR` overrides the plugin cache dir for tests. Known-bad/good
+  fixtures + self-test lines; 29 checks. Closes the "plugin updates its effort set on its
+  own clock" residual from the deep-audit of the fable-advisor-derived doc edits.
+
+### Changed
+
+- `docs/reference/codex-integration-map.md`: the silent-refusal gotcha now records what was
+  and was not reproduced locally (quota and provider failures exit 1 loudly; the refusal case
+  itself is still borrowed evidence, retry after 2026-09-14 when the Codex quota resets).
+
 ## [1.1.12] — 2026-09-06
 
 ### Fixed

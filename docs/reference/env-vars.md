@@ -8,6 +8,7 @@ under `env`, never in a committed file.
 | `MH_PLUGIN_ROOT` | skill markdown (`bash "${MH_PLUGIN_ROOT}/..."`) | Exported at SessionStart by `hooks/session/command-root-anchor.sh` from `CLAUDE_PLUGIN_ROOT`, so skill prose can name bundled scripts portably. Not a user knob. |
 | `MH_CACHE_DIR` | `skills/meta/harness-audit/scripts/audit.sh`, check 35 | Overrides the mh plugin cache root the audit resolves loadability against; `--plugin-cache <path>` wins over it. |
 | `MH_CODEX_DATA_DIR` | `scripts/_lib/codex-state-path.sh`, check 71 | Overrides the paired `codex@openai-codex` plugin's per-plugin data root (default: `~/.claude/plugins/data/codex-openai-codex`) that check 71 reads the review-gate state from. Test-only: points the self-test at a throwaway directory instead of the real, shared one. |
+| `MH_CODEX_CACHE_DIR` | check 72 | Overrides the paired `codex@openai-codex` plugin's cache dir (default: newest `~/.claude/plugins/cache/openai-codex/codex/<version>/`) that check 72 reads `VALID_REASONING_EFFORTS` from. Test-only. |
 
 Native Claude Code variables this plugin relies on but does not own: `CLAUDE_PLUGIN_ROOT`
 (every hook command), `CLAUDE_ENV_FILE` (command-root-anchor writes the export there),

@@ -67,6 +67,13 @@ a refusal when nothing moved; (2) open the task text with a one-line opt-out sco
 explicit opt-out from any instruction-file default flow; every other rule still applies"). The
 empty-diff check is the one that actually catches it; the preamble only avoids it.
 
+Evidence status (2026-09-06): the loud half is verified on this machine — a quota-exhausted
+account and a provider without model access both exit 1 with `ERROR:` on stderr and an empty
+`--output-last-message` file, on codex-cli 0.153.4. The quiet half (clean exit, empty diff)
+is still fable-advisor's observation, not ours: the repro (a throwaway `CODEX_HOME` whose
+`AGENTS.md` mandates an "orchestrator flow", one append-a-line task with and without the
+preamble) could not run before the Codex quota resets on 2026-09-14. Run it then.
+
 ## Degrading gracefully
 
 Every line above still has to make sense with the plugin absent, the Codex CLI missing, or the

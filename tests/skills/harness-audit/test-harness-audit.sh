@@ -3,7 +3,7 @@
 #
 # audit.sh's fragment integrity guard catches LOST checks, not SILENT ones. Each
 # known-bad fixture below is paired with a clean one; the matching check must
-# FIRE on bad and stay SILENT on good. Covered: 04, 05, 20, 22, 28, 29, 70, 71.
+# FIRE on bad and stay SILENT on good. Covered: 04, 05, 20, 22, 28, 29, 70, 71, 72.
 set -uo pipefail
 
 HERE="$(cd -P "$(dirname "$0")" && pwd)"
@@ -117,6 +117,15 @@ expect_warn   71 check-71-bad-review-gate-on
 setup_codex_state check-71-good-review-gate-off false
 expect_silent 71 check-71-good-review-gate-off
 unset MH_CODEX_DATA_DIR
+
+# Check 72: Codex effort-set drift. A fake plugin cache carries the plugin's
+# VALID_REASONING_EFFORTS line; the fixture doc either matches it or not.
+mkdir -p "$CODEX_TMP/cache/scripts"
+printf 'const VALID_REASONING_EFFORTS = new Set(["none", "minimal", "low", "medium", "high", "xhigh"]);\n' > "$CODEX_TMP/cache/scripts/codex-companion.mjs"
+export MH_CODEX_CACHE_DIR="$CODEX_TMP/cache"
+expect_warn   72 check-72-bad-effort-drift
+expect_silent 72 check-72-good-effort-set
+unset MH_CODEX_CACHE_DIR
 
 echo ""
 echo "self-test: $pass passed, $fail failed"
