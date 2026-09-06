@@ -5,6 +5,29 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.31] — 2026-09-07
+
+### Changed
+
+- `post-mortem` SKILL.md rewritten to the fleet shape (12.1 KB to 6.9 KB): three standing rules,
+  five numbered steps each with a Done-when line, a failure-modes section. Duplicated text
+  (the four-input gate stated three times, "harvest from context" twice) collapsed to one place.
+  The archive step skips its AskUserQuestion when the user already named the destination, and
+  the repo-markdown write is a plain Write plus a yes/no before the commit; the earlier rule
+  that only a dispatched agent may write the file had no gate or doctrine behind it.
+  Dropped: the METHODOLOGY-alignment bullet, now one "Doctrine ties" line; the stale "3 repo-committed post-mortems, re-check the gate" note (five exist and
+  all five passed the gate) and the dated Section 11 origin note (git history has it).
+  Description gains a trigger clause. Template header records that the five existing records
+  predate sections 8 and 11 and are not retrofitted (research: 4 of 5 have nine sections, one
+  has ten).
+
+### Added
+
+- Evals for `post-mortem` (18 cases total): a complete case on a scaffolded git repo with the
+  fix commit and regression test, and a missing-input case that must stop and ask for the
+  validation input instead of drafting or running the tests itself. The loader test learns
+  a `not_contains` contract grader (the sample must not match) and checks the slash-command
+  invocation, since a `disable-model-invocation` skill cannot be reached by the Skill tool.
 ## [1.1.30] — 2026-09-07
 
 ### Added
@@ -38,6 +61,7 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
   (2026-09-07): `claude plugin validate` checks manifest fields and agent frontmatter parse
   only, and `/skill-doctor` is a usage and context-cost report, so no audit check overlaps a
   vendor surface.
+||||||| parent of 21a599db (refactor(post-mortem): fleet-shape rewrite (rules, five steps with Done-when, failure modes), skip archive ask when destination given, evals: complete + missing-input cases; v1.1.31)
 
 ## [1.1.29] — 2026-09-07
 

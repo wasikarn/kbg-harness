@@ -1,6 +1,6 @@
 # Review-agent and skill evals
 
-Eighteen cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
+Twenty cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
 agents, one planted-defect case and one clean control per agent, the same fires/silent pairing
 `tests/skills/harness-audit/known-bad/` uses for audit checks. Each case is
 `prompt.md` (the ask: an agent case dispatches by `subagent_type`, a skill case invokes by `skill:`), `case.yaml` (a
@@ -20,6 +20,14 @@ the file's contents). Their `skill-fired.md` is `tool_used: Skill`; their regex 
 planted tell is absent (`not_contains`) or a source specific is kept (`contains`), and the loader
 test proves each pattern against the scaffolded fixture.
 
+Two for `post-mortem` (tag `post-mortem`): a complete case whose repo carries the fix commit and
+regression test, graded on all 11 sections in order, no hedging, a Rule 4 failure class, and an
+LLM rubric for the checklist and anchoring; and a missing-input case that withholds the
+validation input and must get a question, not a draft. The skill is user-invoked
+(`disable-model-invocation`), so `prompt.md` opens with `/mh:post-mortem` and `skill-loaded.md`
+is a `trace` regex on the skill's own text rather than `tool_used: Skill`. Two runner facts are
+undocumented and the first live run settles both: whether a slash command in `prompt.md` is
+expanded, and whether `target: trace` is accepted (these are the only two graders using it).
 Two for `harness-audit` (tag `harness-audit`): a planted fleet with two CRITs (skill name
 mismatch, missing `tools:` grant) that the session must fix and confirm with a second run
 (`audit-reran.md` is `tool_used: Bash`, min 2; file graders check the fix landed in the named
@@ -28,6 +36,7 @@ is this suite's first use of the key and unverified against the runner, so `flee
 proves the same thing on the file's bytes).
 The scaffolded repo is its own plugin cache (`--plugin-cache .`). Bash is not granted by
 default: run these with `--allow-tools Bash` (the prompt frontmatter also lists it).
+||||||| parent of 21a599db (refactor(post-mortem): fleet-shape rewrite (rules, five steps with Done-when, failure modes), skip archive ask when destination given, evals: complete + missing-input cases; v1.1.31)
 
 Run (needs `plugin eval` early access on the account; 2.1.263 prints "currently in early access"
 otherwise):

@@ -1,8 +1,9 @@
 # Post-Mortem Template
 
-The 11-section template for `mh:post-mortem` Phase 3. Fill every section; see
-SKILL.md Phase 3 Actions for how to handle empty ("None.") or unknown
-("Unknown — tracked in <follow-up issue>.") sections.
+The 11-section template for `mh:post-mortem` step 3. Fill every section; an empty one reads
+"None.", one under investigation reads "Unknown — tracked in <follow-up issue>". Records under
+`docs/post-mortems/` written before section 8 existed (and, for four of them, section 11) keep
+their nine or ten sections; they are not retrofitted.
 
 ```markdown
 # Post-Mortem: <Bug Title> (<slug>)

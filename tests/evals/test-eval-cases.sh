@@ -25,6 +25,7 @@ for d in "$EVALS"/*/; do
   case "$c" in
     tech-humanize-*) /usr/bin/grep -q 'skill: "mh:tech-humanize"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     harness-audit-*) /usr/bin/grep -q 'skill: "mh:harness-audit"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
+    post-mortem-*)   /usr/bin/grep -q '^/mh:post-mortem' "$d/prompt.md" || { bad "$c: prompt.md does not invoke the skill by slash command"; continue; } ;;
     *) /usr/bin/grep -q 'subagent_type: "mh:' "$d/prompt.md" || { bad "$c: prompt.md does not name a subagent_type"; continue; } ;;
   esac
 
@@ -70,6 +71,8 @@ PY
     requirement-analyst-clean)    sample='verdict: ready' ;;
     tech-humanize-*)              sample='FIXTURE' ;;
     harness-audit-*)              sample=$'=== Summary ===\nCritical: 0\nWarnings: 1\nInfo:     4\n' ;;
+    post-mortem-complete)         sample=$'## 1. Summary\n\n## 2. Symptom\n\n## 3. Root Cause (Mechanism)\n\n## 4. Symptom Linkage\n\n## 5. Fix\n\n## 6. Discovery Method\n\n## 7. Escape Reason\n\n## 8. Failure class\n\n## 9. Validation Proof\n\n## 10. Follow-Ups\n\n## 11. Assumption Trace' ;;
+    post-mortem-missing-input)    sample='Before drafting I need the fourth input: passing validation.' ;;
     *) sample='' ;;
   esac
   [ -n "$sample" ] || { bad "$c: no verdict sample in test-eval-cases.sh (add one to the case list)"; continue; }
@@ -100,8 +103,9 @@ for f in sorted(os.listdir(sys.argv[1])):
     fl = re.search(r"^flags: (\w+)$", m.group(1), re.M)
     flags = re.I if fl and "i" in fl.group(1) else 0
     if f in ("contract.md", "clean.md"):
-        if not re.search(p.group(1), sample, flags):
-            print(f"  {f}: pattern rejects the observed verdict shape {sample!r}"); bad = 1
+        want = "match: not_contains" not in m.group(1)
+        if bool(re.search(p.group(1), sample, flags)) != want:
+            print(f"  {f}: pattern {'rejects' if want else 'matches'} the verdict sample {sample!r}"); bad = 1
     elif os.path.basename(os.path.dirname(sys.argv[1])).startswith("tech-humanize-"):
         if not re.search(p.group(1), sample, flags | re.M):
             print(f"  {f}: pattern does not match the scaffolded fixture, so it cannot discriminate"); bad = 1
@@ -110,7 +114,7 @@ PY
   then bad "$c: a grader is malformed"; continue; fi
   ok "$c"
 done
-[ "$n" -eq 18 ] || bad "expected 18 cases, found $n"
+[ "$n" -eq 20 ] || bad "expected 20 cases, found $n"
 
 echo "eval-cases: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
