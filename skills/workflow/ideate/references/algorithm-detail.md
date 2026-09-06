@@ -5,7 +5,9 @@ COMMAND.md until the commands-to-skills conversion folded it into SKILL.md, 2026
 SKILL.md keeps the control flow and every invariant; this file carries the literal templates
 read at execution time. Provenance for all of it: `provenance.md`.
 
-## Phase 1 — Diverge payload (per Agent call)
+## Phase 1 — Diverge prompt (per Agent call)
+
+The Agent tool takes one prompt; put the DIVERGENT block first, then this payload.
 
 ```
 PROBLEM:
@@ -14,12 +16,12 @@ PROBLEM:
 {context ? `CONTEXT:\n${context}\n\n` : ""}FRAME — {frame.label}:
 {frame.prompt}
 
-Generate {ideasPerFrame} ideas under this frame.
+Generate 6 ideas under this frame.
 Output JSON array only. No prose before or after.
 [{"text": "...", "rationale": "..."}, ...]
 ```
 
-## Phase 1 — Diverge system prompt (per Agent call)
+## Phase 1 — DIVERGENT block (top of every Diverge prompt)
 
 > You are in DIVERGENT mode. You are a generator, not a critic.
 > Generate 6 short distinct ideas under this frame. Each idea is
@@ -29,7 +31,7 @@ Output JSON array only. No prose before or after.
 > Output a JSON array only. No prose before or after.
 > `[{"text": "...", "rationale": "..."}, ...]`
 
-## Phase 3 — Deepen system prompt (per Agent call)
+## Phase 3 — FOCUS block (top of every Deepen prompt)
 
 > You are in FOCUS mode. Take one promising idea and connect
 > dots. Sketch how it would actually work in 4 to 8 sentences.
@@ -38,8 +40,8 @@ Output JSON array only. No prose before or after.
 > off (variations, combinations with other domains, things this
 > unlocks). Output JSON only.
 
-Its user prompt includes **sibling ideas** from Phase 1 as a recombination pool, but not any
-other deepen branch's output (SKILL.md's Isolation invariant section).
+Below the block, the prompt carries the focus idea and the **sibling ideas** from Phase 1 as a
+recombination pool, never another deepen branch's output (SKILL.md, Isolation invariant).
 
 ## 3-axis scoring rubric — full mechanics
 
@@ -64,11 +66,13 @@ Source: `provenance.md`'s "3-axis scoring rubric source" section.
 
 ## Critic invocation (auto-fire path)
 
-Collect the Phase 1 `ideas[]` JSON and invoke `ideate-critic` per its Input Contract
-(`agents/ideate-critic.md`); render the output shape from its returned `scores`, `clusters`,
+Collect the Phase 1 `ideas[]` JSON into the envelope in `agents/ideate-critic.md` and pass it as
+the whole prompt of one `subagent_type: mh:ideate-critic` Agent call; parse its final message
+as JSON (a reply with text outside the braces is a parse failure, reported like a failed
+branch) and render the output shape from its returned `scores`, `clusters`,
 `shortlist`, `shortlistReasons`, `nonObviousPick`, `nonObviousPickReason`, `runnerUp`,
-`confidence`, `traps`, `deepened`, `provocation`. Deepen still runs as 3 parallel Agent
-calls, using the critic's `shortlist`.
+`confidence`, `traps`, `deepened`, `provocation`. The critic's `deepened` is the Focus
+block; Phase 3's three Agent calls run only on the host path.
 
 ## Output shape — full rendering contract
 
@@ -76,9 +80,9 @@ Render in this order after Phase 2 — don't collapse into a wall of prose; the 
 the point.
 
 1. **Brief + cost estimate.** 1-2 lines on the problem/reframe, then:
-   *"Cost estimate: ~8–10 Agent calls, ~3k–8k input tokens, ~1k–3k output
-   tokens. Actuals vary by problem size."* Advisory heuristic, not a metered
-   bill.
+   *"Cost estimate: 8 Agent calls (6 on the critic path), ~3k–8k input tokens,
+   ~1k–3k output tokens. Actuals vary by problem size."* Advisory heuristic,
+   not a metered bill.
 2. **Wide set.** Full pool grouped by cluster and angle, one short phrase
    per idea, score chips like `[N7 V8 F9]`. If the critic ran, render its
    `frameCount` next to any cluster ≥3 ("3 frames converged here") — same

@@ -25,7 +25,7 @@ You do not pad, you do not cheerlead, and you do not produce prose walls. Output
 
 ## Input Contract
 
-The invoking host passes a JSON envelope on **stdin**:
+The invoking host passes a JSON envelope as the whole prompt:
 
 ```jsonc
 {
@@ -52,7 +52,7 @@ The invoking host passes a JSON envelope on **stdin**:
 
 ## Output Format
 
-Emit a single JSON object on **stdout**. No prose before or after. The host parses it directly.
+Your final message is a single JSON object. No prose before or after. The host parses it directly.
 
 ```jsonc
 {
@@ -144,7 +144,7 @@ output programmatically; a wrapped or annotated response is a parse failure, not
 
 ## Procedure
 
-1. **Read the input envelope from stdin.**
+1. **Read the input envelope from the prompt.**
 2. **Score every idea** on the 3 axes. Be adversarial: if an idea looks attractive but you can name a hidden cost, mark it as a trap. (Named bias guard — anchoring: score every idea before ranking any of them, don't let the first one scored set your scale. Confirmation: `trap` exists to force you to look for the reason an idea is wrong, not just why it's right.)
 3. **Cluster the ideas** by underlying angle, not by frame or keyword overlap.
 4. **Build the shortlist**: exclude traps, rank by `total`, take top-K. Attach `shortlistReasons`, `runnerUp`, and `confidence`.
@@ -168,4 +168,4 @@ You are still the same model class as the generator. Fresh context mitigates but
 
 - **Minimum surface:** the output envelope is the minimum shape the host needs.
 - **Verifiable criteria:** every score maps to a decision-relevant property (novelty, viability, fit).
-- **Tests verify intent, not just shape:** the downstream code (Phase 2 parsing in `skills/workflow/ideate/SKILL.md`) is the actual contract check — there is no eval fixture for this, `eval/` does not exist in this repo.
+- **Tests verify intent, not just shape:** the host's Phase 2 parse in `skills/workflow/ideate/SKILL.md` is the contract check at run time; `evals/ideate-run/` proves a full run renders the fields this agent returns.

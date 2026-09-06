@@ -1,6 +1,6 @@
 # Review-agent and skill evals
 
-Twenty-two cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
+Twenty-four cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
 agents, one planted-defect case and one clean control per agent, the same fires/silent pairing
 `tests/skills/harness-audit/known-bad/` uses for audit checks. Each case is
 `prompt.md` (the ask: an agent case dispatches by `subagent_type`, a skill case invokes by `skill:`), `case.yaml` (a
@@ -37,6 +37,12 @@ is this suite's first use of the key and unverified against the runner, so `flee
 proves the same thing on the file's bytes).
 The scaffolded repo is its own plugin cache (`--plugin-cache .`). Bash is not granted by
 default: run these with `--allow-tools Bash` (the prompt frontmatter also lists it).
+Two for `ideate` (tag `ideate`): a full run on an open design problem, bounded on Agent calls
+(`fanout.md`, `tool_used: Agent` min 6 max 8: 8 on the host path, 6 when the critic deepens) and
+graded on the rendered output shape (score chips, ★ pick, provocation line); the isolation
+invariant and wave shape are not observable from these graders; and an abort control, a
+"quick"/"canonical" question that must fail the pre-flight gate and get a direct answer with no
+Agent call at all (`no-fanout.md`, max 0).
 
 Two for `memory-lint` (tag `memory-lint`): a planted store with one repairable finding per
 detector class (typo'd wikilink, stale pointer, unindexed unreachable file) that the session must
@@ -54,6 +60,7 @@ claude plugin eval . --scaffold --runs 1 --no-publish
 claude plugin eval . --scaffold --tag silent-failure-hunter --runs 1 --no-publish
 claude plugin eval . --scaffold --tag harness-audit --allow-tools Bash --runs 1 --no-publish
 claude plugin eval . --scaffold --tag memory-lint --allow-tools Bash --runs 1 --no-publish
+claude plugin eval . --scaffold --tag ideate --runs 1 --no-publish     # the run case spawns 6-8 agents
 ```
 
 `--scaffold` is required: the fixtures live in each case's `scaffold_script`.

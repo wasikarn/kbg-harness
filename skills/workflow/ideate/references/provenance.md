@@ -1,24 +1,22 @@
 # Ideate — Provenance & Cross-References
 
-Upstream algorithm-shape citations, the fan-out cap's audit history, and pointers to related
-kbg surfaces — kept out of `SKILL.md` to stay under its size budget.
+Upstream algorithm-shape citations (`/tmp/adhd-repo/...` paths are the port-time checkout,
+2026-06, not a live path), the fan-out cap's audit history, and pointers to related kbg
+surfaces — kept out of `SKILL.md` to stay under its size budget.
 None of this is needed to execute a run; it's why the design is shaped the way it is.
 
 ## 2-wave fan-out — audit history
 
 The 2026-06-12 audit caught a 44→105-agent failure mode where a
 soft cap on a work-list was silently doubled by an audit + verify
-layer (see `memory/bounded-agent-spawning.md` and
-`memory/whole-repo-dig-2026-06-16.md`). There is no eval/regression
-fixture for this — `eval/` does not exist in this repo (the eval
-dataset gate was deleted, not rebuilt, in the 2026-06-27 reset;
-see `CLAUDE.md`'s Validation section). What is actually code-enforced
-is narrower than a fixture would claim: METHODOLOGY Rule 13's hard cap
+layer (operator memory store, `bounded-agent-spawning` and
+`whole-repo-dig-2026-06-16`; not in this repo). `evals/ideate-run/`
+bounds Agent calls per run (8 to 9) but cannot see wave shape; what is
+code-enforced is narrower than a fixture would claim: METHODOLOGY Rule 13's hard cap
 clamps any single wave's work-list to ≤5 before spawning. This command's Phase 1 (5)
 and Phase 3 (3) sizes are written to sit inside that per-wave
 clamp. The "exactly 2 waves, not 3+" shape is this skill's own
-design contract (see Phase 1 and Phase 2 — including its Deepen step — in
-`SKILL.md`), not
+design contract (Phase 1 through Phase 3 in `SKILL.md`), not
 something F8.5 polices — F8.5 caps how big a wave can get, not
 how many waves a skill runs.
 
@@ -36,13 +34,12 @@ records the port decisions (deterministic frame pick replacing
 Source: upstream `/tmp/adhd-repo/skills/adhd/SKILL.md:84-112` and
 `/tmp/adhd-repo/src/engine.ts:103-175, 177-229`.
 
-**Full rationale** (compact routing rule lives in `SKILL.md`'s "Phase 2 —
-Focus" section):
+**Full rationale** (compact routing rule lives in `SKILL.md`, "Phase 2: Focus", Who scores):
 
 - Host-Claude scoring (Phase 2+3 run on the same model class as the Phase 1
   generators) carries the LLM-judge-circularity caveat from `docs/reference/operating-model.md`'s
   "Why — the unifying crux".
-- On the explicit-invocation path (via Step 1, self-judge skipped), stakes
+- On the explicit-invocation path (the gate is skipped), stakes
   aren't classified — don't infer high-stakes from prompt wording like
   "critical"/"production"; that lexical-heuristic pattern is exactly what
   `harness-audit` already flags as toothless elsewhere.
@@ -52,7 +49,8 @@ Focus" section):
   (CLAUDE.md's Architecture section, "the implementer agreeing with its own work").
 - Routing to the critic adds no third fan-out wave: Phase 2 goes from 0
   agent calls (host-inline) to 1 sequential call on the auto-fire path, not
-  a parallel spawn — the "2-wave, peak-5" F8.5 contract is unaffected.
+  a parallel spawn, and that call returns the deepened branches, so Phase 3
+  does not run — the "2-wave, peak-5" F8.5 contract is unaffected.
 
 ## Output-shape source
 
@@ -76,27 +74,14 @@ implementation.
 
 Source: upstream `/tmp/adhd-repo/skills/adhd/SKILL.md:192-194`.
 
-## Advisory hooks — full mechanics
+## Retired advisory hooks (historical)
 
-Full detail behind `SKILL.md`'s "Session frame rotation, convergence, and
-memory search" section.
-
-**Session frame rotation.** A SessionStart hook emits a block of the form:
-
-```markdown
-<ideate-rotation index="N">
-- hardware-eyes
-- regulator
-- ...
-</ideate-rotation>
-```
-
-If present, prefer these 5 frames for the next ideate run.
-
-**Ideate memory search.** Historical design only — the former ideate-search companion skill
-was deleted 2026-09-01 (its `ideate-memory` qmd collection and capture hook never existed on
-any machine, so every query dead-ended). If past-run search is ever wanted, wire the capture
-hook first and query the collection via the qmd MCP directly.
+Three hook-emitted blocks were designed and never shipped past the v1.0.0 rebuild:
+`<ideate-rotation>` (SessionStart frame rotation), `<ideate-budget>` and
+`<ideate-convergence>` warnings (dropped with the budget/telemetry hooks, v1.0.1), and the
+ideate-search companion skill (deleted 2026-09-01; its qmd collection never existed). Frame
+rotation is now the "swap at least two on a re-run" rule in `SKILL.md`. Wire a hook first
+before any of these is cited again.
 
 ## Cross-references
 
@@ -110,7 +95,7 @@ hook first and query the collection via the qmd MCP directly.
 - **Fresh-context critic pattern** —
   `agents/ideate-critic.md`
   is the kbg-native critic used for the same-model-critic-circularity
-  caveat (see Phase 2 — Focus in `SKILL.md`). Score + cluster +
+  caveat (`SKILL.md`, "Phase 2: Focus"). Score + cluster +
   deepen are engineered to be re-pointable at this fresh-context
   critic.
 - **Methodology on maker ≠ checker** —
@@ -118,7 +103,7 @@ hook first and query the collection via the qmd MCP directly.
   agreeing with its own work is not proof; the verifying agent
   must be given fresh context.
 - **Bounded-agent-spawning precedent** —
-  `memory/bounded-agent-spawning.md`
+  operator memory store, `bounded-agent-spawning`
   — the failure mode this skill's 2-wave cap is designed to
   prevent; full narrative + enforcement caveat in the
   "2-wave fan-out — audit history" section above.
@@ -129,4 +114,6 @@ hook first and query the collection via the qmd MCP directly.
   `kbg-vs-adhd.md`'s "Eval rigor limitation" section (read via Bash: `cat "${MH_PLUGIN_ROOT}/docs/research/kbg-vs-adhd.md"`)
   is the load-bearing
   disclaimer: treat this as a structured brainstorming tool, not
-  a quality-validated generator.
+  a quality-validated generator. That doc is frozen research: its
+  `eval/` paths and `skills/ideate/` location predate the 2026-06-27
+  reset and the bucket move; the live eval is `evals/ideate-run/`.

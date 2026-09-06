@@ -3,170 +3,133 @@ name: ideate
 description: "Parallel divergent ideation (5 isolated agents, rotating frames, novelty/viability/fit scoring). Use when the question is open-ended. Say 'brainstorm'. Not for syntax, lookups, or closed-phrasing asks."
 argument-hint: "[problem-statement]"
 disable-model-invocation: false
-disable-model-invocation-reason: Auto-fire on vague prompts is load-bearing (catches prompts the model would otherwise default on). Cost is bounded by the 5-agent-per-wave cap (METHODOLOGY Rule 13) and the 2-wave fan-out callout below — NOT by this flag.
+disable-model-invocation-reason: Auto-fire on vague prompts is load-bearing (catches prompts the model would otherwise default on). Cost is bounded by the 5-agent-per-wave cap (METHODOLOGY Rule 13) and the 2-wave structure below, not by this flag.
 model: inherit
 effort: high
 ---
 
 # Ideate
 
-Single kbg ideation surface. Type `mh:ideate` explicitly (e.g.
-`mh:ideate How should we design a feature flag service?`), or let the model auto-route here on
-vague, open-ended, high-stakes prompts — either path runs the same algorithm.
+Divergent ideation in two fan-out waves: five isolated generator agents under different
+cognitive frames, a score-and-cluster pass, then three deepen agents. Explicit
+(`mh:ideate <problem>`, "brainstorm") and auto-routed invocations run the same algorithm.
 
 ## Pre-flight gate
 
-This surface is expensive — about 8-10 Agent calls, 30-90s wall clock, 5-10x a single
-answer — so don't pay that cost when a direct answer is better. Run this gate before Phase 1.
+A run costs 8 Agent calls on the host path (6 on the critic path), 30-90 s, and 5-10x a direct
+answer. An imperative request to run it (`mh:ideate <problem>`, "brainstorm", "ideate mode",
+"run ideate on this") is opt-in: go straight to Phase 1. Mentioning the skill's name inside a
+question about whether to run it is not opt-in; the gate applies. Otherwise ask three
+questions and abort on any NO:
 
-Steps 0-2 (warning-block check, explicit-invocation bypass, when the self-judge applies): read `references/preflight.md` first. An explicit `mh:ideate`/"brainstorm" skips straight to Phase 1; otherwise self-judge below.
+1. **Open-ended?** Several viable answers. One canonical answer (syntax fix, known-root-cause
+   bug, lookup, "what is the X for Y", "find the file that does X") is a NO.
+2. **High-stakes?** The obvious answer is expensive to get wrong (architecture, public API,
+   naming, schema, fuzzy debugging). A side project at 11pm is a NO.
+3. **Open phrasing?** "quick", "standard", "canonical", "textbook", "just", "one-liner" mean
+   the user wants the direct answer: NO.
 
-Ask three questions. If any answer is NO, ABORT.
+On abort, answer directly; optionally add one line: *"For a wider exploration under parallel
+cognitive frames with explicit trap detection, run `mh:ideate <your problem>`."*
+Done when: the brief names either the three YES answers or the explicit trigger.
 
-1. **Open-ended?** Multiple viable answers, or one canonical (syntax fix, known-root-cause
-   bug, lookup, "what is the X for Y", "find the file that does X") → abort.
-2. **High-stakes?** Is the obvious answer expensive to get wrong (architecture, public API,
-   naming, schema, fuzzy-debug = yes; side project at 11pm = no)?
-3. **Open phrasing?** Did the user avoid "quick"/"standard"/"canonical"/"textbook"/"just"/
-   "one-line(r)"? Any of those → they want the direct answer, abort.
+## Wave structure (load-bearing)
 
-All three pass → proceed to Phase 1. Any fails → ABORT and answer directly, optionally
-appending: *"If you want a wider exploration under parallel cognitive frames with explicit
-trap detection, run `mh:ideate <your problem>`."*
+- **Phase 1 Diverge:** 5 parallel Agent calls, peak 5.
+- **Phase 2 Focus:** score and cluster on the host, no fan-out; or one sequential critic call,
+  which also deepens and so replaces Phase 3.
+- **Phase 3 Deepen (host path only):** 3 parallel Agent calls, peak 3.
 
-## 2-wave fan-out (load-bearing)
+Peak concurrency 5 is the Rule 13 hard cap. Phase 1 completes before Phase 2 starts; never
+collapse Diverge and Deepen into one wave of 8. History of the 44-to-105-agent failure this
+guards against: `references/provenance.md`.
 
-> **WARNING — this skill is 2 fan-out waves, NOT 1.**
->
-> - **Phase 1 (Diverge)**: 5 parallel Agent calls, peak 5.
-> - **Phase 2 (Focus)**: sequential score + cluster on the host, no fan-out.
-> - **Phase 3 (Deepen)**: 3 parallel Agent calls, peak 3.
->
-> **Peak concurrent = 5** (the hard cap in METHODOLOGY Rule 13). Sequential: Phase 1 → Phase 2 →
-> Phase 3. ≈8-10 Agent calls/run. **Do not collapse into 1 wave.**
->
-> Audit history (the 44→105-agent failure mode) and enforcement mechanism:
-> `references/provenance.md`'s "2-wave fan-out — audit history" section.
+## Phase 1: Diverge
 
-## Phase 1 — Diverge
+1. **Pick 5 frames** from `references/frames.md`. Code-shaped problem: 4 tagged `code` or
+   `design` plus 1 tagged `wild`; product or strategy problem: a mix across all tags. Name
+   the five in the brief. A re-run on the same problem swaps at least two.
+2. **Dispatch 5 parallel Agent calls** (`subagent_type: general-purpose`), one per frame. Each
+   prompt is the DIVERGENT block followed by the payload from `references/algorithm-detail.md`,
+   Phase 1, copied verbatim. The Agent tool has no separate system prompt; the block goes at
+   the top of the prompt. A prompt carries only the problem, optional context, and its own
+   frame: never another branch's ideas or a list of the other frames (Isolation invariant).
+3. **Wait for all five**, then parse each as a JSON array. A branch that returns nothing
+   parseable is reported in the brief as a failed branch, never silently dropped; fewer than 3
+   parseable branches stops the run with that fact.
+   Done when: every branch is either an idea list or a named failure.
 
-For the problem P:
+## Phase 2: Focus
 
-1. **Pick 5 cognitive frames** — see [Picking frames](#picking-frames).
-2. **Spawn 5 parallel Agent calls**, one per frame — each Agent gets ONLY the payload and
-   system prompt in `references/algorithm-detail.md`'s "Phase 1" section (read them there verbatim
-   before dispatching), no peer branch data (see
-   [Isolation invariant](#isolation-invariant)).
-3. **Wait for all 5 to return** before reading outputs — don't start reading one branch
-   before the others finish.
+1. **Score** every idea on three axes, 0-10, before ranking any (anchoring guard):
+   novelty (distance from the obvious default), viability (could it ship), fit (addresses the
+   stated problem). `total = novelty * 0.35 + viability * 0.40 + fit * 0.25`; viability is
+   heaviest because unshippable-but-brilliant is the dominant failure mode. Attach a one-line
+   `trap` reason to any attractive idea with a hidden cost, false economy, scale ceiling, or
+   premature abstraction (confirmation guard: look for why an attractive idea is wrong). `trap`
+   is a reason field, never a score threshold.
+2. **Cluster** into 3-6 groups by underlying angle, labelled by the angle ("remove-the-server
+   plays"), never by surface keyword. A cluster drawn from 3 or more distinct frames is
+   independent convergence: say so beside the label.
+3. **Shortlist** the top 3 by `total`, traps excluded, with a one-line reason each, the
+   runner-up and why it missed, and a confidence level with its reason.
 
-Algorithm-shape source + port decisions: `references/provenance.md`'s "Phase 1 algorithm-shape source" section.
+**Who scores.** Auto-fired runs (the gate passed on high stakes) hand Phase 2 to the
+`ideate-critic` agent, one sequential Agent call (`subagent_type: mh:ideate-critic`) with the
+envelope in `agents/ideate-critic.md`; its JSON reply carries every field the output shape
+renders, including the three deepened branches, so Phase 3 is skipped. Explicit runs score on
+the host and run Phase 3 unless the user asks for the critic. The critic is the same model class
+as the generators: fresh context cuts anchoring, and its output is advisory evidence, not
+ground truth. Done when: every idea has three scores, a cluster, and a trap or none.
 
-## Phase 2 — Focus
+## Phase 3: Deepen (host path)
 
-After all 5 Diverge branches return:
-
-1. **Score.** Rate each idea on three axes 0 to 10:
-   - **Novelty** — distance from the obvious default
-   - **Viability** — could it actually ship
-   - **Fit** — does it address the stated problem
-
-   Attach a one-line `trap` reason to any idea that looks attractive but is a trap (hidden
-   cost, false economy, will-not-scale, premature abstraction) — `trap` is a free-text reason
-   field, NOT a score threshold; full mechanics + score-chip format:
-   `references/algorithm-detail.md`'s "3-axis scoring rubric" section.
-
-   **Named bias guard (anchoring + confirmation):** score every idea on the same axes before
-   ranking — don't let the first idea set the scale. `trap` is the confirmation guard: look
-   for why an attractive idea is wrong, not just evidence it's right.
-
-2. **Cluster.** Group ideas into 3-6 clusters by **underlying angle**, not surface keywords —
-   label by angle ("remove-the-server plays", "cache-shaped plays"). The shape of the idea
-   space is the point. **Note independent convergence:** when a cluster draws from ≥3
-   distinct frames, say so next to the label ("3 frames converged here") — keep it visible.
-
-3. **Deepen the top 3.** Rank by weighted score (`novelty × 0.35 + viability × 0.40 +
-   fit × 0.25`), exclude traps, take top 3. Spawn one **parallel** Agent call per idea
-   (Phase 3) with the FOCUS-mode system prompt from `references/algorithm-detail.md`'s
-   "Phase 3" section — sibling ideas ride along as a recombination pool, never another deepen
-   branch's output.
-
-**Fresh-context critic — default on the auto-fire path.** Host-Claude scoring carries an
-LLM-judge-circularity caveat; Step 2 already requires a YES on "high-stakes?" before
-auto-fire, so:
-
-- **Auto-fired (via Step 2):** default to the `ideate-critic` agent
-  (`agents/ideate-critic.md`), not host-Claude.
-- **Explicit invocation (via Step 1, self-judge skipped):** keep host-Claude as default —
-  stakes aren't classified here; the user can request the critic explicitly.
-
-Invocation + returned-field rendering: `references/algorithm-detail.md`'s "Critic invocation" section.
-Full rationale: `references/provenance.md`'s "Phase 2 critic-routing source" section.
-
-## Frames table
-
-The 15 cognitive frames — each with its tags (`code`/`design`/`general`/`wild`) and vantage
-prompt — live in [`references/frames.md`](references/frames.md), kept out of this file for
-size.
-
-### Picking frames
-
-Code-shaped problems: pick 4 frames tagged `code` or `design`, plus 1 tagged `wild`. Open
-product/strategy problems: a mix from all tags. Vary picks across sessions so re-runs produce
-different candidates.
-
-## 3-axis scoring rubric
-
-```
-total = novelty * 0.35 + viability * 0.40 + fit * 0.25
-```
-
-Viability is heaviest (unshippable-but-brilliant is the dominant failure mode). Full
-mechanics — trap field, chip rendering, source: `references/algorithm-detail.md`'s
-"3-axis scoring rubric" section.
+Dispatch 3 parallel Agent calls (`subagent_type: general-purpose`), one per shortlisted idea,
+each prompt the FOCUS block from
+`references/algorithm-detail.md`, Phase 3, plus the focus idea and the Phase 1 sibling ideas as a
+read-only recombination pool. Never pass another deepen branch's output. Done when: each
+returns a sketch, a load-bearing risk, a first concrete step, and 3-5 child ideas.
 
 ## Isolation invariant
 
-**Diverge branches MUST NOT see each other's output — each Agent call is independent.** The
-Phase 1 payload does NOT list other branches or carry peer `Idea` objects, and its system
-prompt forbids cross-talk. Sibling recombination is passed ONLY at Phase 3 (deepen), never
-during Diverge. This is load-bearing: a branch seeing another's output anchors the two
-together, collapsing the method to one wider thought (no shared mutable state across parallel
-branches).
-
-**Practical rules:** don't call one Diverge Agent from another; don't include a "here's what
-the other branches generated" line in any Diverge userPrompt; don't carry `Idea` objects
-forward into a Phase 1 sibling. DO pass siblings as a read-only recombination pool to the
-Phase 3 deepen Agent — never the focus idea.
-Source: `references/provenance.md`'s "Isolation invariant source" section.
-
-## Phase 4 — Interactive deepen (optional)
-
-If the user replies after the initial output asking to explore a shortlisted idea, rotate the
-frames, or combine candidates, run a short Phase 4 pass instead of starting over. The 3
-supported patterns and exact behavior: [`references/phase4.md`](references/phase4.md).
-Phase 4 is **opt-in** — don't offer it unprompted. It costs the same as a partial run
-(1-3 Agent calls); ask first if the budget/convergence warning is active.
+Diverge branches never see each other. A branch that reads another's output anchors to it and
+the method collapses into one wider thought. Siblings are shared only at Phase 3, only as a
+pool, never as the focus idea. A Diverge or Deepen branch never spawns its own Agent calls:
+the branch prompt is the whole task, and a nested wave is the 44-to-105 failure again.
 
 ## Output shape
 
-Render in this order after Phase 2 — the structure is the point, never a wall of prose:
-**1. Brief + cost estimate** → **2. Wide set** (clusters, score chips, convergence notes) →
-**3. Converge** (2-4 shortlist with reasons, ★ non-obvious pick, traps listed separately) →
-**4. Focus** (3 deepened branches) → **5. Provocation** (one wildcard).
-Full per-item rendering contract — read before rendering:
-`references/algorithm-detail.md`'s "Output shape — full rendering contract" section.
+Render in this order; the structure is the point, never a wall of prose. Full per-item
+contract: `references/algorithm-detail.md`, Output shape.
 
-## When NOT to use
+1. **Brief**: problem in 1-2 lines, the five frames, any failed branch, the cost line
+   ("8 Agent calls" on the host path, "6" on the critic path; advisory, not metered).
+2. **Wide set**: clusters with angle labels, one phrase per idea, score chips `[N7 V8 F9]`,
+   convergence notes.
+3. **Converge**: the 3 shortlisted ideas with reasons, ★ on the non-obvious-but-viable pick with its
+   reason, confidence, runner-up, traps listed separately with their reasons.
+4. **Focus**: the 3 deepened branches.
+5. **Provocation**: one wildcard, *"What if we took this seriously: <highest-novelty survivor>"*.
 
-Concrete Step 2 abort triggers: syntax fixes, name/file lookups, known-root-cause bug fixes
-("fix the bug, don't ideate around it"), anything phrased "quick"/"just"/"one-liner"/
-"standard"/"canonical"/"textbook".
+## Phase 4: follow-up (opt-in)
 
-## Anti-patterns / Cost / Cross-references
+When the user replies asking to deepen one idea, re-run with named frames, or combine two ideas,
+run the matching short pass in `references/phase4.md` (1-3 Agent calls) instead of a full run.
+Never offer it unprompted.
 
-How this skill goes wrong (convergence disguised as divergence, collapsing the 2-wave
-structure, silent parse failures, same-model-judge-as-ground-truth):
-`references/anti-patterns.md`. Per-run cost estimate + provenance: `references/cost.md`.
-Why this exists, the F8.5 cap, maker≠checker methodology: `references/provenance.md`'s
-"Cross-references" section.
+## Failure modes
+
+- **Decoration, not divergence.** Ten variations on one assumption. Spread the frame picks.
+- **Refusing to commit.** "Here are 30 ideas, you decide" is a cop-out; converge with an opinion.
+- **Sequential branches in one context.** That is one wider thought, not ideate. Use Agent calls.
+- **Silent parse failure.** An empty branch reported as a run that succeeded.
+- **Judge as ground truth.** Same model class scored it; the user remains the gate.
+
+## Bundled resources
+
+- `references/algorithm-detail.md`: the literal DIVERGENT and FOCUS prompt blocks, payload,
+  rubric mechanics, rendering contract. **Load before dispatching.**
+- `references/frames.md`: the 15 frames with tags. **Load at Phase 1 step 1.**
+- `references/phase4.md`: the three follow-up patterns. **Load only on a follow-up.**
+- `references/provenance.md`: upstream citations, cap history, eval rigor limitation. Not
+  needed to run.

@@ -5,6 +5,37 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.33] — 2026-09-07
+
+### Changed
+
+- `ideate` SKILL.md rewritten under writing-for-agents (8.8 KB to about 8 KB): each phase carries
+  a Done-when; the Agent-tool contract is stated as it exists (one prompt with the DIVERGENT or
+  FOCUS block on top, `subagent_type` named, no separate system prompt); the Diverge prompt says
+  6 ideas instead of an unbound `{ideasPerFrame}`; parse failures are a named step (a failed
+  branch is reported, fewer than 3 parseable branches stops the run); frame rotation is a rule
+  ("swap at least two on a re-run") instead of a hook that never shipped. Pre-flight Step 0
+  (`<ideate-budget>` / `<ideate-convergence>` blocks) removed: no hook has emitted them since
+  the v1.0.1 hook drop. `references/preflight.md` and `references/cost.md` inlined and deleted;
+  the cost line now counts Agent calls only (8 on the host path, 6 on the critic path, whose
+  single call also deepens and replaces Phase 3) instead of adding the host's score and cluster
+  steps as calls. Opt-in is an imperative request; a mention of the skill inside a question
+  about whether to run it keeps the gate on ("use the ideate skill" dropped from the trigger
+  list for that reason). The recursive-spawn ban is stated in the Isolation invariant.
+  `references/anti-patterns.md` folded into the new Failure modes section and deleted.
+- `ideate-critic` contract corrected: the envelope arrives as the prompt and the JSON is the
+  final message (an Agent call has no stdin or stdout); the stale "`eval/` does not exist" line
+  now points at `evals/ideate-run/`. `references/provenance.md`: dead `memory/*.md` paths and
+  the same stale eval claim fixed; the advisory-hooks section rewritten as historical.
+- Research (2026-09-07): `superpowers:brainstorming` is a sequential spec-through-dialogue
+  skill and `mattpocock-skills` ships grilling, not ideation, so ideate has no upstream
+  duplicate; the n=1 upstream eval limitation stands and is cited unchanged.
+
+### Added
+
+- Evals for `ideate`: a full run bounded to 6-8 Agent calls and graded on the output shape, and
+  an abort control where a "quick"/"canonical" question must get a direct answer with zero Agent
+  calls. Loader test proves both regex contracts against a rendered sample.
 ## [1.1.32] — 2026-09-07
 
 ### Added
@@ -82,7 +113,6 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
   (2026-09-07): `claude plugin validate` checks manifest fields and agent frontmatter parse
   only, and `/skill-doctor` is a usage and context-cost report, so no audit check overlaps a
   vendor surface.
-
 ## [1.1.29] — 2026-09-07
 
 ### Added
