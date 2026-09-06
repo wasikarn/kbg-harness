@@ -261,6 +261,34 @@ sonnet_row=$(/usr/bin/grep '"model":"claude-sonnet-5"' "$metrics_file" 2>/dev/nu
 assert "multi-model transcript writes one model_scoped row per model with that model's own tokens" "$ok"
 trash "$fake_home" "$transcript" 2>/dev/null || true
 
+# Change receipt: every row names the plugin version that wrote it and the HEAD commit of
+# the payload's cwd, so a regression is attributable to a policy version and a rollback
+# point (harness-engineering checklist, 2026-09-07). Missing plugin root or non-git cwd
+# still writes the row with null in those fields.
+fake_home=$(mktemp -d)
+fake_root=$(mktemp -d)
+fake_repo=$(mktemp -d)
+transcript=$(mktemp)
+mkdir -p "$fake_root/.claude-plugin"
+printf '{"name":"mh","version":"9.9.9"}' > "$fake_root/.claude-plugin/plugin.json"
+( cd "$fake_repo" && git init -q && git -c user.name=t -c user.email=t@t commit -q --allow-empty -m init )
+head_sha=$(git -C "$fake_repo" rev-parse HEAD)
+make_transcript_line claude-sonnet-5 100 50 > "$transcript"
+payload=$(python3 -c 'import json,sys; print(json.dumps({"transcript_path": sys.argv[1], "session_id": "receipt", "cwd": sys.argv[2]}))' "$transcript" "$fake_repo")
+printf '%s' "$payload" | HOME="$fake_home" CLAUDE_PLUGIN_ROOT="$fake_root" bash "$COST_TRACKER" >/dev/null 2>&1
+row=$(tail -1 "$fake_home/.local/share/kbg/metrics/costs.jsonl" 2>/dev/null)
+printf '%s' "$row" | /usr/bin/grep -q '"mh_version":"9.9.9"' \
+  && printf '%s' "$row" | /usr/bin/grep -q "\"head_commit\":\"$head_sha\"" && ok=1 || ok=0
+assert "row carries mh_version from CLAUDE_PLUGIN_ROOT plugin.json and head_commit of the payload cwd" "$ok"
+payload=$(python3 -c 'import json,sys; print(json.dumps({"transcript_path": sys.argv[1], "session_id": "receipt-none", "cwd": sys.argv[2]}))' "$transcript" "$fake_home")
+printf '%s' "$payload" | HOME="$fake_home" CLAUDE_PLUGIN_ROOT='' bash "$COST_TRACKER" >/dev/null 2>&1
+row=$(tail -1 "$fake_home/.local/share/kbg/metrics/costs.jsonl" 2>/dev/null)
+printf '%s' "$row" | /usr/bin/grep -q '"session_id":"receipt-none"' \
+  && printf '%s' "$row" | /usr/bin/grep -q '"mh_version":null' \
+  && printf '%s' "$row" | /usr/bin/grep -q '"head_commit":null' && ok=1 || ok=0
+assert "no plugin root and non-git cwd → row still written with mh_version:null, head_commit:null" "$ok"
+trash "$fake_home" "$fake_root" "$fake_repo" "$transcript" 2>/dev/null || true
+
 # Orchestrator-tax split. Claude Code writes the main session to
 # <project>/<session-id>.jsonl and each subagent to its own file under the sibling
 # <project>/<session-id>/subagents/agent-*.jsonl. cost-tracker read only the main

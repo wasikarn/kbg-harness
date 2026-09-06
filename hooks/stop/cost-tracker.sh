@@ -26,6 +26,13 @@ fi
 transcript=$(printf '%s' "$payload" | jq -r '.transcript_path // empty' 2>/dev/null)
 session_id=$(printf '%s' "$payload" | jq -r '.session_id // "default"' 2>/dev/null)
 
+# Change receipt: the plugin version that wrote the row and the HEAD commit of the
+# session cwd, so a cost or quality regression is attributable to a policy version
+# and has a rollback point. Either may be null; the row is written regardless.
+mh_version=$(jq -r .version "${CLAUDE_PLUGIN_ROOT:-/nonexistent}/.claude-plugin/plugin.json" 2>/dev/null)
+cwd=$(printf '%s' "$payload" | jq -r '.cwd // empty' 2>/dev/null)
+head_commit=$(git -C "${cwd:-/nonexistent}" rev-parse HEAD 2>/dev/null)
+
 metrics_dir="$HOME/.local/share/kbg/metrics"
 mkdir -p "$metrics_dir"
 
@@ -133,6 +140,8 @@ emit_rows() {
     --arg sid "$session_id" \
     --arg tp "$transcript" \
     --arg stream "$stream" \
+    --arg mhv "$mh_version" \
+    --arg head "$head_commit" \
     --argjson sonnet_rate "$sonnet_rate" '
     def rate:
       # Haiku 4.5 and Opus 5/4.8 rates confirmed live against
@@ -150,6 +159,8 @@ emit_rows() {
       cache_write_tokens: $u.cache_write_tokens, cache_read_tokens: $u.cache_read_tokens,
       cache_read_per_turn: (if $u.turns > 0 then ($u.cache_read_tokens / $u.turns | round) else 0 end),
       rate_verified: $r.v,
+      mh_version: (if $mhv == "" or $mhv == "null" then null else $mhv end),
+      head_commit: (if $head == "" then null else $head end),
       estimated_cost_usd: (
         ($u.input_tokens / 1e6 * $r.i) + ($u.output_tokens / 1e6 * $r.o) +
         ($u.cache_write_tokens / 1e6 * $r.cw) + ($u.cache_read_tokens / 1e6 * $r.cr) |

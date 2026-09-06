@@ -5,6 +5,21 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.23] — 2026-09-07
+
+### Added
+
+- Change receipt on every cost row: `cost-tracker.sh` records `mh_version` (from the plugin
+  root's `plugin.json`) and `head_commit` (of the Stop payload's cwd), so a regression is
+  attributable to a policy version and has a rollback point; null when either is missing,
+  the row is written regardless (test-first, `tests/hooks/test-session-stop.sh`). Prompted
+  by the harness-engineering checklist audit of 2026-09-07 (`docs/research/`).
+
+### Changed
+
+- Post-mortem template failure-class fix list names a memory entry as the fix for a lost
+  decision (missing_context); the list only named map/tool/permission/test before.
+
 ## [1.1.22] — 2026-09-07
 
 ### Fixed

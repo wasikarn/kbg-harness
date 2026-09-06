@@ -19,7 +19,7 @@ The tracker appends JSON rows to `~/.local/share/kbg/metrics/costs.jsonl` — on
 `model_scoped: true`; each row re-derives cumulative totals from the full transcript
 (stateless). Row schema:
 
-`{ timestamp, session_id, transcript_path, model, model_scoped, dedup_usage, usage_pick, stream, agent_type, turns, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens, cache_read_per_turn, rate_verified, estimated_cost_usd }`
+`{ timestamp, session_id, transcript_path, model, model_scoped, dedup_usage, usage_pick, stream, agent_type, turns, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens, cache_read_per_turn, rate_verified, mh_version, head_commit, estimated_cost_usd }`
 
 `stream` is `orchestrator` (the main transcript) or `subagent` (each `subagents/agent-*.jsonl`);
 `agent_type` is the Agent tool's `subagent_type` from the sibling `.meta.json`, `unknown` when
