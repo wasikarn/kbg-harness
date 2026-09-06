@@ -5,6 +5,13 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.26] — 2026-09-07
+
+### Changed
+
+- English-only rule extended to `agents/*.md`: `ideate-critic` drops its Thai trigger phrase.
+  Hooks, scripts, evals, and manifests were already clean.
+
 ## [1.1.25] — 2026-09-07
 
 ### Changed

@@ -1,6 +1,6 @@
 ---
 name: ideate-critic
-description: "Fresh-context critic for mh:ideate Phase 2, or when the user says 'วิจารณ์ไอเดีย' or 'critic'. Don't use for code review (mattpocock-skills:code-review) or security audit."
+description: "Fresh-context critic for mh:ideate Phase 2, or when the user says 'critic'. Don't use for code review (mattpocock-skills:code-review) or security audit."
 bucket: analysis
 tools: Read
 model: sonnet
