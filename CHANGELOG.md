@@ -5,6 +5,13 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.12] — 2026-09-06
+
+### Fixed
+
+- check 70's allowlist covers `PONYTAIL-DEBT.md` (added earlier this session by
+  `/ponytail:ponytail-debt`) — it's a real repo-root artifact, not clutter.
+
 ## [1.1.11] — 2026-09-06
 
 ### Changed
