@@ -10,7 +10,7 @@ When the triad flags a one-way door or wide blast radius on a task that edits co
 
 ## Rule 3: Interrogate the incoming claim
 
-A requirement, bug report, spec, or handoff is a claim to test, not a truth to obey. Before code on any non-trivial task, read it for what is **ambiguous**, **missing** (error path, edge case, untestable acceptance criterion), and **assumed** (the riskiest assumption from Rule 1). State each assumption you proceed under, and ask when readings diverge materially. Reflex, not gate: a one-line fix needs none, a multi-file feature needs all of it.
+A requirement, bug report, spec, or handoff is a claim to test, not a truth to obey. Before code on any non-trivial task, read it for what is **ambiguous**, **missing** (error path, edge case, untestable acceptance criterion), and **assumed** (the riskiest assumption from Rule 1). State each assumption you proceed under, and ask when readings diverge materially. A claim borrowed from another repo, paper, or README is a claim too: check it against the installed source (binary, plugin, CLI) and this repo's own invocation path before it lands in any committed file, docs included. Reflex, not gate: a one-line fix needs none, a multi-file feature needs all of it.
 
 ## Rule 4: Bug fix = failing test first
 
@@ -26,6 +26,7 @@ Reproduce with a failing test before touching the fix; the test passing is the d
 - A dispatched builder's work touching 2+ files or a test gets a fresh-context validator returning `{pass, findings[], scope_ok, unexpected_files[]}`; missing = not verified.
 - Validator fails -> the same builder fixes -> re-run; stop after 3 rounds.
 - A subagent's "nothing found" is not verification; it must cite one checkable fact.
+- A lane that exits clean with an empty diff has refused, not finished; its final message is the reason (Codex: `docs/reference/codex-integration-map.md`).
 Brief shape: `docs/reference/spawn-brief.md`.
 
 ## Rule 14: Score, not feel

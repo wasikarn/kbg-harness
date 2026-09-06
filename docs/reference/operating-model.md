@@ -20,6 +20,17 @@ Everything not in that table is advice: METHODOLOGY.md text, skill prose, agent 
 Advice is honest about being advice; no doc claims a check enforces a rule unless a file in
 `hooks/gates/` does.
 
+Each gate owns its error path, and the policy is written in the gate, not assumed: input it
+cannot tokenize asks (`could not safely tokenize`), a missing sibling script denies (exit 2),
+and only a missing `python3` allows, announced on stderr (#93). `scripts/gate-canary.sh` proves
+every staged gate still allows benign payloads. The table is the contract; the hook type is
+not. Claude Code's proposed function hooks (anthropics/claude-code#91870, prototype behind
+`CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` since 2.1.260; `claude plugin validate` already lists a
+module's hooks and `$` calls on 2.1.263) skip a hook that throws, turn every function hook off
+for the session when the hooks worker crashes, and evaluate matchers once before the chain. A
+gate ported there must catch and deny on its own error and sit above any hook that rewrites
+the event.
+
 ## 2. The maker never grades its own work
 
 An LLM cannot reliably judge output it produced in the same context (self-preference bias;
@@ -28,7 +39,7 @@ task-completion self-grading tops out near chance). So:
 - A builder that touched 2+ files or a test gets a fresh-context validator (METHODOLOGY Rule 13).
 - Reviewer agents are read-only (`harness-audit` check 32) and return findings, never a verdict
   that ships the work by fiat.
-- `harness-audit`'s frontmatter checks (04, 05, 20, 28, 29) are proven against known-bad fixtures in
+- `harness-audit` checks 04, 05, 20, 22, 28, 29, 70, 71, 72 are proven against known-bad fixtures in
   `tests/skills/harness-audit/`; the rest are smoke-tested only.
 - `gate:task:complete-separation` makes the rule mechanical for task state.
 

@@ -5,6 +5,21 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.14] — 2026-09-06
+
+### Changed
+
+- `docs/METHODOLOGY.md` Rule 3: a claim borrowed from another repo, paper, or README is a
+  claim to verify against the installed source and this repo's own invocation path before it
+  lands in any committed file (the fable-advisor borrow shipped wrong for mh's Codex path and
+  only `/mh:deep-audit` caught it). Rule 13: a lane that exits clean with an empty diff has
+  refused, not finished.
+- `docs/reference/operating-model.md`: each gate's error policy is stated (ask on unparseable
+  input, deny on a missing sibling, announced allow only without `python3`), the contract is
+  the deny table not the hook type, and the function-hooks prototype
+  (anthropics/claude-code#91870) is named as the reason a ported gate must deny on its own
+  error. Fixture-proven check list updated to 04, 05, 20, 22, 28, 29, 70, 71, 72.
+
 ## [1.1.13] — 2026-09-06
 
 ### Added
