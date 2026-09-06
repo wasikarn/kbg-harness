@@ -18,8 +18,8 @@ This skill extends [Wikipedia:Signs of AI writing](https://en.wikipedia.org/wiki
 - Google translation style: https://developers.google.com/style/translation
 - W3C Thai Layout: https://www.w3.org/TR/thai-gap/ · https://www.w3.org/TR/thai-lreq/
 - Microsoft Thai typography: https://learn.microsoft.com/en-us/typography/script-development/thai
-- Piyangkool Thaweephol (2024) — Chulalongkorn thesis, Thai Gen-Y attitudes toward English-Thai code-switching
-- Umpornpun & Mongkolhutthi (2022) — Thai multilingual gamers on Discord (closest published setting to "dev chat")
+- Thaweephol, P. & Saisuwan, P. (2021). Attitudes towards Thai-English code-switching among Thai speakers in Generation Y. *Journal of Language and Culture* 40(2), 53-78. https://so03.tci-thaijo.org/index.php/JLC/article/view/257581 (ChulaSEAL summary of the follow-on thesis, 2024: https://www.arts.chula.ac.th/chulaseal/2024/05/31/do-thai-people-really-consider-code-switching-inappropriate-and-unnatural-an-insight-into-thai-peoples-attitude-toward-code-switching/)
+- Umpornpun, A. & Mongkolhutthi, P. (2022). Conversational code-switching among Thai teenage multilingual gamers: a sequential analysis. *Theory and Practice in Language Studies* 12(11). https://tpls.academypublication.com/index.php/tpls/article/view/5030 (closest published setting to "dev chat")
 - Conventional Commits Thai v1.0.0: https://www.conventionalcommits.org/th/v1.0.0/  *(keeps `fix:`/`feat:` in English — tooling requirement)*
 
 ### Universal references

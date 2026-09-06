@@ -19,13 +19,13 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 | 2 | Notability / media name-drops | independent coverage, active social media presence | Keep only sourced, specific claims |
 | 3 | -ing pseudo-depth tails | highlighting, ensuring, reflecting, fostering / ซึ่งสะท้อนถึง, เพื่อส่งเสริม | Delete the trailing clause or make it a real fact |
 | 4 | Promo / ad language | vibrant, nestled, in the heart of, breathtaking / งดงามตระการตา, ตั้งอยู่ใจกลาง | Neutral tone; concrete detail |
-| 5 | Vague attribution / weasel | experts argue, observers cited, reports say / ผู้เชี่ยวชาญบางท่าน, รายงานระบุ | Name the source or cut |
+| 5 | Vague attribution / weasel / vague association | experts argue, observers cited, reports say; linked to, associated with, connected to / ผู้เชี่ยวชาญบางท่าน, รายงานระบุ, มีความเชื่อมโยงกับ | Name the source, or state the actual relation, or cut |
 | 6 | "Challenges & future" formula | Despite challenges, Future Outlook / ท่ามกลางความท้าทาย, อนาคตของ | Replace with specific facts/dates |
-| 7 | AI-vocab words | delve, crucial, tapestry, underscore, intricate, landscape / อันที่จริง, ภูมิทัศน์, เน้นย้ำ | Plain synonyms |
+| 7 | AI-vocab words | delve, crucial, tapestry, underscore, intricate, landscape, robust, deep dive, meticulous / อันที่จริง, ภูมิทัศน์, เน้นย้ำ | Plain synonyms |
 | 8 | Copula avoidance | serves as, stands as, boasts, features / ทำหน้าที่เป็น, ถือเป็น | Use is/are · คือ/เป็น |
 | 9 | Negative parallelism / tailing negation | not only…but, it's not just…it's / ไม่ใช่แค่…แต่ยัง, ไม่ต้องเดา | One real positive clause |
 | 10 | Rule of three | forced triads "X, Y, and Z" / สองพอ สามเกิน | Two if there are two; cut the forced third |
-| 11 | Elegant variation | protagonist→main character→central figure | Reuse the same noun |
+| 11 | Elegant variation (historical) | protagonist→main character→central figure; common in older models, much rarer in newer ones | Reuse the same noun; weak evidence on its own |
 | 12 | False ranges | "from X to Y" off-scale / ตั้งแต่…จนถึง, จาก…สู่ | List the items plainly |
 | 13 | Passive / subjectless | "results are preserved automatically, no config needed" | Name the actor; active voice |
 | 14 | Em dashes | `—` used for asides | Period / comma / colon / parens (en-dash ranges `40–60%` are fine) |
@@ -43,7 +43,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 | 26 | Hyphenated-pair overuse | data-driven, high-quality, end-to-end | Keep hyphen when attributive; drop in predicate |
 | 27 | Authority tropes | the real question is, at its core, fundamentally / คำถามที่แท้จริงคือ, ในแก่นสำคัญ | Make the actual point |
 | 28 | Signposting | let's dive in, here's what you need to know | Just say it |
-| 29 | Fragmented headers | heading + one-line restating it | Delete the warm-up line |
+| 29 | Fragmented headers / thematic breaks | heading + one-line restating it; `---` between every section | Delete the warm-up line and the rules |
 | 30 | Diff-anchored writing | "this was added to replace…" | Describe the thing as it is |
 
 ## CONTENT PATTERNS
@@ -112,7 +112,9 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 **Thai cue:** "ผู้เชี่ยวชาญบางท่านกล่าวว่า", "นักวิจารณ์หลายคนมองว่า", "รายงานระบุ" with no name or source → suspect
 
-**Problem:** AI chatbots attribute opinions to vague authorities without specific sources.
+**Vague association (newer, 2025+ models):** "linked to", "associated with", "connected to", "tied to" in place of the actual relation ("was CEO of", "funded", "wrote"). Thai cue: "มีความเชื่อมโยงกับ", "มีส่วนเกี่ยวข้องกับ" with the relation left unsaid. Fix: state the relation or cut the clause.
+
+**Problem:** AI chatbots attribute opinions to vague authorities without specific sources, or gesture at a relation instead of naming it.
 
 **Before:**
 > เนื่องจากลักษณะเฉพาะ แม่น้ำฮ่วยหลาย is of interest to researchers and conservationists Experts believe it plays a crucial role in the regional ecosystem
@@ -140,7 +142,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 ### 7. Overused "AI Vocabulary" Words
 
-**High-frequency AI words:** Actually, additionally, align with, crucial, delve, emphasizing, enduring, enhance, fostering, garner, highlight (verb), interplay, intricate/intricacies, key (adjective), landscape (abstract noun), pivotal, showcase, tapestry (abstract noun), testament, underscore (verb), valuable, vibrant
+**High-frequency AI words** (Wikipedia list as of 2026-09): Actually, additionally, align with, boasts, bolstered, crucial, deep dive, delve, emphasizing, enduring, enhance, fostering, garner, highlight (verb), interplay, intricate/intricacies, key (adjective), landscape (abstract noun), meticulous/meticulously, pivotal, robust, showcase, tapestry (abstract noun), testament, underscore (verb), valuable, vibrant
 
 **Thai cue:** "อันที่จริง", "นอกจากนี้", "สำคัญยิ่ง", "ส่งเสริม", "เน้นย้ำ", "ภูมิทัศน์", "จุดเปลี่ยน", "สัมผัสได้", "พยาน", "ขีดเส้นใต้" → suspect when used out of context
 
@@ -202,7 +204,9 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 ### 11. Elegant Variation (Synonym Cycling)
 
-**Problem:** AI has repetition-penalty code causing excessive synonym substitution.
+**Historical (Wikipedia, 2026-09):** common in older models, which cycled synonyms under repetition penalties, and much less frequent in newer ones. Treat as a dating signal for older AI text, not as evidence on its own. The fix still applies as a writing rule.
+
+**Problem:** older AI had repetition-penalty code causing excessive synonym substitution.
 
 **Before:**
 > The protagonist faces many challenges The main character must overcome obstacles The central figure eventually triumphs The hero returns home
@@ -452,7 +456,7 @@ Before returning the final rewrite, scan it for em dashes (`—`). Any hit means
 
 ### 29. Fragmented Headers
 
-**Signs to watch:** A heading followed by a one-line paragraph that simply restates the heading before the real content begins.
+**Signs to watch:** A heading followed by a one-line paragraph that simply restates the heading before the real content begins; a horizontal rule (`---`) between every section; heading levels skipped or several level-1 headings in one document.
 
 **Problem:** LLMs often add a generic sentence after a heading as a rhetorical warm-up. It usually adds nothing and makes the prose feel padded.
 

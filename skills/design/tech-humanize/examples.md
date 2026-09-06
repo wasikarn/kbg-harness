@@ -66,16 +66,6 @@ commit to a point of view):
 
 ---
 
-## Process Step Rationale
-
-Failure modes for `SKILL.md`'s Process and Output steps, in full — the numbered steps there link here rather than carry this inline.
-
-- **Step 1 (Identify every tell):** stopping after the loudest tells (em dash, "delve") and missing a cluster that only shows up on a full pass.
-- **Step 2 (Draft rewrite):** deleting AI-isms without adding grit — lands in the "clean but neutral" safe middle the Grit Gate scores ~30/100 AI, not 0. Also: overriding your own step-1 "not a tell" call mid-rewrite without saying so — an untracked change like that can't get caught by step 3/4, since it was never named as a problem in the first place.
-- **Step 4 (Final rewrite):** treating the em-dash check as a stylistic reminder instead of a literal character scan — stating an intention to remove em dashes in a change summary is not the same as checking the delivered text for `—`. A fixture run once claimed em dashes were cut while two remained in the shipped rewrite. Also: a final rewrite indistinguishable from the draft — if step 3 found nothing, re-run step 3, don't skip step 4. Also: naming a real weakness in step 3 and then shipping it unchanged in step 4 without ever revisiting it — step 3 and step 4 have to actually connect, not run as two independent exercises.
-
----
-
 ## Per-Register Worked Examples (v2.2)
 
 How the register selection gate (SKILL.md §0) + per-register patterns apply.

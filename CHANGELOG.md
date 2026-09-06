@@ -5,6 +5,25 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.28] — 2026-09-07
+
+### Changed
+
+- `tech-humanize` re-validated against Wikipedia's "Signs of AI writing" (the skill's own
+  `model_limitation` cadence): §11 elegant variation demoted to a historical indicator, §7
+  word list refreshed (boasts, bolstered, deep dive, meticulous, robust), §5 gains the newer
+  vague-association cue ("linked to", "associated with"), §29 gains thematic breaks and skipped
+  heading levels. `SKILL.md` merges its two overlapping step sequences into one six-step loop
+  with a Done-when per step and the failure modes inlined; the `examples.md` rationale section
+  they pointed at (a 25 KB load for five lines) is gone. New standing constraint: when the input
+  is a file, code, data, frontmatter, and quoted material stay byte-identical. 11.0 KB → 10.3 KB.
+
+### Fixed
+
+- `tech-humanize/references.md`: two citations flagged unverifiable in the 2026-07-31 docs audit
+  now resolve to the published papers (Thaweephol & Saisuwan 2021, JLC 40(2); Umpornpun &
+  Mongkolhutthi 2022, TPLS 12(11)) with URLs.
+
 ## [1.1.27] — 2026-09-07
 
 ### Changed
