@@ -6,7 +6,7 @@
 # either side is missing -- this reads third-party operator-machine state.
 _codex_cache="${MH_CODEX_CACHE_DIR:-}"
 if [ -z "$_codex_cache" ]; then
-  _codex_cache=$(ls -d "$HOME"/.claude/plugins/cache/openai-codex/codex/*/ 2>/dev/null | sort -V | tail -1)
+  _codex_cache=$(for _codex_dir in "$HOME"/.claude/plugins/cache/openai-codex/codex/*/; do if [ -d "$_codex_dir" ]; then printf '%s\n' "$_codex_dir"; fi; done | sort -V | tail -1)
 fi
 _codex_doc="$REPO_ROOT/docs/reference/spawn-brief.md"
 _codex_companion="${_codex_cache%/}/scripts/codex-companion.mjs"
