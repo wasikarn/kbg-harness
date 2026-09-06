@@ -1,8 +1,9 @@
 # matt-harness
 
-A Claude Code plugin (`mh@wasikarn`). It adds only what native Claude Code and the plugins it
-sits next to (`mattpocock-skills`, `ponytail`, `diagram-design`, `qmd`) can't already do: 6
-deny/ask gates, a 4 KB methodology injected at session start, and a small set of skills and
+A Claude Code plugin (`mh@wasikarn`) that composes `mattpocock-skills` instead of duplicating
+it — checked first, before any native surface gets built. Beyond that, it adds only what native
+Claude Code and the plugins it sits next to (`ponytail`, `diagram-design`, `qmd`) can't already
+do: 6 deny/ask gates, a 4 KB methodology injected at session start, and a small set of skills and
 agents that earned their place.
 
 ## Install
