@@ -5,6 +5,25 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.39] — 2026-09-07
+
+### Fixed
+
+- GH #149: `hooks/gates/subagent-git-guard.sh` and `hooks/gates/task-complete-separation.sh` still
+  embedded `python3 -c '...'` blocks — same apostrophe-fragility bug class as #146/#148.
+  `subagent-git-guard.sh` had already been bitten once (one `'"'"'`-escaped apostrophe surviving
+  in its own denial message), `task-complete-separation.sh` too (one in a comment). Both extracted
+  to sibling `.py` files; `subagent-git-guard.py` keeps the `printf '%s' "$_input" | python3 "$_py"`
+  stdin-piping shape (it pre-captures stdin for its own bash-side fast-path filter),
+  `task-complete-separation.py` inherits stdin directly like the #148 pair. Missing-sibling fails
+  open on both, matching each gate's own documented fail-safe-allow posture. All 29 existing
+  `test-subagent-git-guard.sh` cases plus `test-gates.sh`'s task-complete-separation coverage pass
+  unchanged.
+- `tests/hooks/test-gate-canary.sh`'s apostrophe-injection check hardcoded `subagent-git-guard.sh`
+  as its target — broke the moment that file's embedded Python was extracted above. Replaced with a
+  synthetic fixture gate built inline, decoupled from which real gate (if any) still embeds
+  `python3 -c`, so the check doesn't need updating again the next time one gets extracted.
+
 ## [1.1.38] — 2026-09-07
 
 ### Fixed

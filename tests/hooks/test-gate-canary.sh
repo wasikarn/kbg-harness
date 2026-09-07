@@ -26,10 +26,28 @@ bash "$CANARY" "$tmp" >/dev/null 2>&1; rc=$?
 [ "$rc" -ne 0 ]; check "injected NameError in irrecoverable.py fails the canary" $?
 
 fresh
+# Synthetic fixture, not a real shipped gate: every gate that used to embed
+# `python3 -c '...'` has been extracted to a sibling .py (irrecoverable,
+# test-integrity, config-write-guard, subagent-git-guard,
+# task-complete-separation — GH #146/#148/#149), so pinning this check to a
+# real filename breaks the moment that file's extraction lands. This gate
+# shape (embedded python3 -c block) is what gate-canary.sh's detection
+# mechanism must still catch even after every currently-shipped gate stops
+# using it.
+cat > "$tmp/canary-fixture-apostrophe.sh" <<'FIXTURE'
+#!/usr/bin/env bash
+set -uo pipefail
+python3 -c '
+import json, sys
+json.load(sys.stdin)
+print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse"}}))
+'
+FIXTURE
+chmod +x "$tmp/canary-fixture-apostrophe.sh"
 python3 -c "
 import sys; p = sys.argv[1]; s = open(p).read()
-s = s.replace('import json, re, sys', 'import json, re, sys  # it' + chr(39) + 's', 1)
-open(p, 'w').write(s)" "$tmp/subagent-git-guard.sh"
+s = s.replace('import json, sys', 'import json, sys  # it' + chr(39) + 's', 1)
+open(p, 'w').write(s)" "$tmp/canary-fixture-apostrophe.sh"
 bash "$CANARY" "$tmp" >/dev/null 2>&1; rc=$?
 [ "$rc" -ne 0 ]; check "apostrophe inside an embedded python string fails the canary" $?
 
