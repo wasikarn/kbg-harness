@@ -5,6 +5,18 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.50] — 2026-09-07
+
+### Fixed
+
+- `mh:compliance-audit`: Phase 2's sandbox contract now explicitly says not to redirect
+  `TMPDIR`/scratch I/O into the pinned worktree — the before/after tracked-diff check is the
+  actual enforcement mechanism, not where temp files happen to live. A dispatched verifier
+  redirecting all scratch I/O into the worktree makes it a git repo's subdirectory, which broke
+  `tests/skills/memory-lint/test_memory_lint.py`'s not-a-git-repo fallback test three times
+  across independent audit rounds this session — a pre-existing, unrelated test, not a defect in
+  whatever was actually being audited.
+
 ## [1.1.49] — 2026-09-07
 
 ### Added

@@ -95,6 +95,13 @@ must discover independently, then get an independent answer from a different mod
      any tracked-file change beyond expected build artifacts is itself a finding ("verifier
      modified source"), never a silent pass. The worktree is discarded after, so leftover
      untracked artifacts don't matter.
+   - **Don't redirect `TMPDIR`/scratch I/O into the worktree to "confine" it further** — the
+     before/after tracked-diff check above is the enforcement mechanism, not where temp files
+     happen to live. Forcing all scratch I/O inside the worktree makes it a git repo's
+     subdirectory, which breaks any test elsewhere in the gauntlet that assumes its own temp dir
+     is never inside a git repo (hit live, repeatedly: `tests/skills/memory-lint/
+     test_memory_lint.py`'s not-a-git-repo fallback test fails this way). Let the OS/language
+     runtime's normal temp-file defaults apply; only repo writes need to stay inside the worktree.
    - The verifier receives **only** its slice of the plan's requirements plus the pinned SHA —
      **not** your Phase 2 deviation list, **not** your narrative of what you did, and **never** a
      plan-file path (it may already hold this audit's own scope by the time the verifier reads it).
