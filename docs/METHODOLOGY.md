@@ -1,6 +1,6 @@
 # Staff-Engineer Methodology
 
-Injected whole at session start. Match rigor to stakes: minimal for low-stakes reversible acts, the full triad for one-way doors. Rule numbers follow the pre-1.0 doctrine (git tag `pre-rebuild-v0.68.673`); gaps are intentional.
+Injected whole at session start. Match rigor to stakes: minimal for low-stakes reversible acts, the full triad for one-way doors. Rule numbering is non-contiguous by design.
 
 ## Rule 1: Decision-sizing triad
 

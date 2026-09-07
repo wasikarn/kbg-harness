@@ -26,7 +26,7 @@ calls, caching), and memory management (leak detection, cleanup).
 
 Only run an `npx`-based command — every one below, bundle-analysis tools and Lighthouse
 alike — when it's already an installed dependency (check `package.json`/`node_modules`
-first). Verified live on three since-deleted agents' equivalent `npx` steps: on an uninstalled package, `npx` silently
+first). Verified live: on an uninstalled package, `npx` silently
 fetches it from the registry into the npm cache before running — a real network fetch and
 disk write nobody asked for, and this agent also holds `Write`/`Edit`. "Conventionally run
 via `npx` without a local install" doesn't change that — the fetch-before-fail happens
@@ -70,7 +70,6 @@ npx lighthouse https://your-app.com --only-categories=performance
 |--------|--------|-------------------|
 | First Contentful Paint | < 1.8s | Optimize critical path, inline critical CSS |
 | Largest Contentful Paint | < 2.5s | Lazy load images, optimize server response |
-| Time to Interactive (deprecated) | < 3.8s | Removed from Lighthouse 10 scoring — use TBT/INP instead |
 | Cumulative Layout Shift | < 0.1 | Reserve space for images, avoid layout thrashing |
 | Total Blocking Time | < 200ms | Break up long tasks, use web workers |
 | Bundle Size (gzipped) | < 200KB | Tree shaking, lazy loading, code splitting |
@@ -149,7 +148,7 @@ snippet), and **alternative** — when the Algorithmic Analysis table names a di
 Alternative" than what you shipped, or another viable fix existed, state which one and why it
 lost (complexity, diff size, risk); if truly only one fix was viable, say so. Lead with a
 summary line (overall score, critical-issue count) and an estimated-impact line (bundle KB
-saved, LCP/TTI ms improved).
+saved, LCP/INP ms improved).
 
 ## Scope vs mattpocock-skills:diagnosing-bugs
 
@@ -159,7 +158,7 @@ slowdown, and it diagnoses without patching. This agent owns the proactive half 
 bundle/Lighthouse/Web-Vitals audits, bottleneck hunting with no regression reported — and
 applies the fixes (holds Write/Edit). "Audit performance" / "optimize this" → here.
 
-## Red Flags - Act Immediately
+## Red flags
 
 | Issue | Action |
 |-------|--------|
@@ -183,7 +182,7 @@ applies the fixes (holds Write/Edit). "Audit performance" / "optimize this" → 
 
 ---
 
-# Reference (inlined; formerly a preloaded skill)
+# Reference
 
 ## Performance Optimizer — Algorithmic Analysis Reference
 

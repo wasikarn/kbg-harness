@@ -22,7 +22,7 @@ for f in "$CLAUDE_DIR/skills"/*/SKILL.md "$CLAUDE_DIR/skills"/*/*/SKILL.md "$CLA
     desc_inj_issues=$((desc_inj_issues + 1))
   fi
   if printf '%s' "$desc" | /usr/bin/grep -Eq "$IMPERATIVE_PATTERNS"; then
-    info "skill '$skill_name' description: over-forceful imperative (ALWAYS/CRITICAL/MUST/NEVER/'if in doubt') — Opus 4.8+ over-triggers; prefer 'Use when …'"
+    info "skill '$skill_name' description: over-forceful imperative (ALWAYS/CRITICAL/MUST/NEVER/'if in doubt') — current models over-trigger on it; prefer 'Use when …'"
   fi
 done
 # No output on clean — crit/warn/info only when there's an issue (audit.sh convention)

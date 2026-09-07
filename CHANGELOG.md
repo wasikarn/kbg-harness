@@ -5,6 +5,23 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.55] — 2026-09-08
+
+### Fixed
+
+- Prompt audit (`/claude-api prompt-audit`, target Claude Fable 5.1) across agents, skills,
+  doctrine and hook strings: cost-tracker gained Fable/Mythos 5.x rate branches (every Fable row
+  was priced at Sonnet rates); four dead "unifying crux" citations, two dead skill references
+  (`security-auditor`, `production-audit`) and a nonexistent `--trim` flag repointed; a wrong
+  gold `total` in `ideate-critic` (6.95 → 6.85) and the hand arithmetic behind it moved into
+  `skills/workflow/ideate/scripts/rank.py` (critic now holds `Bash` for that one command; new
+  test); failure-diagnose nudge trimmed to the author-only half and capped at 1 per command;
+  METHODOLOGY, four agent Reference headers, memory-lint action-mode, tech-humanize
+  frontmatter, post-mortem template and compliance-audit lost version archaeology; a garbled
+  sentence in blind-spot-hunter's tool-limit paragraph and in post-mortem's Jira step repaired;
+  requirement-analyst's exception stack and code-architect's fixed build order restated as
+  principles; performance-optimizer's TTI row (deprecated in its own table) dropped.
+
 ## [1.1.54] — 2026-09-07
 
 ### Fixed

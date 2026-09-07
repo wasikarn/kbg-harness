@@ -99,8 +99,8 @@ the fact that would flip the pick:
 - **GitHub comment**: `gh issue comment` / `gh pr comment` after the user says "post it".
 - **Jira comment**: a bespoke document, not one of `jira-acli:jira-content`'s four templated
   shapes. Convert with `jira-acli:acli`'s `md2adf.py <file>.md > note.json`, then
-  `acli jira workitem comment create --key <KEY> --body-file note.json`, after "post it". A raw
-  never a raw `--body` or MCP call, one garbled a prior ticket. Without `jira-acli`, hand the
+  `acli jira workitem comment create --key <KEY> --body-file note.json`, after "post it" —
+  never a raw `--body` or MCP call, which garbles the ADF payload. Without `jira-acli`, hand the
   text to the user.
 - **Wiki / Confluence** or **print-only**: hand the text to the user.
 

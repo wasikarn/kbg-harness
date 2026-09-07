@@ -148,7 +148,12 @@ emit_rows() {
       # platform.claude.com/docs/en/about-claude/pricing, 2026-07-31 —
       # the previously coded values were retired-model (Haiku 3.5, Opus
       # 4.1/4) pricing. See docs/research/official-docs-audit-2026-07-31.md.
-      if (.model | ascii_downcase | test("haiku")) then {i:1.00,o:5.0,cw:1.25,cr:0.10,v:true}
+      # Fable/Mythos 5.x: $10/$50 per MTok. cr is quoted, not derived: Fable 5.1
+      # cache read is $0.25/MTok (not 0.1x input); Fable 5 is $1.00/MTok.
+      # The 5-1 test must precede the bare fable test.
+      if (.model | ascii_downcase | test("fable-5-1|mythos-5-1")) then {i:10.0,o:50.0,cw:12.50,cr:0.25,v:true}
+      elif (.model | ascii_downcase | test("fable|mythos")) then {i:10.0,o:50.0,cw:12.50,cr:1.00,v:true}
+      elif (.model | ascii_downcase | test("haiku")) then {i:1.00,o:5.0,cw:1.25,cr:0.10,v:true}
       elif (.model | ascii_downcase | test("opus")) then {i:5.0,o:25.0,cw:6.25,cr:0.50,v:true}
       elif (.model | ascii_downcase | test("sonnet")) then ($sonnet_rate + {v:true})
       else ($sonnet_rate + {v:false}) end;

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Unit tests for hooks/sensors/failure-diagnose-nudge.{sh,py} (GH #153).
 # Advisory PostToolUseFailure(Bash) sensor: never blocks (always exit 0), emits a
-# diagnose-before-retry nudge on a real Bash failure, capped at 3 per distinct
+# diagnose-before-retry nudge on a real Bash failure, capped at 1 per distinct
 # command per session.
 # Run standalone: bash tests/hooks/test-failure-diagnose-nudge.sh
 set -uo pipefail
@@ -71,17 +71,17 @@ else
   bad "expected hookSpecificOutput.hookEventName == PostToolUseFailure, got: $out"
 fi
 
-# --- cap enforcement: same command failing repeatedly stops nudging after CAP=3 ---
+# --- cap enforcement: same command failing repeatedly stops nudging after CAP=1 ---
 trash "$STATE" 2>/dev/null || true
 nudge_count=0
 for _ in 1 2 3 4 5; do
   out=$(posttoolusefailure_payload "flaky-cmd --retry" "Command failed" | bash "$SENSOR" "$STATE")
   echo "$out" | /usr/bin/grep -q 'mh-failure-diagnose-nudge' && nudge_count=$((nudge_count + 1))
 done
-if [ "$nudge_count" -eq 3 ]; then
-  ok "cap enforcement: exactly 3 nudges across 5 identical failures (was uncapped in the trialed plugin)"
+if [ "$nudge_count" -eq 1 ]; then
+  ok "cap enforcement: exactly 1 nudge across 5 identical failures (was uncapped in the trialed plugin)"
 else
-  bad "expected exactly 3 nudges across 5 identical failures, got $nudge_count"
+  bad "expected exactly 1 nudge across 5 identical failures, got $nudge_count"
 fi
 
 # --- a DIFFERENT failing command gets its own fresh cap ---

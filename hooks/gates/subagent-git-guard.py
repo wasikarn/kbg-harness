@@ -116,9 +116,6 @@ hit = _violation(masked)
 if hit:
     print(f"[mh:gate] BLOCKED: subagent ({agent_type}) may not run `git {hit}` "
           f"(command: {clip(cmd)!r}) -- no repo-wide git in a concurrent wave "
-          f"(docs/METHODOLOGY.md Rule 13); scope every git command to files you own. "
-          f"(git checkout -- / git restore are already denied unconditionally, "
-          f"for every session, by gate:bash:irrecoverable when they would "
-          f"discard working-tree changes -- not this gate's job.)", file=sys.stderr)
+          f"(docs/METHODOLOGY.md Rule 13); scope every git command to files you own.", file=sys.stderr)
     sys.exit(2)
 sys.exit(0)

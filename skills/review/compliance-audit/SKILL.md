@@ -13,8 +13,7 @@ effort: xhigh
 Prove a finished implementation matches the plan that was approved for it — every planned
 requirement landed, no unexplained deviation, no regression. This is a conformance check against
 a specific prior plan, not a general code review: quality/security/style lenses belong to
-`mattpocock-skills:code-review` / `mh:security-auditor`; production readiness belongs to
-`mh:production-audit`. Pre-code mirror image: `mh:plan-reviewer` reviews the plan before code
+`mattpocock-skills:code-review`. Pre-code mirror image: `mh:plan-reviewer` reviews the plan before code
 exists; this audits the diff after.
 
 **When to use / not:** use after a plan-driven change. Don't use for an unplanned diff
@@ -23,7 +22,7 @@ exists; this audits the diff after.
 ## Core Principles
 
 - **Maker ≠ checker.** The agent that implemented the plan cannot be the sole grader of its own
-  work — `docs/reference/operating-model.md`'s "unifying crux". Phase 2 dispatches a fresh-context
+  work — `docs/reference/operating-model.md`'s "The maker never grades its own work". Phase 2 dispatches a fresh-context
   verifier with no memory of the implementation session, primary on Codex — a different model
   family, not just a fresh context window.
 - **Ground truth is the plan's text and the actual diff at a pinned commit** — not a summary of
@@ -147,15 +146,10 @@ fix.
    re-verifies only what it touched risks missing a regression the fix caused elsewhere; not
    building that path is simpler than trying to bound it correctly. If real gaps are found, the
    report hands them back — fixing and re-running `/mh:compliance-audit` again is a separate,
-   later invocation, not an automatic loop. (A future version could add bounded remediation:
-   capped at 3 fix→verify rounds per Rule 13, full gauntlet rerun on the result, not just the
-   touched item — not in this build.)
+   later invocation, not an automatic loop.
 4. **Suggested next step:**
    - `pass` true (every requirement CONFORMS/accepted-DEVIATED **and** the gauntlet exited 0
-     **and** `scope_ok`) → done; ship/merge if not already. Deep-audit 2026-09-07: this line used
-     to say only "all conform, nothing open → done," which read as satisfied by the
-     per-requirement table alone — restated here to name all three `pass` conditions explicitly,
-     matching the rule stated earlier in this file.
+     **and** `scope_ok`) → done; ship/merge if not already.
    - `pass` false for any reason — an open requirement, a failed gauntlet, or `scope_ok: false` —
      blocks "done," even with a clean requirement table. Consider `mh:post-mortem` only if a gap
      reveals a systemic pattern, not for a one-off miss.
@@ -176,7 +170,7 @@ fix.
 ## Named Model
 
 Phase 2's fresh-context, Codex-primary dispatch is the verifier-separation / maker≠checker
-principle — `docs/reference/operating-model.md`'s "unifying crux": an LLM judging its own output
+principle — `docs/reference/operating-model.md`'s "The maker never grades its own work": an LLM judging its own output
 is circular, and a different model family is a stronger separation than a fresh context window
 alone. Phase 3's falsify-don't-rubber-stamp step is the scientific-method lens: a claim survives
 by surviving an attempt to disprove it, not by being asserted twice.

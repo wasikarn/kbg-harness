@@ -104,14 +104,8 @@ for the whole component because one piece of it is uncertain.
 
 ### 4. Build Sequence
 
-Order the implementation by dependency:
-
-1. types and interfaces
-2. core logic
-3. integration layer
-4. UI
-5. tests
-6. docs
+Order by dependency: what must exist before the next piece compiles or can be tested. State the
+order this feature actually needs and say why; don't apply a fixed template.
 
 ## Output Format
 

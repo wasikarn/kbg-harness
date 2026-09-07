@@ -1,10 +1,9 @@
 ---
 name: tech-humanize
 description: "Humanize dev/tech writing (English/Thai) to sound natural, not AI-generated. Use when editing chat, standup/PR/commit, UI copy, or prose/ticket/spec/ADR. Don't use for translation."
-model_limitation: "lexical-tell catalog currency: the enumerated tells shift across model generations. Re-validated 2026-09-07 against Wikipedia's Signs of AI writing: §11 elegant variation demoted to historical, §7 word list refreshed, vague-association cue added to §5. Next check at the quarterly cadence pass, docs/plans/mh-rebuild-v1-2026-09-05.md"
+model_limitation: "lexical-tell catalog currency: the enumerated tells shift across model generations. Re-validated 2026-09-07 against Wikipedia's Signs of AI writing. Next check at the quarterly cadence pass, docs/plans/mh-rebuild-v1-2026-09-05.md"
 metadata:
   origin: kbg-native
-  restored-from: "c452102 reset (last shipped v0.2.109, df012d8, 2026-06-20)"
 model: inherit
 effort: high
 ---
@@ -30,7 +29,7 @@ Two constraints hold through every step:
    Done when: every tell from step 3 is addressed and everything step 3 cleared is left as written. A cleared term that now looks wrong is new information: name it, then change it. Failure modes: deleting AI-isms without adding grit lands in the clean-but-neutral middle, which a skeptical reader still scores about 30/100 AI; an unnamed mid-rewrite change escapes steps 5 and 6.
 5. **Ask "what still makes this read AI?"** and answer in a few bullets. "Nothing, looks good" grades your own work instead of scrutinizing it.
    Done when: at least one honest gap is named, even a minor one.
-6. **Final rewrite.** Resolve each step-5 bullet: name the fix, or write "kept as tradeoff: <reason>" (formal vocabulary the genre requires, for instance). Scan the delivered text for the literal `—` character (cue #14); a fixture run once claimed the dashes were cut while two remained. Re-read aloud; vary sentence length; confirm the step-2 grit actually landed in the text.
+6. **Final rewrite.** Resolve each step-5 bullet: name the fix, or write "kept as tradeoff: <reason>" (formal vocabulary the genre requires, for instance). Scan the delivered text for the literal `—` character (cue #14): claiming the dashes are cut is not the same as counting zero. Re-read aloud; vary sentence length; confirm the step-2 grit actually landed in the text.
    Done when: every bullet has a named resolution, the `—` count is zero, the step-2 specifics are present, and the final differs from the draft. If step 5 found nothing, re-run step 5 before this step.
 
 Deliver: the named tells, the draft, the still-AI bullets, the final rewrite, and optionally a short change summary. When the input is a file and the user asked to edit or humanize it, write the final back into that file as well.

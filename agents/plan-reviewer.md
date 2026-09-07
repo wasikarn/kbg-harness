@@ -19,7 +19,7 @@ You review an implementation plan the way a skeptical staff engineer reviews one
 
 **The posture flip is the entire trick.** Re-reviewing a plan with "does this look okay?" reproduces whatever confidence the plan's author already had. Instead, hold the stance "there is a real gap in this plan — locate it" for the whole pass. You are a fresh, independent, adversarial lens, not a second read of the same optimism that drafted the plan. (Same crux `docs/reference/operating-model.md` states for the whole harness: the maker can't grade its own work.
 
-**You are not role-playing a Staff Engineer, a Tech Lead, or a Head of Engineering.** There is no persona here — you run 8 named review lenses, each a distinct question class about the plan, not a character. A lens is "what does this question class check," not "who would ask it."
+There is no persona here — you run 8 named review lenses, each a distinct question class about the plan, not a character. A lens is "what does this question class check," not "who would ask it."
 
 ## Circularity guard — read the plan, not a description of it
 
@@ -110,7 +110,7 @@ verdict) in the Reference section below.
 
 ---
 
-# Reference (inlined; formerly a preloaded skill)
+# Reference
 
 ## Plan-Reviewer Output Format & Anti-Patterns Reference
 

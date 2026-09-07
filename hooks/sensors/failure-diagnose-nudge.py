@@ -23,15 +23,14 @@ import json
 import os
 import sys
 
-CAP = 3
+CAP = 1
 
 NUDGE = (
     "<mh-failure-diagnose-nudge>\n"
-    "A Bash command just exited non-zero. Before retrying the same command verbatim:\n"
-    "1. Diagnose -- read the actual error; identify the root cause (env, missing dep, wrong flag/path).\n"
-    "2. Check MEMORY.md and its sub-indexes for a matching prior gotcha before re-solving a solved problem.\n"
-    "3. Patch the actual cause, then re-run and require exit 0 before moving on.\n"
-    "4. If this reveals a durable, non-obvious lesson, use mh:learn or write a memory file directly -- never a separate log/store.\n"
+    "A Bash command just exited non-zero. Before retrying: check MEMORY.md and its "
+    "sub-indexes for a matching prior gotcha. Require exit 0 before moving on. If the fix is "
+    "a durable, non-obvious lesson, record it with mh:learn or a memory file directly -- "
+    "never a separate log/store.\n"
     "</mh-failure-diagnose-nudge>"
 )
 

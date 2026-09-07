@@ -63,7 +63,8 @@ guards against: `references/provenance.md`.
 
 1. **Score** every idea on three axes, 0-10, before ranking any (anchoring guard):
    novelty (distance from the obvious default), viability (could it ship), fit (addresses the
-   stated problem). `total = novelty * 0.35 + viability * 0.40 + fit * 0.25`; viability is
+   stated problem). Then pipe the scores into `scripts/rank.py` (stdin JSON, see the file
+   docstring) for `total`, the shortlist, runner-up and non-obvious pick; viability weighs
    heaviest because unshippable-but-brilliant is the dominant failure mode. Attach a one-line
    `trap` reason to any attractive idea with a hidden cost, false economy, scale ceiling, or
    premature abstraction (confirmation guard: look for why an attractive idea is wrong). `trap`
@@ -71,7 +72,7 @@ guards against: `references/provenance.md`.
 2. **Cluster** into 3-6 groups by underlying angle, labelled by the angle ("remove-the-server
    plays"), never by surface keyword. A cluster drawn from 3 or more distinct frames is
    independent convergence: say so beside the label.
-3. **Shortlist** the top 3 by `total`, traps excluded, with a one-line reason each, the
+3. **Shortlist** rank.py's top 3 (traps excluded) with a one-line reason each, the
    runner-up and why it missed, and a confidence level with its reason.
 
 **Who scores.** Auto-fired runs (the gate passed on high stakes) hand Phase 2 to the
@@ -130,6 +131,7 @@ Never offer it unprompted.
 - `references/algorithm-detail.md`: the literal DIVERGENT and FOCUS prompt blocks, payload,
   rubric mechanics, rendering contract. **Load before dispatching.**
 - `references/frames.md`: the 15 frames with tags. **Load at Phase 1 step 1.**
+- `scripts/rank.py`: the deterministic ranker both scoring paths run. `--selftest` checks it.
 - `references/phase4.md`: the three follow-up patterns. **Load only on a follow-up.**
 - `references/provenance.md`: upstream citations, cap history, eval rigor limitation. Not
   needed to run.

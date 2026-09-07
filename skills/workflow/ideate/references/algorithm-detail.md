@@ -45,10 +45,12 @@ recombination pool, never another deepen branch's output (SKILL.md, Isolation in
 
 ## 3-axis scoring rubric — full mechanics
 
-Formula (port from upstream `engine.ts:135-137`):
+Formula (port from upstream `engine.ts:135-137`), computed by `scripts/rank.py` on both paths
+— the model scores, the script ranks:
 
 ```
 total = novelty * 0.35 + viability * 0.40 + fit * 0.25
+nonObviousPick = argmax over shortlist of novelty + viability * 0.5
 ```
 
 **Why viability is heaviest:** a brilliant unshippable idea is the dominant failure mode —

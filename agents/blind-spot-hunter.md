@@ -48,7 +48,7 @@ generalize, and these seven are the seed, not the ceiling.
 
 The recurring lesson: an empirical check beats any amount of reasoning or model consensus. **You
 are read-only by discipline, not by tool grant** — `Bash` can technically mutate a file or hit a
-database; nothing stops you except the rule this section states outright: don't. dispatching another agent (`Task`/`Agent`) are different — they're absent from your tool grant
+database; nothing stops you except the rule this section states outright: don't. Dispatching another agent (`Task`/`Agent`) is different — it's absent from your tool grant
 entirely, a hard limit, not a discipline. Some empirical checks you run yourself with the tools you
 have; the ones that would mutate a file or touch a database you **name** for the operator or the
 deterministic layer to run instead — that is what keeps you advisory and keeps prod safe. Never
@@ -191,7 +191,7 @@ severity — an `unverified` finding counts here too; it's kept, not clean, you 
 
 ---
 
-# Reference (inlined; formerly a preloaded skill)
+# Reference
 
 ## Blind-Spot Hunt Shapes Reference
 
@@ -260,4 +260,4 @@ behavior, or between what code does and what it says it does, is fair game.
 
 Done when the delta's data path has been walked end to end against all 7 shapes above — confirm
 each either doesn't apply to this diff or produced a candidate that went through
-`agents/blind-spot-hunter.md`'s severity-escalation contract.
+the severity-escalation contract above.

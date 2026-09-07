@@ -17,7 +17,7 @@ clamps any single wave's work-list to ≤5 before spawning. This command's Phase
 and Phase 3 (3) sizes are written to sit inside that per-wave
 clamp. The "exactly 2 waves, not 3+" shape is this skill's own
 design contract (Phase 1 through Phase 3 in `SKILL.md`), not
-something F8.5 polices — F8.5 caps how big a wave can get, not
+something Rule 13 polices — Rule 13 caps how big a wave can get, not
 how many waves a skill runs.
 
 ## Phase 1 algorithm-shape source
@@ -38,7 +38,7 @@ Source: upstream `/tmp/adhd-repo/skills/adhd/SKILL.md:84-112` and
 
 - Host-Claude scoring (Phase 2+3 run on the same model class as the Phase 1
   generators) carries the LLM-judge-circularity caveat from `docs/reference/operating-model.md`'s
-  "Why — the unifying crux".
+  "The maker never grades its own work".
 - On the explicit-invocation path (the gate is skipped), stakes
   aren't classified — don't infer high-stakes from prompt wording like
   "critical"/"production"; that lexical-heuristic pattern is exactly what
@@ -50,7 +50,7 @@ Source: upstream `/tmp/adhd-repo/skills/adhd/SKILL.md:84-112` and
 - Routing to the critic adds no third fan-out wave: Phase 2 goes from 0
   agent calls (host-inline) to 1 sequential call on the auto-fire path, not
   a parallel spawn, and that call returns the deepened branches, so Phase 3
-  does not run — the "2-wave, peak-5" F8.5 contract is unaffected.
+  does not run — the "2-wave, peak-5" Rule 13 contract is unaffected.
 
 ## Output-shape source
 
