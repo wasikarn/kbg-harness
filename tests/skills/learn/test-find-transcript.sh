@@ -40,24 +40,25 @@ fi
 
 # --- fixture: session id set, but no matching transcript file exists ---
 MISSING_ID="33333333-3333-3333-3333-333333333333"
-HOME="$FAKE_HOME" CLAUDE_CODE_SESSION_ID="$MISSING_ID" bash "$SCRIPT" "$CWD" >/tmp/find-transcript-stdout 2>/tmp/find-transcript-stderr
+STDOUT_LOG="$FAKE_HOME/missing-id.stdout"
+STDERR_LOG="$FAKE_HOME/missing-id.stderr"
+HOME="$FAKE_HOME" CLAUDE_CODE_SESSION_ID="$MISSING_ID" bash "$SCRIPT" "$CWD" >"$STDOUT_LOG" 2>"$STDERR_LOG"
 rc=$?
-if [ "$rc" -ne 0 ] && [ -s /tmp/find-transcript-stderr ]; then
+if [ "$rc" -ne 0 ] && [ -s "$STDERR_LOG" ]; then
   ok "fails loud (non-zero exit + stderr reason) when no transcript matches the session id"
 else
-  bad "expected non-zero exit + stderr on not-found, got rc=$rc stderr=$(cat /tmp/find-transcript-stderr)"
+  bad "expected non-zero exit + stderr on not-found, got rc=$rc stderr=$(cat "$STDERR_LOG")"
 fi
-trash /tmp/find-transcript-stdout /tmp/find-transcript-stderr 2>/dev/null || true
 
 # --- fixture: CLAUDE_CODE_SESSION_ID unset entirely ---
-out=$(HOME="$FAKE_HOME" env -u CLAUDE_CODE_SESSION_ID bash "$SCRIPT" "$CWD" 2>/tmp/find-transcript-stderr)
+UNSET_STDERR_LOG="$FAKE_HOME/unset-id.stderr"
+out=$(HOME="$FAKE_HOME" env -u CLAUDE_CODE_SESSION_ID bash "$SCRIPT" "$CWD" 2>"$UNSET_STDERR_LOG")
 rc=$?
-if [ "$rc" -ne 0 ] && /usr/bin/grep -qi 'CLAUDE_CODE_SESSION_ID' /tmp/find-transcript-stderr; then
+if [ "$rc" -ne 0 ] && /usr/bin/grep -qi 'CLAUDE_CODE_SESSION_ID' "$UNSET_STDERR_LOG"; then
   ok "fails loud and names the missing env var when CLAUDE_CODE_SESSION_ID is unset"
 else
-  bad "expected non-zero exit naming CLAUDE_CODE_SESSION_ID, got rc=$rc stderr=$(cat /tmp/find-transcript-stderr)"
+  bad "expected non-zero exit naming CLAUDE_CODE_SESSION_ID, got rc=$rc stderr=$(cat "$UNSET_STDERR_LOG")"
 fi
-trash /tmp/find-transcript-stderr 2>/dev/null || true
 
 # --- byte size reported matches the actual file ---
 out=$(HOME="$FAKE_HOME" CLAUDE_CODE_SESSION_ID="$CURRENT_ID" bash "$SCRIPT" "$CWD" 2>/dev/null)

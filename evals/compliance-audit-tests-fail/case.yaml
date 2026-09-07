@@ -9,7 +9,7 @@ context:
     cat > plan.md <<'FIXTURE_EOF'
     # Plan: add a double() helper
 
-    1. Add a `double(x)` function to `app.py` that returns `x * 2`.
+    1. Add a `double(x)` function to `app.py` that doubles the number it's given.
     2. Add a test for `double` in `test_app.py`.
     FIXTURE_EOF
     cat > run_tests.sh <<'FIXTURE_EOF'

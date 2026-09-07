@@ -5,6 +5,22 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.47] — 2026-09-07
+
+### Fixed
+
+- `mh:learn`: "why retrospective vs ambient" justification prose moved out of `SKILL.md` into
+  `references/autonomy-posture.md`, loaded on demand — closes a compliance-audit finding against
+  the skill's own build plan (the prose was still inline, matching a plan requirement it hadn't
+  met).
+- `evals/compliance-audit-tests-fail`: the fixture's plan requirement no longer spells out the
+  exact formula (`x * 2`) the buggy implementation gets wrong — a verifier could catch the
+  deviation from prose alone, which defeated the fixture's purpose of proving the gauntlet rerun
+  (not just diff inspection) is what catches the bug.
+- `tests/skills/learn/test-find-transcript.sh`: captured stdout/stderr now write under the test's
+  own `mktemp -d` sandbox instead of hardcoded `/tmp/find-transcript-*` paths — the hardcoded
+  paths broke an independent verifier's attempt to sandbox its own test run to a single worktree.
+
 ## [1.1.46] — 2026-09-07
 
 ### Changed
