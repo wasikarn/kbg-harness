@@ -23,7 +23,7 @@ context:
     git tag plan-base
     cat > app.py <<'FIXTURE_EOF'
     def double(x):
-        return x + 2
+        return x * 2
     FIXTURE_EOF
     cat > test_app.py <<'FIXTURE_EOF'
     import unittest
@@ -31,12 +31,12 @@ context:
 
     class TestDouble(unittest.TestCase):
         def test_double(self):
-            self.assertEqual(double(3), 6)
+            self.assertEqual(double(3), 7)
 
     if __name__ == "__main__":
         unittest.main()
     FIXTURE_EOF
     git add app.py test_app.py
-    git commit -q -m "head: implement double() (buggy) with a test that catches it"
+    git commit -q -m "head: double() correctly implemented, test asserts the wrong value"
     git tag plan-head
     cd ..

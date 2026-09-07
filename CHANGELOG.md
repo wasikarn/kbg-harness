@@ -5,6 +5,19 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.48] — 2026-09-07
+
+### Fixed
+
+- `evals/compliance-audit-tests-fail`: the previous fix (softening the requirement wording) still
+  left the fixture's checklist item independently falsifiable from a diff read alone — "doubles"
+  vs. `x + 2` is just as detectable as `x * 2` vs `x + 2`. Redesigned properly: `double()` now
+  correctly implements `x * 2` (fully CONFORMS on inspection), and the actual defect moved into
+  the test's own assertion (`assertEqual(double(3), 7)` — wrong expected value). This decouples
+  checklist-conformance from runtime-correctness for real, independent of exact wording — a
+  round-2 Codex-primary re-audit still caught the old design's flaw before this landed. Grader
+  comments in the fixture's `graders/*.md` updated to match.
+
 ## [1.1.47] — 2026-09-07
 
 ### Fixed

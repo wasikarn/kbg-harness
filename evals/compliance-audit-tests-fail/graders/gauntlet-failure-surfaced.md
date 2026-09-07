@@ -4,5 +4,7 @@ pattern: '(?i)FAIL|AssertionError|exit code 1|non-?zero'
 match: contains
 target: last_message
 ---
-`double()` is implemented wrong (`x + 2` instead of `x * 2`); the test that exists correctly
-catches it. The report must surface the real test failure, not just the requirement checklist.
+`double()` is implemented correctly (`x * 2`, matching the plan exactly); the test that exists for
+it asserts the wrong expected value (`7` instead of `6`), so only running the suite reveals the
+failure — a checklist-only read finds nothing to flag. The report must surface the real test
+failure, not just the requirement checklist.

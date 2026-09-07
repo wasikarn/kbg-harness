@@ -4,4 +4,5 @@ tool: Edit
 min: 0
 max: 0
 ---
-This version reports, it doesn't fix — no edit to `target-repo/app.py` to correct the bug.
+This version reports, it doesn't fix — no edit to `target-repo/test_app.py` to correct the wrong
+assertion value.
