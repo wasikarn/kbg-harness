@@ -8,6 +8,12 @@
 # distinction). Unconditional across subagent_type: closes the same-type-
 # switch evasion seen in the fork-recursive-spawn incident (2026-08-31),
 # since the check never inspects tool_input.subagent_type at all.
+# No bash-level fast path: a prior raw-text substring check on the agent_id
+# key ran before any JSON parsing and could be bypassed by writing that key
+# with a JSON unicode escape instead of a literal underscore -- valid JSON,
+# same decoded key, but absent from the raw text the substring check saw
+# (GH #154). Every payload now always reaches python3, matching the sibling
+# gate task-complete-separation.sh's convention.
 set -uo pipefail
 
 # Portability guard (#93): announced fail-open when python3 is missing.
@@ -16,9 +22,7 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 0
 fi
 
-# Fast path: main-session calls (no agent_id) never reach python.
 _input=$(cat)
-case "$_input" in *'"agent_id"'*) ;; *) exit 0 ;; esac
 
 _py="$(dirname "$0")/subagent-spawn-guard.py"
 if [ ! -r "$_py" ]; then

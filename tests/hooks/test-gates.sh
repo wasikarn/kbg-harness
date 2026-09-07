@@ -82,6 +82,39 @@ print(json.dumps(d))
 ' "$1" "$2" "${3-}"
 }
 
+# Build an Agent tool-call payload with the agent_id KEY forced present at an
+# explicit value, including "" or JSON null -- agent_payload() above treats a
+# falsy $2 as "omit the key" (main session shape), which cannot express
+# "key present but empty/null" (GH #154 gap 2: the .py gate's old `if not
+# agent_id` check treated presence-with-empty/null the same as absence).
+# $2 == "__NULL__" emits JSON null; anything else is used as the literal string
+# value (including "").
+agent_payload_forced_id() {
+  python3 -c '
+import json, sys
+subagent_type, agent_id_raw = sys.argv[1], sys.argv[2]
+d = {"tool_name": "Agent", "tool_input": {"prompt": "do work", "description": "task", "subagent_type": subagent_type}}
+d["agent_id"] = None if agent_id_raw == "__NULL__" else agent_id_raw
+print(json.dumps(d))
+' "$1" "$2"
+}
+
+# Build an Agent tool-call payload where the agent_id KEY is written as the
+# JSON _ escape for the underscore (agent_id) instead of a literal
+# underscore -- valid JSON decoding to the key "agent_id", but the RAW text
+# never contains the substring "agent_id" (GH #154 gap 1: the .sh gate's old
+# bash fast-path was a raw-text substring match performed before any JSON
+# parsing, so an escaped key silently bypassed it). Built with chr(92) rather
+# than a literal backslash so the escape survives untouched through argv/tool
+# transports that would otherwise decode _ before it reaches this script.
+agent_payload_escaped_id_key() {
+  python3 -c '
+key = "agent" + chr(92) + "u005f" + "id"
+print("{\"tool_name\": \"Agent\", \"tool_input\": {\"prompt\": \"do work\", "
+      "\"description\": \"task\", \"subagent_type\": \"general-purpose\"}, \"" + key + "\": \"agent-1\"}")
+'
+}
+
 # Expect the gate to BLOCK (exit 2).
 test_deny() {
   local gate="$1" desc="$2" payload="$3"
@@ -810,12 +843,26 @@ test_allow "$SUBAGENT_SPAWN_GUARD" "main session calling Agent (no agent_id) all
   "$(agent_payload 'general-purpose' '' '')"
 test_allow "$SUBAGENT_SPAWN_GUARD" "subagent calling a non-Agent tool (Bash) is out of scope for this gate" \
   "$(bash_agent_payload 'ls -la' fork)"
-# Payloads below carry the literal "agent_id" substring so the bash fast-path lets them
-# through to python (a payload without it would fast-path-exit 0 before ever reaching the
-# json.load()/isinstance() branches these two tests target).
-test_allow "$SUBAGENT_SPAWN_GUARD" "malformed stdin past the fast-path (fail-safe allow)" \
+# GH #154: the gate's own stated intent is to key on PRESENCE of agent_id, not
+# a non-empty/non-null value -- these three exercise cases the old bash
+# fast-path (raw-text substring match) and old python truthiness check
+# (`if not agent_id`) both mishandled as "no agent_id" when the key was in
+# fact present. A real payload capture (2026-09-07, matt-harness issue #154)
+# never observed an empty/null/escaped agent_id in practice -- these are
+# hardening tests for a theoretical gap the gate's own contract should still
+# hold against, not evidence the gap is live-exploitable.
+test_deny "$SUBAGENT_SPAWN_GUARD" "GH #154 gap 2: agent_id present but an empty string still denied" \
+  "$(agent_payload_forced_id 'general-purpose' '')"
+test_deny "$SUBAGENT_SPAWN_GUARD" "GH #154 gap 2: agent_id present but JSON null still denied" \
+  "$(agent_payload_forced_id 'general-purpose' '__NULL__')"
+test_deny "$SUBAGENT_SPAWN_GUARD" "GH #154 gap 1: agent_id key JSON-escaped (\\u005f for the underscore) still denied, not fast-pathed past on raw-text match" \
+  "$(agent_payload_escaped_id_key)"
+# The .sh gate has no bash-level fast path (removed for GH #154) -- every
+# payload always reaches python3, so these exercise the json.load()/
+# isinstance() fail-safe branches directly.
+test_allow "$SUBAGENT_SPAWN_GUARD" "malformed stdin (fail-safe allow)" \
   '{"agent_id": invalid'
-test_allow "$SUBAGENT_SPAWN_GUARD" "valid JSON but non-object payload past the fast-path (fail-safe allow)" \
+test_allow "$SUBAGENT_SPAWN_GUARD" "valid JSON but non-object payload (fail-safe allow)" \
   '["agent_id"]'
 
 echo "=== fast-path (bash pre-filter that skips python3 on commands that cannot match, added 2026-08-14) ==="

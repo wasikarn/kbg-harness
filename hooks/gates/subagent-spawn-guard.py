@@ -18,9 +18,11 @@ if d.get("tool_name") != "Agent":
 # agent_id is present ONLY inside a subagent call (task-complete-separation.py's
 # header: agent_type is ALSO set for a top-level `claude --agent <name>` main
 # session, which legitimately dispatches; agent_id is the correct discriminant).
-agent_id = d.get("agent_id")
-if not agent_id:
+# Presence check, not truthiness (GH #154): the key being present at all is
+# the signal, so an empty-string or null agent_id must still deny, not allow.
+if "agent_id" not in d:
     sys.exit(0)
+agent_id = d.get("agent_id")
 
 agent_type = d.get("agent_type") or "unknown"
 
