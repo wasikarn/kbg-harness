@@ -156,22 +156,74 @@ _SPAWN_ANCHOR_RE = re.compile(
 )
 _SPAWN_FLAG_RE = re.compile(r"-p\b|--print\b|--agent\b|--bg\b|--worktree\b")
 _SPAWN_TOKEN_RE = re.compile(
-    "\"(?:[^\"\\\\]|\\\\.)*\"|" + SQ + "[^" + SQ + "]*" + SQ + "|.", re.DOTALL
+    "\"(?:[^\"\\\\]|\\\\.)*\"|" + SQ + "[^" + SQ + "]*" + SQ + "|\\\\+|.", re.DOTALL
 )
 
 def _nested_spawn(c):
+    # Deep-audit 2026-09-07: a bare separator (&;|\n) inside a paren/backtick
+    # group (command substitution, process substitution, a subshell) is NOT a
+    # top-level statement separator for the outer command -- real bash parses
+    # the whole group as one unit regardless of what's inside it. depth tracks
+    # "(" / ")" nesting (clamped at 0, so a stray unmatched ")" can't go
+    # negative and mask a later real "("); in_backtick toggles on each "`".
+    # While either is active, a separator only ends the CURRENT token's
+    # ordinary handling, never the scan -- widening the scan region is the
+    # safe direction for a deny gate.
+    #
+    # Backslashes outside quotes pair up two-at-a-time in real bash: a RUN of
+    # N consecutive backslashes escapes the following character only if N is
+    # odd (the trailing, unpaired backslash); an even N means every backslash
+    # is a literal and the following character keeps its normal meaning.
+    # _SPAWN_TOKEN_RE's own "\\+" alternative captures a whole run as one
+    # token so its length can be checked directly, rather than matching one
+    # backslash at a time (which can't tell an odd run from an even one).
+    # Two Codex-validator rounds, deep-audit 2026-09-07, both reproduced
+    # live: (1) `claude --version \( ; othertool -p` was denied -- an odd
+    # (single) escaped "(" is a literal argument character, not a subshell
+    # opener, but got miscounted as depth+=1, swallowing the real ";" and
+    # crediting othertool's -p back to claude. (2) a first, simpler fix
+    # (fixed-length "\\X" pairing, no parity check) then ALLOWED `claude
+    # \\`printf x; printf y` -p evil` -- an EVEN (double) backslash before a
+    # backtick leaves the backtick unescaped and live in real bash (the pair
+    # is just one literal backslash), so it really does open a command
+    # substitution carrying -p back to claude; treating the backtick as
+    # escaped there was a false ALLOW, a real bypass, not just an
+    # over-cautious false DENY. Parity tracking fixes both directions.
     for m in _SPAWN_ANCHOR_RE.finditer(c):
-        buf, prev = [], ""
+        buf, depth, in_backtick = [], 0, False
+        escape_next = False    # trailing backslash of an odd-length run
+        after_backslash = False  # any backslash run, odd or even, just seen
         for tok in _SPAWN_TOKEN_RE.finditer(c[m.end():]):
             t = tok.group()
-            if t == "\n" and prev == "\\":
+            if t and t.count("\\") == len(t):
                 buf.append(t)
-                prev = t
+                escape_next = len(t) % 2 == 1
+                after_backslash = True
                 continue
-            if len(t) == 1 and t in "&;|\n":
+            if t == "\n" and (escape_next or after_backslash):
+                # Any backslash run right before a real newline keeps the
+                # scan going, regardless of parity -- this file's own
+                # deliberate safe-direction precedent for a deny gate (an
+                # even count is not a true continuation in real bash, but
+                # treating it as one is the safe direction: it can only
+                # widen the scan, never narrow it past a real spawn).
+                buf.append(t)
+                escape_next = after_backslash = False
+                continue
+            if escape_next:
+                buf.append(t)
+                escape_next = after_backslash = False
+                continue
+            after_backslash = False
+            if t == "(":
+                depth += 1
+            elif t == ")":
+                depth = max(0, depth - 1)
+            elif t == "`":
+                in_backtick = not in_backtick
+            elif len(t) == 1 and t in "&;|\n" and depth == 0 and not in_backtick:
                 break
             buf.append(t)
-            prev = t
         if _SPAWN_FLAG_RE.search("".join(buf)):
             return True
     return False

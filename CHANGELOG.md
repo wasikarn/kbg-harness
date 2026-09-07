@@ -5,6 +5,91 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.52] — 2026-09-07
+
+### Fixed
+
+- Deep-audit report on the 1.1.51 fix above (fresh run, third independent repro of the loose-quote
+  gap): filed as [GH #157](https://github.com/wasikarn/matt-harness/issues/157) — same scanner,
+  different token-boundary bug from #152, triaged against this file's documented habit-guard bar
+  rather than fixed inline.
+
+## [1.1.51] — 2026-09-07
+
+### Fixed
+
+Deep-audit pass on this session's own `learn`+`compliance-audit` build (baseline 5.4/10, all 6
+findings independently reproduced before fixing):
+
+- `hooks/gates/irrecoverable.py` (P1): `_nested_spawn` tracked shell separators (`&;|\n`) as
+  always statement-ending, so `claude $(\nprintf x\n) -p "evil"` — one real bash statement, the
+  newline inside the substitution isn't top-level — evaded detection because the embedded
+  newline stopped the scan before `-p` was reached. Now tracks `(`/`)` nesting depth (clamped at
+  0, so a stray unmatched `)` can't go negative and mask a real later `(`) and backtick toggling;
+  a separator only ends the scan at depth 0 outside backticks. Two allow-direction regression
+  controls added to `tests/hooks/test-gates.sh` proving the fix doesn't reopen GH #152's "later
+  command's flag leaks back to an earlier flag-free `claude` mention" class (270/270, was
+  268/268).
+- `hooks/sensors/failure-diagnose-nudge.py` (P1, GH #153): the sensor was registered only on
+  `PostToolUse`, but a real nonzero Bash exit dispatches via `PostToolUseFailure` in this CC
+  version — confirmed live with a debug dump added directly to the script: a genuine failing
+  command produced zero invocations. The sensor never fired on an actual failure since it
+  shipped. `hooks.json` now registers it on `PostToolUseFailure` only (the `PostToolUse`
+  registration was proven dead — it could only ever see successful calls — and dropped rather
+  than kept as an always-no-op); `is_failure()` simplified to match; `hookSpecificOutput.
+  hookEventName` in the output is hardcoded to `PostToolUseFailure` instead of computed, since
+  that's the only event this sensor is registered on. `PostToolUseFailure`'s own output schema
+  (confirmed in the installed CC binary) declares `additionalContext`, same as `PostToolUse`.
+- `hooks/sensors/failure-diagnose-nudge.py` (P2): `load_counts`/`save_counts` ran as two
+  separate, uncoordinated file opens — two Bash failures completing close together could
+  interleave their read-modify-write and lose an increment, letting the 3-per-signature nudge
+  cap under- or over-count. Wrapped in an `flock`-based `locked()` context manager (advisory-only:
+  a lock that can't be acquired fails open to the prior unlocked behavior, never blocks).
+  Regression test uses two forked processes each holding the lock for a fixed sleep and asserts
+  their `[acquire, release]` intervals never overlap — deterministic, not timing-dependent (a
+  natural-race attempt via real subprocess launches didn't reliably reproduce the interleave on
+  this machine and was dropped in favor of this).
+- `skills/meta/learn/scripts/find-transcript.sh` (P2): its project-path slug rule only replaced
+  `/` with `-`, but the installed CC binary's own slug function replaces *every*
+  non-alphanumeric character — this repo's own checkout path (letters/hyphens only) happened to
+  produce an identical result either way, which is exactly why it went uncaught. Fixed to match;
+  a project path over 200 chars (which the real runtime truncates and hashes internally) now
+  fails loud instead of guessing wrong.
+- `evals/compliance-audit-wrong-sha-real/graders/no-silent-decoy-verdict.md` (P2): the regex had
+  no exclusion window, so it false-failed a *correct* report that explains the decoy commit while
+  still using the right pinned SHA. Now requires the missing/absent claim to appear with no
+  "decoy"/"detached worktree"/"pinned" acknowledgment within 150 chars on either side.
+- `skills/review/compliance-audit/SKILL.md` (P2): Phase 3's "suggested next step" line said only
+  "all conform, nothing open → done," which read as satisfied by the per-requirement table alone.
+  Restated to name all three `pass` conditions explicitly (every requirement CONFORMS/accepted-
+  DEVIATED, the gauntlet exits 0, `scope_ok` true), matching the rule already stated earlier in
+  the same file.
+- `hooks/gates/irrecoverable.py`'s paren-depth fix above, rounds 2-3 (two Codex-validator
+  fresh-context passes, each catching a real bug the previous fix introduced or missed): a
+  backslash-escaped `(` outside quotes (a literal argument character to `claude`, not a real
+  subshell opener — e.g. `claude --version \( ; othertool -p`) was miscounted as depth+=1,
+  reproduced live pre-fix as a false DENY. A first attempted fix (a fixed "backslash + one
+  specific char" rule, no parity check) was itself caught by round 2's validator introducing a
+  false ALLOW: an EVEN backslash count before a backtick or separator leaves that character
+  unescaped and LIVE in real bash (the pair is just one literal backslash), so `claude
+  \\`printf x; printf y` -p evil` really does carry `-p` back to `claude` via a live command
+  substitution, but the fixed-rule version treated the backtick as escaped/inert and ALLOWed it
+  — reproduced live via a bash-stub trace showing `claude` actually receiving `-p`. Rewrote as
+  proper run-length parity tracking: `_SPAWN_TOKEN_RE`'s `\\+` alternative captures a whole
+  backslash run as one token; an odd-length run's trailing backslash escapes the next character
+  (inert), an even-length run leaves it fully live (real bash semantics). A real newline right
+  after ANY backslash run (odd or even) still doesn't break the scan regardless of parity — this
+  file's own deliberate safe-direction precedent for a deny gate, preserved on purpose even though
+  an even count isn't a true continuation in real bash. Four regression cases total in
+  `tests/hooks/test-gates.sh` across both rounds (274/274, was 270/270). A separate, pre-existing
+  bug the round-2 validator also surfaced (a loose, unescaped-looking `"` character misdirecting
+  `_SPAWN_TOKEN_RE`'s own quoted-string alternative, independent of this backslash fix) is a known
+  gap, not fixed in this pass.
+- `hooks/sensors/failure-diagnose-nudge.py`'s `locked()` (Codex-validator round, same pass):
+  caught its own `except OSError` not catching `ModuleNotFoundError` (a subclass of `ImportError`,
+  not `OSError`) when `import fcntl` fails on a platform without it — reproduced live as an
+  uncaught crash instead of the documented fail-open. Now catches `(OSError, ImportError)`.
+
 ## [1.1.50] — 2026-09-07
 
 ### Fixed

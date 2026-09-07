@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""PostToolUse(Bash) sensor: on a non-zero exit, injects a diagnose-before-
-retry nudge back into the same turn. Never blocks (always exit 0) -- this is
-advisory only, not a gate. GH #153.
+"""PostToolUseFailure(Bash) sensor: on a Bash failure, injects a
+diagnose-before-retry nudge back into the same turn. Never blocks (always
+exit 0) -- this is advisory only, not a gate. GH #153. Registered only on
+PostToolUseFailure: a real Bash failure dispatches via that event in this CC
+version, not PostToolUse (confirmed live, deep-audit 2026-09-07) -- a
+PostToolUse registration would only ever see successful calls (exit_code 0),
+so it was dropped rather than kept as an always-no-op.
 
 Capped at 3 nudges per distinct failing command per session (METHODOLOGY
 Rule 13's bounded-retry doctrine: "stop after 3 rounds, the fault is then in
@@ -13,6 +17,7 @@ Fires on every non-zero exit (no denylist of "worth nudging on" patterns) --
 a deliberate first cut, narrowing to specific failure shapes is left for a
 follow-up if the noise turns out to matter in practice.
 """
+import contextlib
 import hashlib
 import json
 import os
@@ -31,23 +36,19 @@ NUDGE = (
 )
 
 
-def extract_exit_code(data):
-    # tool_response.exit_code is the documented PostToolUse shape for Bash
-    # (Claude Code hooks reference; the update-config skill's own schema
-    # labels tool_response as "PostToolUse only"). This hook is registered
-    # only under hooks.json's PostToolUse:Bash matcher, so no other payload
-    # family (e.g. Codex's dispatcher-normalized shape) ever reaches it --
-    # add a path here only once a real payload is observed needing one.
-    tr = data.get("tool_response")
-    if not isinstance(tr, dict):
-        return None
-    ec = tr.get("exit_code")
-    if isinstance(ec, (int, str)):
-        try:
-            return int(ec)
-        except (ValueError, TypeError):
-            pass
-    return None
+def is_failure(data):
+    # Deep-audit 2026-09-07 (GH #153 fix): a real nonzero Bash exit does NOT
+    # dispatch via PostToolUse in this Claude Code version -- confirmed live,
+    # in-session, with a debug dump added directly to this file: a genuine
+    # `ls <missing-path>` failure produced zero invocations on the
+    # PostToolUse(Bash) registration that existed before this fix. It
+    # dispatches via PostToolUseFailure instead, whose input schema (confirmed
+    # directly in the installed CC binary's own Zod definitions) carries NO
+    # tool_response/exit_code at all -- only hook_event_name, tool_name,
+    # tool_input, tool_use_id, and error (a string). hooks.json now registers
+    # this sensor only on PostToolUseFailure, so its mere presence is the
+    # signal -- no exit-code inspection needed or possible for that shape.
+    return data.get("hook_event_name") == "PostToolUseFailure"
 
 
 def extract_command(data):
@@ -81,6 +82,47 @@ def save_counts(state_path, counts):
         pass  # fail-open: losing the counter just means the cap resets, never blocks
 
 
+@contextlib.contextmanager
+def locked(state_path):
+    # Deep-audit 2026-09-07: load_counts/save_counts used to run as two
+    # separate, uncoordinated file opens -- two Bash calls completing close
+    # together (a backgrounded one finishing near a foreground one) could
+    # interleave their read-modify-write and lose an increment, letting the
+    # 3-per-signature cap under- or over-count. flock on a sibling .lock file
+    # (not state_path itself, so a reader never blocks on the writer's own
+    # rename/truncate) serializes the whole load+save critical section across
+    # processes. Advisory-only feature: a lock that can't be acquired (no
+    # fcntl on this platform, or the directory can't be created) fails open
+    # to an unlocked in-process default -- losing the lock only risks the
+    # same latent miscounting this fix closes, never a block.
+    try:
+        import fcntl
+        os.makedirs(os.path.dirname(state_path), exist_ok=True)
+        lock_path = state_path + ".lock"
+        fh = open(lock_path, "a+")
+    except (OSError, ImportError):
+        # ImportError (ModuleNotFoundError is a subclass) covers a platform
+        # with no fcntl module at all -- OSError alone let that case crash
+        # instead of falling open as this comment already claimed it would
+        # (codex-validator round, deep-audit 2026-09-07, reproduced directly).
+        yield
+        return
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+    except OSError:
+        fh.close()
+        yield
+        return
+    try:
+        yield
+    finally:
+        try:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
+        except OSError:
+            pass
+        fh.close()
+
+
 def default_state_path(data):
     # session_id is on every documented hook payload (PreToolUse and
     # PostToolUse examples both carry it) -- prefer it over the env var so
@@ -103,23 +145,23 @@ def main(argv):
 
     state_path = argv[1] if len(argv) > 1 else default_state_path(data)
 
-    exit_code = extract_exit_code(data)
-    if not exit_code:  # None or 0 -- no failure, nothing to nudge
+    if not is_failure(data):
         return 0
 
     command = extract_command(data)
     sig = signature(command)
-    counts = load_counts(state_path)
-    seen = counts.get(sig, 0)
-    if seen >= CAP:
-        return 0  # capped -- stay silent for this exact command, don't spam
+    with locked(state_path):
+        counts = load_counts(state_path)
+        seen = counts.get(sig, 0)
+        if seen >= CAP:
+            return 0  # capped -- stay silent for this exact command, don't spam
 
-    counts[sig] = seen + 1
-    save_counts(state_path, counts)
+        counts[sig] = seen + 1
+        save_counts(state_path, counts)
 
     print(json.dumps({
         "hookSpecificOutput": {
-            "hookEventName": "PostToolUse",
+            "hookEventName": "PostToolUseFailure",
             "additionalContext": NUDGE,
         }
     }))

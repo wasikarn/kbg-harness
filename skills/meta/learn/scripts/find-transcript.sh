@@ -14,8 +14,20 @@ set -uo pipefail
 SESSION_ID="${CLAUDE_CODE_SESSION_ID:-}"
 [ -n "$SESSION_ID" ] || { echo "find-transcript: CLAUDE_CODE_SESSION_ID is not set — cannot determine this session's own transcript; ask the operator for the transcript path directly" >&2; exit 1; }
 
+# Deep-audit 2026-09-07: the real runtime's own slug function (confirmed in
+# the installed CC binary's own source) replaces EVERY non-alphanumeric
+# character with "-", not just "/". This repo's own checkout path (letters
+# and hyphens only) happens to produce an identical result under either
+# rule, which is exactly why the old "/"-only rule went uncaught. A project
+# path >200 chars additionally gets truncated with a hash suffix in the real
+# runtime, using an internal hash function this script has no way to
+# replicate -- rather than silently guess wrong for that case, fail loud.
 CWD="${1:-$PWD}"
-SLUG="${CWD//\//-}"
+if [ "${#CWD}" -gt 200 ]; then
+  echo "find-transcript: project path is over 200 chars ($CWD) -- the real runtime truncates and hashes long paths, which this script cannot replicate; ask the operator for the transcript path directly" >&2
+  exit 1
+fi
+SLUG=$(printf '%s' "$CWD" | LC_ALL=C sed 's/[^a-zA-Z0-9]/-/g')
 DIR="$HOME/.claude/projects/$SLUG"
 TARGET="$DIR/$SESSION_ID.jsonl"
 

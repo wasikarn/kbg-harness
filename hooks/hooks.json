@@ -121,11 +121,11 @@
         ]
       }
     ],
-    "PostToolUse": [
+    "PostToolUseFailure": [
       {
         "id": "sensor:bash:failure-diagnose-nudge",
         "matcher": "Bash",
-        "description": "Advisory only, never blocks: on a non-zero exit, nudge diagnose-before-retry via additionalContext. Capped at 3 per distinct failing command per session.",
+        "description": "Advisory only, never blocks: on a non-zero exit, nudge diagnose-before-retry via additionalContext. Capped at 3 per distinct failing command per session. Deep-audit 2026-09-07: a real nonzero Bash exit dispatches via PostToolUseFailure, not PostToolUse, in this CC version -- confirmed live (a genuine failing command never invoked a PostToolUse-only registration) and PostToolUseFailure's own output schema (confirmed in the installed CC binary) declares additionalContext, same as PostToolUse.",
         "hooks": [
           {
             "type": "command",

@@ -729,6 +729,13 @@ test_allow "$IRRECOVERABLE" "unrelated later LINE's flag does not leak back to c
 # not blind the scan to a REAL spawn on a later line.
 test_deny  "$IRRECOVERABLE" "GH #152 control: false path-substring on line 1 does not mask a real spawn on line 2" \
   "$(bash_agent_payload $'BASE=/private/tmp/claude-501/foo\nclaude -p "evil"' fork)"
+# Deep-audit adversarial pass, 2026-09-07: the newline-stops-scan rule the GH #152 fix added has
+# no concept of $(...) nesting depth. Real bash executes `claude $(\nprintf x\n) -p evil` as ONE
+# command (the newline inside the substitution is not a top-level separator), but the scanner's
+# flat token walk treated that embedded newline as scan-stopping regardless of nesting, so the
+# flag scan never reached `-p` after the substitution closed.
+test_deny  "$IRRECOVERABLE" "spawn flag after a command substitution containing an embedded newline must still be caught" \
+  "$(bash_agent_payload $'claude $(\nprintf x\n) -p "evil"' fork)"
 # code-review round on the GH #152 fix (before it shipped) caught two
 # dangerous-direction regressions the fix itself would have introduced --
 # both fixed, both locked in here so neither regresses again.
@@ -736,6 +743,50 @@ test_deny  "$IRRECOVERABLE" "GH #152 review catch: a shell metacharacter (not ju
   "$(bash_agent_payload 'claude>out.log -p "evil"' fork)"
 test_deny  "$IRRECOVERABLE" "GH #152 review catch: a backslash-continued line is still one statement, spawn on the continuation line still caught" \
   "$(bash_agent_payload $'bash <<EOF\nclaude \\\\\n  -p "evil"\nEOF' fork)"
+# Deep-audit 2026-09-07 paren-depth fix control (advisor-flagged gap): a
+# BALANCED $(...) group between an unrelated claude mention and the real
+# top-level separator must still let that separator stop the scan once the
+# group closes depth back to 0 -- the same GH #152 leak-back property, now
+# proven with parens in the mix rather than only newline/semicolon.
+test_allow "$IRRECOVERABLE" "GH #152-class control: balanced \$(...) between claude and the real separator does not leak a later command's flag back" \
+  "$(bash_agent_payload 'claude --version $(date) ; othertool -p' fork)"
+# A stray unmatched ")" before the real separator must clamp at depth 0, not
+# go negative -- going negative would require an unrelated later "(" to
+# numerically return to 0, incorrectly swallowing everything in between
+# (including a real separator) into the scan.
+test_allow "$IRRECOVERABLE" "paren-depth clamp control: a stray unmatched ')' before the real separator does not swallow a later command's flag" \
+  "$(bash_agent_payload 'claude --version) ; othertool -p' fork)"
+# Codex-validator round on the paren-depth fix itself, deep-audit 2026-09-07:
+# a backslash-escaped "(" is a literal argument character to claude, NOT a
+# real subshell opener -- the depth tracker must not count it, or the real
+# ";" right after gets swallowed and an unrelated later command's -p leaks
+# back (reproduced live pre-fix: this exact payload was denied).
+test_allow "$IRRECOVERABLE" "escaped literal paren control: a backslash-escaped '\\(' is not a real subshell opener, does not leak a later command's flag back" \
+  "$(bash_agent_payload 'claude --version \( ; othertool -p' fork)"
+# Same property, double backslash before a real newline: an EVEN count of
+# backslashes right before a real newline is not a continuation in real bash
+# (the pair is one escaped backslash, then the newline is unescaped and
+# ends the statement) -- but this file deliberately still treats it as one,
+# same safe-direction precedent as the single-backslash case, so a spawn on
+# the "continuation" line must still be caught, not narrowed away.
+test_deny "$IRRECOVERABLE" "double-backslash-before-newline control: even backslash count still treated as continuation (safe-direction precedent), spawn on the next line still caught" \
+  "$(bash_agent_payload $'claude \\\\\n  -p "evil"' fork)"
+# Round-2 codex-validator catch on the FIRST attempt at the escaped-paren fix
+# (a fixed "backslash + one of these chars" rule with no parity check): an
+# EVEN backslash count before a backtick leaves the backtick unescaped and
+# LIVE in real bash (the pair is one literal backslash; the backtick opens a
+# real command substitution) -- treating it as escaped/inert was a false
+# ALLOW, a genuine bypass, reproduced live pre-fix (bash-stub trace showed
+# claude actually receiving -p as an argument). Parity tracking (an odd-
+# length run escapes the next char, an even-length run doesn't) fixes this.
+test_deny "$IRRECOVERABLE" "backslash-parity control: an EVEN backslash count before a backtick leaves it live -- real command substitution still caught, not treated as escaped" \
+  "$(bash_agent_payload 'claude \\`printf x; printf y` -p evil' fork)"
+# Mirror case, ALLOW direction: an even backslash count before a semicolon
+# also leaves the semicolon a real, live separator in real bash (same
+# pairing rule) -- must still stop the scan normally, not get swallowed as
+# an escaped/inert semicolon.
+test_allow "$IRRECOVERABLE" "backslash-parity control: an EVEN backslash count before ';' leaves it a real separator -- later command's flag does not leak back" \
+  "$(bash_agent_payload 'claude --version \\; othertool -p' fork)"
 
 # Heredoc-body stripping regression coverage.
 test_allow "$IRRECOVERABLE" "heredoc-authored commit message mentioning feat(claude): and --bg in unrelated prose lines no longer false-blocks (GH #121 exact repro)" \

@@ -148,9 +148,14 @@ fix.
    capped at 3 fix→verify rounds per Rule 13, full gauntlet rerun on the result, not just the
    touched item — not in this build.)
 4. **Suggested next step:**
-   - All conform, nothing open → done; ship/merge if not already.
-   - Open items → they block "done." Consider `mh:post-mortem` only if a gap reveals a systemic
-     pattern, not for a one-off miss.
+   - `pass` true (every requirement CONFORMS/accepted-DEVIATED **and** the gauntlet exited 0
+     **and** `scope_ok`) → done; ship/merge if not already. Deep-audit 2026-09-07: this line used
+     to say only "all conform, nothing open → done," which read as satisfied by the
+     per-requirement table alone — restated here to name all three `pass` conditions explicitly,
+     matching the rule stated earlier in this file.
+   - `pass` false for any reason — an open requirement, a failed gauntlet, or `scope_ok: false` —
+     blocks "done," even with a clean requirement table. Consider `mh:post-mortem` only if a gap
+     reveals a systemic pattern, not for a one-off miss.
 
 **Done.**
 

@@ -70,5 +70,42 @@ else
   bad "expected size $actual_size, got $reported_size"
 fi
 
+# --- slug rule must match the real CC runtime, not just "/" -> "-" ---
+# Deep-audit 2026-09-07: the real runtime's own project-path slug function
+# (confirmed in the installed CC binary's own source: `e.replace(/[^a-zA-Z0-9]/g,"-")`)
+# replaces EVERY non-alphanumeric character, not just "/". This repo's own
+# checkout path (letters and hyphens only) happens to produce an identical
+# result either way, which is exactly why this went uncaught. A path
+# containing an underscore is the smallest fixture that tells the two rules
+# apart.
+UNDERSCORE_CWD="/fake/my_project"
+UNDERSCORE_SLUG="-fake-my-project"   # runtime rule: "_" -> "-" too
+WRONG_SLUG="-fake-my_project"        # old script rule: only "/" -> "-"
+UNDERSCORE_DIR="$FAKE_HOME/.claude/projects/$UNDERSCORE_SLUG"
+mkdir -p "$UNDERSCORE_DIR"
+UNDERSCORE_ID="44444444-4444-4444-4444-444444444444"
+printf 'underscore project session content\n' > "$UNDERSCORE_DIR/$UNDERSCORE_ID.jsonl"
+out=$(HOME="$FAKE_HOME" CLAUDE_CODE_SESSION_ID="$UNDERSCORE_ID" bash "$SCRIPT" "$UNDERSCORE_CWD" 2>/dev/null)
+rc=$?
+picked_path=$(echo "$out" | awk '{print $1}')
+if [ "$rc" -eq 0 ] && [ "$picked_path" = "$UNDERSCORE_DIR/$UNDERSCORE_ID.jsonl" ]; then
+  ok "slug rule matches the real runtime for a path containing an underscore"
+else
+  bad "expected $UNDERSCORE_DIR/$UNDERSCORE_ID.jsonl, got '$picked_path' (rc=$rc) -- the old /-only rule would look in $FAKE_HOME/.claude/projects/$WRONG_SLUG instead"
+fi
+
+# --- a project path over 200 chars fails loud rather than guessing wrong
+# (the real runtime hashes long paths with an internal function this script
+# cannot replicate) ---
+LONG_CWD="/fake/$(python3 -c 'print("x" * 250)')"
+LONG_STDERR="$FAKE_HOME/long-path.stderr"
+HOME="$FAKE_HOME" CLAUDE_CODE_SESSION_ID="$CURRENT_ID" bash "$SCRIPT" "$LONG_CWD" >/dev/null 2>"$LONG_STDERR"
+rc=$?
+if [ "$rc" -ne 0 ] && /usr/bin/grep -qi 'over 200 chars' "$LONG_STDERR"; then
+  ok "a >200-char project path fails loud instead of guessing at the real runtime's hash suffix"
+else
+  bad "expected non-zero exit naming the 200-char limit, got rc=$rc stderr=$(cat "$LONG_STDERR")"
+fi
+
 echo "learn/find-transcript: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
