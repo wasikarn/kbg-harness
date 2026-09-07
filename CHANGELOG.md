@@ -5,6 +5,34 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.36] — 2026-09-07
+
+### Added
+
+- Evals for `cost-report` (tags `cost-report`): a planted log whose deduped total ($10) differs
+  from a hand sum ($15) and from an older-row pick ($8), with a legacy-era row whose `note:` the
+  read-back must carry; and a not-set-up control that must relay the script's own line, quote
+  no figure, and create no log. The script honours `MH_COSTS_FILE=<path>` so a fixture can live
+  in the eval workspace (sandbox HOME is fresh; case `env` keys must be `EVAL_*`).
+  `tests/skills/test-cost-report.sh` now also pins the override, both era notes (the
+  pre-dedup note names cost as inflated, not only turns and tokens), and the not-set-up line:
+  9 assertions, up from 5.
+- `skills/meta/cost-report/references/data-model.md`: row schema, the three schema eras, and
+  the aggregation key, moved out of the skill body.
+
+### Changed
+
+- `cost-report` SKILL.md rewritten for the agent that runs it: one Bash call, a read-back
+  checklist (whole-machine scope, era notes before the total, unverified rates, non-Claude
+  rows as history, subagent rows from 2026-08-07, Codex rows as counts), failure modes for a
+  missing log and a missing `node`. Research (2026-09-07): native `/usage` (aliases `/cost`,
+  `/stats`) is per-session and per-model with a 24h/7d attribution share on subscriptions;
+  no native per-day, per-agent-type dollar history exists, and Stop/SessionEnd hook payloads
+  carry no cost fields, so the tracker and this report stay.
+- `scripts/workflows/cost-report-dedup.js` moved to `skills/meta/cost-report/scripts/` and
+  the skill invokes it via `${CLAUDE_SKILL_DIR}` like harness-audit and memory-lint;
+  `MH_PLUGIN_ROOT` comes from a SessionStart hook an eval sandbox may not run. The wiring
+  guard in the test now rejects both `CLAUDE_PLUGIN_ROOT` and `MH_PLUGIN_ROOT` in the body.
 ## [1.1.35] — 2026-09-07
 
 ### Added

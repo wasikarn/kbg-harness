@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Regression test for the mh:cost-report dedup script,
-# scripts/workflows/cost-report-dedup.js (extracted 2026-08-23 from the
+# skills/meta/cost-report/scripts/cost-report-dedup.js (extracted 2026-08-23 from the
 # command body's embedded fence — 200-LOC cap refactor; this file now runs the
 # real bundled script directly instead of extracting a fence, so there is no
 # separate maintained copy to drift from the command). Points it at a
@@ -19,7 +19,7 @@
 # Note on what proves what (found by a second-round adversarial review,
 # 2026-08-07): the actual proof that these fixtures discriminate the fix from
 # the bug is the mutation test: manually reverting `(r.stream||"orchestrator")`
-# to `(r.stream||"")` in a scratch copy of scripts/workflows/
+# to `(r.stream||"")` in a scratch copy of skills/meta/cost-report/scripts/
 # cost-report-dedup.js and pointing REPORT_JS at it — case 1 then fails with a
 # wrong total instead of a crash. That's not automated here (it would require
 # mutating the file under test, which this suite intentionally doesn't do);
@@ -35,7 +35,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-REPORT_JS="$ROOT/scripts/workflows/cost-report-dedup.js"
+REPORT_JS="$ROOT/skills/meta/cost-report/scripts/cost-report-dedup.js"
 SKILL_MD="$ROOT/skills/meta/cost-report/SKILL.md"
 
 pass=0
@@ -57,16 +57,16 @@ assert() {
 
 echo "=== cost-report dedup (stream-aware) ==="
 
-# Wiring guard (plan-review finding, 2026-08-23): the command body must invoke
-# the script via ${MH_PLUGIN_ROOT} — the hook-only ${CLAUDE_PLUGIN_ROOT}
-# expands EMPTY in a command body (hooks/session/command-root-anchor.sh's own
-# header says command bodies must not name it), which would ENOENT for every
-# installed-plugin user while this suite still passes green against the repo
-# path. No other gate sees that mismatch, so pin it here.
-cpr_refs=$(/usr/bin/grep -c 'CLAUDE_PLUGIN_ROOT' "$SKILL_MD") || true
-kpr_refs=$(/usr/bin/grep -c 'MH_PLUGIN_ROOT.*cost-report-dedup\.js' "$SKILL_MD") || true
-[[ "$cpr_refs" == "0" && "$kpr_refs" -ge 1 ]] && ok=1 || ok=0
-assert "SKILL.md invokes cost-report-dedup.js via \${MH_PLUGIN_ROOT} and never names the hook-only \${CLAUDE_PLUGIN_ROOT} (got $kpr_refs KBG refs, $cpr_refs CLAUDE refs)" "$ok"
+# Wiring guard (plan-review finding, 2026-08-23; path changed 2026-09-07): the skill
+# body must invoke the script via ${CLAUDE_SKILL_DIR}, set wherever a skill loads
+# (harness-audit and memory-lint use the same). The hook-only ${CLAUDE_PLUGIN_ROOT}
+# expands EMPTY in a skill body, and MH_PLUGIN_ROOT comes from a SessionStart hook an
+# eval sandbox may not run; either would ENOENT for a real user while this suite
+# passes green against the repo path. No other gate sees that mismatch, so pin it here.
+bad_refs=$(/usr/bin/grep -c 'CLAUDE_PLUGIN_ROOT\|MH_PLUGIN_ROOT' "$SKILL_MD") || true
+csd_refs=$(/usr/bin/grep -c 'CLAUDE_SKILL_DIR}/scripts/cost-report-dedup\.js' "$SKILL_MD") || true
+[[ "$bad_refs" == "0" && "$csd_refs" -ge 1 ]] && ok=1 || ok=0
+assert "SKILL.md invokes cost-report-dedup.js via \${CLAUDE_SKILL_DIR} and never names CLAUDE_PLUGIN_ROOT or MH_PLUGIN_ROOT (got $csd_refs skill-dir refs, $bad_refs bad refs)" "$ok"
 
 # Adversarial case: a session_id with a pre-stream legacy row (model_scoped:true,
 # no `stream` field — always meant the orchestrator total) and a post-fix
@@ -161,6 +161,63 @@ agent_section=$(printf '%s' "$out" | awk '/=== By agent type/{f=1;next} /^$/{f=0
   && printf '%s' "$agent_section" | /usr/bin/grep -qE '\b7 tok  Explore$' \
   && [[ "$(printf '%s\n' "$agent_section" | /usr/bin/grep -oE '\(unknown\)|Explore' | tr '\n' ' ')" == "(unknown) Explore " ]] && ok=1 || ok=0
 assert "By agent type shows the typed subagent row's \$2.0000 and the untyped subagent row as its own \$3.0000 (unknown) line, never the orchestrator's \$1000, with a tok column, ranked by cost desc ((unknown) \$3 above Explore \$2 despite reverse insertion order)" "$ok"
+trash "$fake_home" 2>/dev/null || true
+
+# Era notes (2026-09-07): a row without dedup_usage was summed per JSONL line, so its
+# cost is inflated too, not just turns/tokens — the note must say so, or a reader
+# trusts the legacy total. A dedup_usage row without usage_pick:"last" gets the
+# output-low note. A row carrying both gets neither. Three rows, three sessions,
+# so all three states show in one run; the counts pin which rows triggered which note.
+fake_home=$(mktemp -d)
+metrics_dir="$fake_home/.local/share/kbg/metrics"
+mkdir -p "$metrics_dir"
+cat > "$metrics_dir/costs.jsonl" <<'EOF'
+{"timestamp":"2026-08-07T00:00:00Z","session_id":"legacy","transcript_path":"/t","model":"claude-sonnet-5","model_scoped":true,"stream":"orchestrator","turns":2,"input_tokens":100,"output_tokens":50,"cache_write_tokens":0,"cache_read_tokens":0,"rate_verified":true,"estimated_cost_usd":1.0}
+{"timestamp":"2026-09-04T00:00:00Z","session_id":"first-line","transcript_path":"/t","model":"claude-sonnet-5","model_scoped":true,"dedup_usage":true,"stream":"orchestrator","turns":2,"input_tokens":100,"output_tokens":50,"cache_write_tokens":0,"cache_read_tokens":0,"rate_verified":true,"estimated_cost_usd":1.0}
+{"timestamp":"2026-09-05T00:00:00Z","session_id":"modern","transcript_path":"/t","model":"claude-sonnet-5","model_scoped":true,"dedup_usage":true,"usage_pick":"last","stream":"orchestrator","turns":2,"input_tokens":100,"output_tokens":50,"cache_write_tokens":0,"cache_read_tokens":0,"rate_verified":true,"estimated_cost_usd":1.0}
+EOF
+out=$(HOME="$fake_home" node "$REPORT_JS" 2>&1)
+rc=$?
+[[ "$rc" == "0" ]] \
+  && printf '%s' "$out" | /usr/bin/grep -q '^note: 1 of 3 rows predate dedup_usage.*turns, tokens, and cost run ~2.4x high' \
+  && printf '%s' "$out" | /usr/bin/grep -q '^note: 1 of 3 rows predate usage_pick.*output_tokens (and cost) run ~39% low' && ok=1 || ok=0
+assert "era notes: the pre-dedup row's note names cost as inflated, the first-line row gets the output-low note, and the modern row triggers neither (1 of 3 each)" "$ok"
+trash "$fake_home" 2>/dev/null || true
+
+# MH_COSTS_FILE override (2026-09-07): evals run in a fresh HOME and can only plant a
+# fixture in the workspace, so the env path must win over the HOME default. HOME points
+# at a dir with NO log; only the override path can produce the $1.0000 total.
+fake_home=$(mktemp -d)
+cat > "$fake_home/planted.jsonl" <<'EOF'
+{"timestamp":"2026-09-05T00:00:00Z","session_id":"override","transcript_path":"/t","model":"claude-sonnet-5","model_scoped":true,"dedup_usage":true,"usage_pick":"last","stream":"orchestrator","turns":2,"input_tokens":100,"output_tokens":50,"cache_write_tokens":0,"cache_read_tokens":0,"rate_verified":true,"estimated_cost_usd":1.0}
+EOF
+out=$(HOME="$fake_home" MH_COSTS_FILE="$fake_home/planted.jsonl" node "$REPORT_JS" 2>&1)
+rc=$?
+total=$(printf '%s' "$out" | /usr/bin/grep '^total:' | /usr/bin/grep -oE '\$[0-9.]+' | tr -d '$')
+[[ "$rc" == "0" && "$total" == "1.0000" ]] && ok=1 || ok=0
+assert "MH_COSTS_FILE overrides the HOME default (got total=\$${total:-?} from a HOME with no log)" "$ok"
+trash "$fake_home" 2>/dev/null || true
+
+# Modern-only data prints no era note at all.
+fake_home=$(mktemp -d)
+metrics_dir="$fake_home/.local/share/kbg/metrics"
+mkdir -p "$metrics_dir"
+cat > "$metrics_dir/costs.jsonl" <<'EOF'
+{"timestamp":"2026-09-05T00:00:00Z","session_id":"modern","transcript_path":"/t","model":"claude-sonnet-5","model_scoped":true,"dedup_usage":true,"usage_pick":"last","stream":"orchestrator","turns":2,"input_tokens":100,"output_tokens":50,"cache_write_tokens":0,"cache_read_tokens":0,"rate_verified":true,"estimated_cost_usd":1.0}
+EOF
+out=$(HOME="$fake_home" node "$REPORT_JS" 2>&1)
+rc=$?
+[[ "$rc" == "0" ]] && ! printf '%s' "$out" | /usr/bin/grep -q '^note:' && ok=1 || ok=0
+assert "modern-only data prints no era note" "$ok"
+trash "$fake_home" 2>/dev/null || true
+
+# Missing file: the script itself reports the tracker as not set up (exit 0), so the
+# skill body need not pre-check the path — the eval clean case relies on this message.
+fake_home=$(mktemp -d)
+out=$(HOME="$fake_home" node "$REPORT_JS" 2>&1)
+rc=$?
+[[ "$rc" == "0" ]] && printf '%s' "$out" | /usr/bin/grep -q '^Cost tracker not set up:' && ok=1 || ok=0
+assert "missing costs.jsonl prints the 'Cost tracker not set up' line and exits 0" "$ok"
 trash "$fake_home" 2>/dev/null || true
 
 echo ""

@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 // cost-report-dedup.js — the mh:cost-report skill's report + CSV logic.
-// Extracted verbatim from skills/meta/cost-report/SKILL.md's two embedded fences
-// (2026-08-23, 200-LOC cap refactor) so the command body stays under cap and
-// this logic is directly testable: tests/skills/test-cost-report.sh runs
-// this file, not a fence extraction. Old rows may carry extra fields from
-// retired schemas; unknown keys are ignored.
+// Lives beside SKILL.md (moved from scripts/workflows/ 2026-09-07) so the skill
+// reaches it through ${CLAUDE_SKILL_DIR}, which is set wherever the skill loads;
+// tests/skills/test-cost-report.sh runs this same file. Old rows may carry extra
+// fields from retired schemas; unknown keys are ignored. Data model and the dedup
+// rule: ../references/data-model.md.
 // Usage: node cost-report-dedup.js        -> summary report
 //        node cost-report-dedup.js csv    -> CSV of the last 100 raw rows
+// MH_COSTS_FILE=<path> overrides the log location (tests and evals plant a fixture).
 const fs=require("fs"),os=require("os"),path=require("path");
-const f=path.join(os.homedir(),".local","share","kbg","metrics","costs.jsonl");
+const f=process.env.MH_COSTS_FILE||path.join(os.homedir(),".local","share","kbg","metrics","costs.jsonl");
 
 if(process.argv[2]==="csv"){
   if(!fs.existsSync(f)){console.error("no data");process.exit(0);}
@@ -48,7 +49,7 @@ console.log("=== Cost summary ===");
 // message.id, whose output_tokens is a streaming placeholder — ~39% low on output_tokens.
 const inflated=latest.filter(r=>r.dedup_usage!==true).length;
 const outLow=latest.filter(r=>r.dedup_usage===true&&r.usage_pick!=="last").length;
-if(inflated)console.log("note: "+inflated+" of "+latest.length+" rows predate dedup_usage (2026-09-04) — their turns/tokens run ~2.4x high (per-line, not per-response)");
+if(inflated)console.log("note: "+inflated+" of "+latest.length+" rows predate dedup_usage (2026-09-04) — their turns, tokens, and cost run ~2.4x high (summed per line, not per response)");
 if(outLow)console.log("note: "+outLow+" of "+latest.length+" rows predate usage_pick:\"last\" (v0.68.641) — their output_tokens (and cost) run ~39% low (first line per response, not last)");
 console.log("today:     "+f4(sum(latest.filter(r=>day(r)===today))));
 console.log("yesterday: "+f4(sum(latest.filter(r=>day(r)===d))));

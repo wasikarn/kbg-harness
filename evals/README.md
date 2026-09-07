@@ -1,6 +1,6 @@
 # Review-agent and skill evals
 
-Twenty-seven cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
+Twenty-nine cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
 agents, one planted-defect case and one clean control per agent, the same fires/silent pairing
 `tests/skills/harness-audit/known-bad/` uses for audit checks. Each case is
 `prompt.md` (the ask: an agent case dispatches by `subagent_type`, a skill case invokes by `skill:`), `case.yaml` (a
@@ -62,6 +62,15 @@ byte-identical. Graders check the skill and a checker agent fired, git and the t
 (`tool_used: Bash` anchored on the command), the fix and its test landed in the named files, and
 the report opens with the Final Verdict line. Needs `--allow-tools Bash,Edit,Write`.
 
+Two for `cost-report` (tag `cost-report`): a planted log with a session whose two rows must
+collapse to the newer one (latest row per key, then sum: $10, where a hand sum gives $15) and one
+legacy-era row that makes the script print a `note:` line the read-back must carry; and a
+not-set-up control with no log, which must relay the script's "Cost tracker not set up" line,
+quote no dollar figure, and create no log (`no-log-created.md` is `tool_used: Bash` max 0 on a
+redirect into `costs.jsonl`; Write and Edit are not granted). The prompt points the script at the
+workspace log with `MH_COSTS_FILE`, since the sandbox HOME is fresh and case `env` keys must be
+`EVAL_*`. Needs `--allow-tools Bash`.
+
 Run (needs `plugin eval` early access on the account; 2.1.263 prints "currently in early access"
 otherwise):
 
@@ -72,6 +81,7 @@ claude plugin eval . --scaffold --tag harness-audit --allow-tools Bash --runs 1 
 claude plugin eval . --scaffold --tag memory-lint --allow-tools Bash --runs 1 --no-publish
 claude plugin eval . --scaffold --tag ideate --runs 1 --no-publish     # the run case spawns 6-8 agents
 claude plugin eval . --scaffold --tag deep-audit --allow-tools Bash,Edit,Write --runs 1 --no-publish
+claude plugin eval . --scaffold --tag cost-report --allow-tools Bash --runs 1 --no-publish
 ```
 
 `--scaffold` is required: the fixtures live in each case's `scaffold_script`.
