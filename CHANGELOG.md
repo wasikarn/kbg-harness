@@ -5,6 +5,38 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.37] — 2026-09-07
+
+### Fixed
+
+- `tests/skills/harness-audit/test-harness-audit.sh` exported an empty
+  `SLASH_COMMAND_TOOL_CHAR_BUDGET`, which check 43 treats as unset, so the two full-run
+  assertions read `$HOME/.claude/settings.json`; a small `skillListingBudgetFraction` there failed
+  `fleet-good full run not clean` (reproduced with a 0.00001 fraction: `Warnings: 1`). The ceiling is
+  now pinned to 100000 for the suite and a tiny-fraction HOME is asserted silent on 43. Deep-audit
+  finding, failure class weak_verification.
+- `evals/post-mortem-complete` and `-missing-input` scaffold tests were pytest-style bare asserts and the prompt named
+  `python3 -m pytest`; the sandbox has no pytest. Now `unittest.TestCase`, run with
+  `python3 -m unittest tests/test_retry.py`, like the deep-audit scaffolds.
+- `evals/ideate-run` and `evals/ideate-abort` prompts carry an `allowed_tools` line (Agent, Read,
+  Glob, Grep, Skill) like the other cases; `traps-named.md` uses `flags: i` instead of an inline
+  `(?i)` no other grader uses; `deep-audit-clean/graders/no-edits.md` drops an `arm: both` key found
+  in no other grader and validated by nothing.
+- `scripts/run-gauntlet.sh` home-path ban never ran: BSD xargs took `LC_ALL=C` as the command
+  (exit 127, hidden by `2>/dev/null`), so the layer passed on any tree (validator finding). The
+  env now goes on xargs and hits are captured, since xargs exits 123 on a batch with no match.
+  A dead two-file whitelist pre-commit never had is gone too; the ban pattern does not match its
+  own text in either file. Failure class weak_verification.
+
+### Changed
+
+- Eval inventory in `README.md` and `docs/reference/operating-model.md` names all 29 cases (ideate,
+  deep-audit, and cost-report were unlisted; tech-humanize has five). `operating-model.md` says check
+  43's pair varies the budget env, not a fixture. `docs/reference/env-vars.md` records
+  `CLAUDE_SKILL_DIR` as the script path for three skills, `MH_PLUGIN_ROOT` as doc-read only, and
+  `MH_COSTS_FILE`. `harness-audit` SKILL.md table lists check 21 (28 of 29 were named).
+- CHANGELOG headings 1.1.35, 1.1.32, 1.1.29 regain their preceding blank line.
+
 ## [1.1.36] — 2026-09-07
 
 ### Added
@@ -33,6 +65,7 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
   the skill invokes it via `${CLAUDE_SKILL_DIR}` like harness-audit and memory-lint;
   `MH_PLUGIN_ROOT` comes from a SessionStart hook an eval sandbox may not run. The wiring
   guard in the test now rejects both `CLAUDE_PLUGIN_ROOT` and `MH_PLUGIN_ROOT` in the body.
+
 ## [1.1.35] — 2026-09-07
 
 ### Added
@@ -127,6 +160,7 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 - Evals for `ideate`: a full run bounded to 6-8 Agent calls and graded on the output shape, and
   an abort control where a "quick"/"canonical" question must get a direct answer with zero Agent
   calls. Loader test proves both regex contracts against a rendered sample.
+
 ## [1.1.32] — 2026-09-07
 
 ### Added
@@ -204,6 +238,7 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
   (2026-09-07): `claude plugin validate` checks manifest fields and agent frontmatter parse
   only, and `/skill-doctor` is a usage and context-cost report, so no audit check overlaps a
   vendor surface.
+
 ## [1.1.29] — 2026-09-07
 
 ### Added

@@ -3,6 +3,7 @@ name: ideate-abort
 tags: [ideate, abort]
 runs: 1
 max_turns: 8
+allowed_tools: [Agent, Read, Glob, Grep, Skill]
 timeout_seconds: 300
 ---
 The `mh:ideate` skill (Skill tool, `skill: "mh:ideate"`) is available; apply its pre-flight gate to this question before deciding whether to run it.

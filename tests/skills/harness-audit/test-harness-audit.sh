@@ -176,11 +176,13 @@ GOOD="$FIX/fleet-good"
 # 02/03 pass with the checks gutted. A decoy cache (populated, holding none of the fleet)
 # proves they still discriminate; an empty cache would only WARN "unverified". 02/03 also
 # read HOME's symlink farm, so they run under an empty HOME (not the full run: python3 loses
-# user-site PyYAML without the real HOME and check 28 WARNs). 43 gets no budget env.
+# user-site PyYAML without the real HOME and check 28 WARNs). 43 runs with the ceiling pinned.
 CACHE="$CODEX_TMP/cache-copy"; cp -R "$GOOD" "$CACHE"
 DECOY="$CODEX_TMP/decoy-cache"; mkdir -p "$DECOY/agents" "$DECOY/skills/meta/unrelated"
 EMPTY_HOME="$CODEX_TMP/empty-home"; mkdir -p "$EMPTY_HOME"
-export SLASH_COMMAND_TOOL_CHAR_BUDGET=
+# Pinned, not emptied: an empty value falls through to $HOME/.claude/settings.json
+# (skillListingBudgetFraction), which made the full runs below machine-dependent.
+export SLASH_COMMAND_TOOL_CHAR_BUDGET=100000
 for id in 02 03; do
   HOME="$EMPTY_HOME" expect_crit   "$id" fleet-bad  --plugin-cache "$CACHE"
   HOME="$EMPTY_HOME" expect_silent "$id" fleet-good --plugin-cache "$CACHE"
@@ -196,6 +198,10 @@ for id in 10 21 24 35 41 42 54; do
 done
 SLASH_COMMAND_TOOL_CHAR_BUDGET=10     expect_warn   43 fleet-bad
 SLASH_COMMAND_TOOL_CHAR_BUDGET=100000 expect_silent 43 fleet-good
+# A HOME whose settings.json sets a tiny skillListingBudgetFraction must not leak into 43.
+TINY_HOME="$CODEX_TMP/tiny-home"; mkdir -p "$TINY_HOME/.claude"
+printf '{"skillListingBudgetFraction":0.00001}\n' > "$TINY_HOME/.claude/settings.json"
+HOME="$TINY_HOME" expect_silent 43 fleet-good
 # Full run on the clean fleet: proves the fixture is a whole fleet, not just silent per check,
 # and that the vacuous-surface guard stays quiet when agents/, skills/, hooks/ all exist.
 full=$(bash "$AUDIT" "$GOOD" --plugin-cache "$CACHE" 2>/dev/null || true)

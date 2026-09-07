@@ -1,6 +1,7 @@
 ---
 type: regex
-pattern: '(?i)trap'
+pattern: 'trap'
+flags: i
 match: contains
 target: last_message
 ---

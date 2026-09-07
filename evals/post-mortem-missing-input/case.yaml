@@ -23,21 +23,23 @@ context:
         raise last
     FIXTURE_EOF
     cat > tests/test_retry.py <<'FIXTURE_EOF'
+    import unittest
     from src.retry import backoff, with_retry
 
-    def test_backoff_first_retry_waits_base():
-        assert backoff(1) == 0.5
+    class RetryTests(unittest.TestCase):
+        def test_backoff_first_retry_waits_base(self):
+            self.assertEqual(backoff(1), 0.5)
 
-    def test_with_retry_sleeps_between_attempts_only():
-        calls = []
-        n = {"i": 0}
-        def fn():
-            n["i"] += 1
-            if n["i"] < 3:
-                raise ValueError("flaky")
-            return "ok"
-        assert with_retry(fn, attempts=3, sleep=calls.append) == "ok"
-        assert calls == [0.5, 1.0]
+        def test_with_retry_sleeps_between_attempts_only(self):
+            calls = []
+            n = {"i": 0}
+            def fn():
+                n["i"] += 1
+                if n["i"] < 3:
+                    raise ValueError("flaky")
+                return "ok"
+            self.assertEqual(with_retry(fn, attempts=3, sleep=calls.append), "ok")
+            self.assertEqual(calls, [0.5, 1.0])
     FIXTURE_EOF
     git add src tests && git commit -qm "feat: retry helper"
     sed -i.bak 's/return base \* (2 \*\* (attempt - 1))/return base * (2 ** attempt)/' src/retry.py && rm src/retry.py.bak

@@ -39,14 +39,17 @@ task-completion self-grading tops out near chance). So:
 - A builder that touched 2+ files or a test gets a fresh-context validator (METHODOLOGY Rule 13).
 - Reviewer agents are read-only (`harness-audit` check 32) and return findings, never a verdict
   that ships the work by fiat.
-- Every `harness-audit` check has a fires/silent fixture pair (`tests/skills/harness-audit/`);
+- Every `harness-audit` check has a fires/silent pair in `tests/skills/harness-audit/` (fixture
+  pairs; check 43 varies the budget env against the clean fleet, with the ceiling pinned);
   a full run WARNs when a top-level surface dir (`agents/`, `skills/`, `hooks/`) is missing. An
   empty surface dir still passes its checks vacuously; the guard names only the missing dir.
 - The six review agents (`plan-reviewer`, `blind-spot-hunter`, `silent-failure-hunter`,
   `requirement-analyst`, `test-gap-analyzer`, `type-design-analyzer`) have a planted-defect case and a clean control each
   under `evals/`, in `claude plugin eval`'s native layout, graded on their own Output Format
-  (`evals/README.md`). `tech-humanize` has four more: two planted, a human-written control, and
-  a file-input case graded on the file's bytes. The runner is early-access gated;
+  (`evals/README.md`). `tech-humanize` has five more (three planted, a human-written control, a
+  file-input case graded on the file's bytes); `harness-audit`, `memory-lint`, `deep-audit`,
+  `post-mortem`, and `cost-report` have a planted case and a clean control each; `ideate` has a
+  run and an abort case. 29 in all. The runner is early-access gated;
   `tests/evals/test-eval-cases.sh` keeps the cases loadable until it opens and proves every
   regex grader against its fixture or verdict sample.
 - `gate:task:complete-separation` makes the rule mechanical for task state.

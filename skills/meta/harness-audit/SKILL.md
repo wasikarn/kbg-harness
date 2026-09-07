@@ -20,7 +20,7 @@ bash "${CLAUDE_SKILL_DIR}/scripts/audit.sh" --only 22  # one check by number
 | Area | Checks |
 |---|---|
 | Loadability | 02 skills, 03 agents (plugin cache or symlink) |
-| Frontmatter | 04 agents (name, description, bucket enum), 05 skills (name, description, bucket dir, trigger clause), 28 strict YAML, 54 model + effort present |
+| Frontmatter | 04 agents (name, description, bucket enum), 05 skills (name, description, bucket dir, trigger clause), 21 `model:` is a documented alias, 28 strict YAML, 54 model + effort present |
 | Names | 07/08 name matches filename, 23 lowercase-hyphen format |
 | Agent tool grants | 09 explicit `tools:`, 10 no duplicates, 24 real tool tokens, 41 never `Agent`, 32 reviewers stay read-only |
 | Hooks | 11 no orphaned hook files, 22 hooks.json event / type / matcher validity, 33 `${CLAUDE_PLUGIN_ROOT}` not `CLAUDE_PLUGIN_DIR` |
