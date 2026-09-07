@@ -24,7 +24,7 @@ Two constraints hold through every step:
    Done when: genre letter and language are named.
 2. **Grit plan.** Decide what concrete specifics and point of view the rewrite will carry (Grit Gate below).
    Done when: at least one specific pulled from the source is listed, or the source is declared hollow.
-3. **Identify every tell.** Scan against the cue-sheet (§1-§30); for any Thai, load `patterns-thai.md` (§31-§42) first, since universal tells miss terminology drift and calque, a Thai-only class.
+3. **Identify every tell.** Scan against `cue-sheet.md` (§1-§30); for any Thai, load `patterns-thai.md` (§31-§42) first, since universal tells miss terminology drift and calque, a Thai-only class.
    Done when: every tell present is named, not the first loud few. Failure mode: stopping after the em dash and "delve" and missing the cluster a full pass shows.
 4. **Draft rewrite.** Replace each named tell with the natural alternative; keep paragraph count and core meaning; natural aloud, varied length, simple constructions (is/are/has, คือ/เป็น), correct register, grit applied. Match the user's voice when they gave a sample (Voice below).
    Done when: every tell from step 3 is addressed and everything step 3 cleared is left as written. A cleared term that now looks wrong is new information: name it, then change it. Failure modes: deleting AI-isms without adding grit lands in the clean-but-neutral middle, which a skeptical reader still scores about 30/100 AI; an unnamed mid-rewrite change escapes steps 5 and 6.
@@ -33,7 +33,7 @@ Two constraints hold through every step:
 6. **Final rewrite.** Resolve each step-5 bullet: name the fix, or write "kept as tradeoff: <reason>" (formal vocabulary the genre requires, for instance). Scan the delivered text for the literal `—` character (cue #14); a fixture run once claimed the dashes were cut while two remained. Re-read aloud; vary sentence length; confirm the step-2 grit actually landed in the text.
    Done when: every bullet has a named resolution, the `—` count is zero, the step-2 specifics are present, and the final differs from the draft. If step 5 found nothing, re-run step 5 before this step.
 
-Deliver: the draft, the still-AI bullets, the final rewrite, and optionally a short change summary.
+Deliver: the named tells, the draft, the still-AI bullets, the final rewrite, and optionally a short change summary. When the input is a file and the user asked to edit or humanize it, write the final back into that file as well.
 
 ## §0. Register and language gate
 
@@ -61,7 +61,7 @@ High cognitive load (hotfix, incident, alert) is written monolingual. An EN-only
 1. **Surface the grit.** Pull the concrete specifics a real author includes and an LLM rounds off: ticket and PR refs, file and module names, the actual cause (race condition, double-submit, null from an API), real numbers, the one weird detail. Grit is what reads human, not the absence of fluff.
 2. **Commit to a point of view.** Say which part matters and what you would actually do; balanced neutral reporting is the AI default. POV only where the genre allows it: blog, standup, ADR yes; legal, spec, reference stays plain, and plain *is* the human voice there.
 
-**Fabrication boundary.** Specifics come only from the source or context. Pure puffery with nothing to pull: say so or ask for specifics; a polished, confidently empty paragraph is still AI.
+**Fabrication boundary.** Specifics come only from the source or context. A point of view is yours to add (a plan, a recommendation, which part matters), voiced as yours where the genre allows; a fact, number, cause, or result is not. On a thin source the boundary wins: less grit beats invented grit. Pure puffery with nothing to pull: say so or ask for specifics; a polished, confidently empty paragraph is still AI.
 
 **One unverifiable claim inside an otherwise real draft** differs from a hollow source. Keep the claim, strip unbacked certainty intensifiers (`เรียบร้อยแล้ว`, "completely", "fully"), and ask what was checked where the genre allows (Tier 2 hedge, §32.1). The three tiers apply in any language: unverifiable → drop, heard but unconfirmed → hedge once, sourced → cite.
 
@@ -75,7 +75,7 @@ No sample: the Grit Gate default. Opinionated where the genre allows, varied rhy
 
 ## Pattern cue-sheet
 
-Thirty universal tells, all languages; Thai-only tells (§31–§42) are in `patterns-thai.md`. One line per cluster here; the full 30-row table (pattern / EN+TH cue / fix) opens `patterns-universal.md`. **Read it before scanning**; scans without it miss the cues.
+Thirty universal tells, all languages; Thai-only tells (§31–§42) are in `patterns-thai.md`. One line per cluster here; the 30-row table (pattern / EN+TH cue / fix) is `cue-sheet.md`. **Read it before scanning**; scans without it miss the cues. `patterns-universal.md` holds the worked before/after per pattern; open it for a tell you cannot fix, not for every scan.
 
 - **Content (§1-6)**: significance puffery, notability name-drops, -ing pseudo-depth tails, promo language, weasel attribution and vague association ("linked to", "associated with"), "challenges and future" formula.
 - **Language and grammar (§7-13)**: AI-vocab words, copula avoidance, negative parallelism, rule of three, elegant variation (historical: older models, weak on current ones), false ranges, passive and subjectless fragments.
@@ -91,7 +91,8 @@ One em dash means nothing; em dashes plus rule-of-three plus *vibrant tapestry* 
 
 Each says when to load it; one level deep; read fully.
 
-- `patterns-universal.md`: cue-sheet table, full §1–§30 (problem plus worked before/after), detection guidance. **Load when:** starting a scan, or before deciding prose is AI vs human.
+- `cue-sheet.md`: the 30-row table (pattern / cue / fix). **Load when:** starting any scan.
+- `patterns-universal.md`: full §1–§30 (problem plus worked before/after), detection guidance. **Load when:** a named tell resists a fix, or before deciding prose is AI vs human.
 - `patterns-thai.md`: §31–§42 Thai-specific rules (terminology and calque, anti-fabrication tiers, connectives, register matrix, code-switching tells, AI-leaked closers). **Load when:** the draft has Thai. **Skip for monolingual English.**
 - `examples.md`: worked examples A (TH chat), B (TH standup), C (TH UI), D (TH prose), E (EN UI), F (EN standup), G (EN prose), and the Grit Gate soulless-vs-alive pair. **Load when:** stuck, or to show the process.
 - `references.md`: external sources (RTGS, Mozilla Thai Style Guide, W3C Thai Layout, PyThaiNLP, Conventional Commits Thai), Thai-tech glossary, calque and typography cheat sheet. **Load when:** verifying transliteration or citations.

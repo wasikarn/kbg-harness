@@ -1,50 +1,12 @@
-# Universal AI-writing patterns (§1–§30) — full catalog
+# Universal AI-writing patterns (§1–§30): full catalog
 
 The 30 universal patterns, with the problem and a worked before/after for each.
-These apply to **all languages** (EN, TH, mixed). The compact cue-sheet below
-(moved here from `SKILL.md`, which keeps a per-cluster index) is enough for most scans;
-read on into the catalog when you need the worked before/after for a specific pattern,
-or you are unsure how to fix a detected tell.
+These apply to **all languages** (EN, TH, mixed). The compact 30-row table is
+`cue-sheet.md`; open this file for the worked before/after of a tell you cannot fix,
+or for the Detection Guidance at the end before deciding prose is AI at all.
 
 Thai-specific patterns (§31–§42: terminology, calque, anti-fabrication, register,
 code-switching, AI-leaked closers) live in `patterns-thai.md`.
-
-## Pattern cue-sheet
-
-Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42) are in `patterns-thai.md`.
-
-| # | Pattern | Cue (EN / TH) | Fix |
-|---|---------|---------------|-----|
-| 1 | Significance/legacy puffery | testament, pivotal moment, evolving landscape / ถือเป็นก้าวสำคัญ, สะท้อนถึงความสำคัญ | Cut the importance claim; state the fact |
-| 2 | Notability / media name-drops | independent coverage, active social media presence | Keep only sourced, specific claims |
-| 3 | -ing pseudo-depth tails | highlighting, ensuring, reflecting, fostering / ซึ่งสะท้อนถึง, เพื่อส่งเสริม | Delete the trailing clause or make it a real fact |
-| 4 | Promo / ad language | vibrant, nestled, in the heart of, breathtaking / งดงามตระการตา, ตั้งอยู่ใจกลาง | Neutral tone; concrete detail |
-| 5 | Vague attribution / weasel / vague association | experts argue, observers cited, reports say; linked to, associated with, connected to / ผู้เชี่ยวชาญบางท่าน, รายงานระบุ, มีความเชื่อมโยงกับ | Name the source, or state the actual relation, or cut |
-| 6 | "Challenges & future" formula | Despite challenges, Future Outlook / ท่ามกลางความท้าทาย, อนาคตของ | Replace with specific facts/dates |
-| 7 | AI-vocab words | delve, crucial, tapestry, underscore, intricate, landscape, robust, deep dive, meticulous / อันที่จริง, ภูมิทัศน์, เน้นย้ำ | Plain synonyms |
-| 8 | Copula avoidance | serves as, stands as, boasts, features / ทำหน้าที่เป็น, ถือเป็น | Use is/are · คือ/เป็น |
-| 9 | Negative parallelism / tailing negation | not only…but, it's not just…it's / ไม่ใช่แค่…แต่ยัง, ไม่ต้องเดา | One real positive clause |
-| 10 | Rule of three | forced triads "X, Y, and Z" / สองพอ สามเกิน | Two if there are two; cut the forced third |
-| 11 | Elegant variation (historical) | protagonist→main character→central figure; common in older models, much rarer in newer ones | Reuse the same noun; weak evidence on its own |
-| 12 | False ranges | "from X to Y" off-scale / ตั้งแต่…จนถึง, จาก…สู่ | List the items plainly |
-| 13 | Passive / subjectless | "results are preserved automatically, no config needed" | Name the actor; active voice |
-| 14 | Em dashes | `—` used for asides | Period / comma / colon / parens (en-dash ranges `40–60%` are fine) |
-| 15 | Boldface overuse | mechanical `**bold**` | Drop decorative bold |
-| 16 | Inline-header lists | `- **X:**` that restates X | Prose or plain bullets |
-| 17 | Title case headings | `## Strategic Negotiations And` | Sentence case |
-| 18 | Emojis | 🚀 💡 ✅ on headings/bullets | Remove |
-| 19 | Curly quotes | `“ ”` | Straight quotes `" "` |
-| 20 | Chat artifacts | I hope this helps, Certainly!, let me know | Cut the assistant talk |
-| 21 | Cutoff disclaimers / gap-fill | as of my last update, likely grew up, maintains a low profile / ณ ขณะนี้, น่าจะ, เชื่อว่า | Say what's unknown or cut; don't guess |
-| 22 | Sycophancy | Great question!, You're absolutely right / คำถามดีมากค่ะ | Drop |
-| 23 | Filler phrases | in order to, due to the fact that, at this point in time / เนื่องจากข้อเท็จจริงที่ว่า, ณ จุดเวลานี้ | Shorten |
-| 24 | Excessive hedging | could potentially possibly / อาจจะเป็นไปได้ว่าน่าจะ | One hedge max |
-| 25 | Generic positive conclusion | future looks bright, journey toward excellence | Concrete next fact, or cut |
-| 26 | Hyphenated-pair overuse | data-driven, high-quality, end-to-end | Keep hyphen when attributive; drop in predicate |
-| 27 | Authority tropes | the real question is, at its core, fundamentally / คำถามที่แท้จริงคือ, ในแก่นสำคัญ | Make the actual point |
-| 28 | Signposting | let's dive in, here's what you need to know | Just say it |
-| 29 | Fragmented headers / thematic breaks | heading + one-line restating it; `---` between every section | Delete the warm-up line and the rules |
-| 30 | Diff-anchored writing | "this was added to replace…" | Describe the thing as it is |
 
 ## CONTENT PATTERNS
 
@@ -243,7 +205,7 @@ Scan for these 30 universal tells (all languages). Thai-only tells (§31–§42)
 
 ### 14. Em Dashes (and En Dashes): Cut Them
 
-**Rule:** In Thai prose, em dash has no native typography convention — strip unconditionally, no exceptions (see `references.md` typography rules). In English/mixed text the em dash is a commonly-cited but contested AI tell (see "Don't over-edit" below — many human editors and journalists use it deliberately): check first whether the user gave a writing sample that uses em dashes on purpose, and if so keep them there per the Voice section — a real author's habit outranks this rule. Otherwise, treat it as a hard constraint on the final rewrite, not a "use sparingly" preference. Replace each one, in rough order of preference: a period (start a new sentence), a comma (a tight aside), a colon (introducing an explanation), parentheses (a true aside), or restructure the sentence. Also catch spaced em dashes (` — `) and double hyphens (` -- `) used the same way.
+**Rule:** In Thai prose, em dash has no native typography convention: strip unconditionally, no exceptions (see `references.md` typography rules). In English/mixed text the em dash is a commonly-cited but contested AI tell (see "Don't over-edit" below; many human editors and journalists use it deliberately): check first whether the user gave a writing sample that uses em dashes on purpose, and if so keep them there per the Voice section. A real author's habit outranks this rule. Otherwise, treat it as a hard constraint on the final rewrite, not a "use sparingly" preference. Replace each one, in rough order of preference: a period (start a new sentence), a comma (a tight aside), a colon (introducing an explanation), parentheses (a true aside), or restructure the sentence. Also catch spaced em dashes (` — `) and double hyphens (` -- `) used the same way.
 
 **En-dash exemption:** number ranges (`40–60%`, `§31–32`, `2–5 minutes`) are fine. That's an en dash (`–`) doing its actual job, not an AI tell. The rule is about *em dashes used for asides* and *en dashes used as em dashes*. The em dash (`—`) is what AI overuses.
 
@@ -491,7 +453,7 @@ Before returning the final rewrite, scan it for em dashes (`—`). Any hit means
 A clean human writer can hit several of the patterns above without any AI involvement. Before rewriting, sanity-check that you are not gutting legitimate prose. The following are *not* reliable indicators on their own:
 
 - **Perfect grammar and consistent style.** Many writers are professionals or have been edited. Polish does not equal AI.
-- **Mixed casual and formal registers.** This often signals a person in a technical field, a young writer, or someone with neurodivergent prose habits — not a chatbot. **For Thai: Thai writers code-switch Thai-English by habit; it is normal, not always an AI tell**
+- **Mixed casual and formal registers.** This often signals a person in a technical field, a young writer, or someone with neurodivergent prose habits, not a chatbot. **For Thai: Thai writers code-switch Thai-English by habit; it is normal, not always an AI tell**
 - **"Bland" or "robotic" prose.** AI prose has *specific* tells. Generic dryness without those tells is just dry writing.
 - **Formal or academic vocabulary.** AI overuses *specific* fancy words (see §7), not all fancy words. Don't flatten "ostensibly" or "constituent" just because they sound brainy. **For Thai: formal words in a formal context are not always an AI tell**
 - **Letter-style opening or closing on a comment.** Salutations and sign-offs predate ChatGPT by centuries.
@@ -506,7 +468,7 @@ When in doubt, look for **clusters** of tells, not isolated ones. A single em da
 
 ### Signs of human writing (preserve these)
 
-When you see these, lean toward leaving the prose alone — they are evidence of a real person writing, and over-editing will destroy what makes the piece sound human:
+When you see these, lean toward leaving the prose alone. They are evidence of a real person writing, and over-editing will destroy what makes the piece sound human:
 
 - **Specific, unusual, hard-to-fabricate detail.** A real address. A weird quote. The phrase "the lawyer who used to work upstairs from my dentist." LLMs round off specifics; humans hoard them. **For Thai: a ticket link, a log timestamp, a real teammate's name, "เมื่อวานคุยกับพี่แจ็ค"**
 - **Mixed feelings and unresolved tension.** "I think this is mostly good, but it bothers me, and I can't fully explain why." LLMs default to clean takes.

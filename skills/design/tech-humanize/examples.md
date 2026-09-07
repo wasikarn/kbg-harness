@@ -1,6 +1,6 @@
 # Worked Examples (extends SKILL.md)
 
-> Worked applications of the 30 universal + 12 Thai-specific top-level patterns in `SKILL.md` + `patterns-thai.md`, full loop: draft → "still-AI" bullets → final rewrite. Use as a reference when stuck.
+> Worked applications of the 30 universal + 12 Thai-specific top-level patterns in `patterns-universal.md` + `patterns-thai.md`, full loop: draft → "still-AI" bullets → final rewrite. Use as a reference when stuck.
 >
 > ❌/✅ below = bad/good notation, not the decorative emoji §18 tells you to cut from real writing.
 >
@@ -184,7 +184,7 @@ Given the draft `ผมได้ merge PR #64 เข้า develop แล้ว 
 
 ## Monolingual English Examples (v3.0)
 
-Same catalog (30 universal + 12 Thai-specific top-level in `patterns-thai.md`), but applied to drafts that contain **no Thai**. Useful when the user writes internal EN-only docs, EN UI copy, or EN strategy/blog prose. Universal patterns (§1-§30 in `SKILL.md`) all apply; Thai-specific patterns (§31-§42 in `patterns-thai.md`) are skipped.
+Same catalog (30 universal + 12 Thai-specific top-level in `patterns-thai.md`), but applied to drafts that contain **no Thai**. Useful when the user writes internal EN-only docs, EN UI copy, or EN strategy/blog prose. Universal patterns (§1-§30 in `patterns-universal.md`) all apply; Thai-specific patterns (§31-§42 in `patterns-thai.md`) are skipped.
 
 ### Example E — EN UI Error (Stripe-style)
 

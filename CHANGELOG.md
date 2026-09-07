@@ -5,6 +5,44 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.35] — 2026-09-07
+
+### Added
+
+- `tech-humanize/cue-sheet.md`: the 30-row pattern table on its own (4.8 KB). `SKILL.md`
+  loads it before every scan and opens `patterns-universal.md` (now 29.9 KB, table removed)
+  only for a tell that resists a fix or for the detection guidance. Two live runs on the
+  eval fixtures read the full catalog because `SKILL.md` said "read fully": the English path
+  drops from about 45 KB to 16 KB, the Thai path from about 76 KB to 46 KB.
+- Eval `tech-humanize-th-ui-planted` (27 cases total): Thai payment-declined UI copy, genre C,
+  planted with §36 marketing calques, a UI-aspirational closer, and a chat sign-off; regex
+  graders prove the calques and closer are gone and the one real next step survives, the LLM
+  rubric holds §36.1 (UI-actual, at most three sentences, decline said in Thai). The fixture
+  is the old `evals.json` UI case, the one genre the four 1.1.29 cases did not cover.
+
+### Changed
+
+- `tech-humanize/SKILL.md`, from the two live runs: the deliverable list names the tells
+  (step 3 makes naming them a done-when, the old list never asked for them); a file input the
+  user asked to humanize is written back, not only returned; the Grit Gate says a point of
+  view is the editor's to add and a fact is not, and that on a thin source the fabrication
+  boundary wins. Both runs had to work that last rule out for themselves.
+- `tech-humanize/patterns-thai.md` and `examples.md`: six cross-references that still pointed at
+  `SKILL.md` for the §1-§30 catalog, §18, or a "Thai Foundations" heading that no longer exists
+  now point at `patterns-universal.md`, `cue-sheet.md`, or the §0 gate (validator finding).
+- `tech-humanize/patterns-universal.md`: six em dashes in its own instruction prose (title, §14, and
+  Detection Guidance) replaced; example quotes and cue cells keep theirs.
+- `evals/tech-humanize-th-standup-planted` rubric matches the skill's Tier 2 rule: strip the
+  certainty intensifiers on the unverified staging claim, ask what was checked only where the
+  genre allows. The live run stripped them and the old wording ("hedged") would have
+  argued with it.
+
+### Removed
+
+- `tests/skills/tech-humanize-evals/` (legacy `evals.json` and four fixtures): no test or check
+  read it; three of its four inputs are covered by the `evals/` cases and the fourth is now
+  `tech-humanize-th-ui-planted`.
+
 ## [1.1.34] — 2026-09-07
 
 ### Added

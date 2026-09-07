@@ -1,6 +1,6 @@
 # Review-agent and skill evals
 
-Twenty-six cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
+Twenty-seven cases in Claude Code's native `claude plugin eval` layout. Twelve cover the six review
 agents, one planted-defect case and one clean control per agent, the same fires/silent pairing
 `tests/skills/harness-audit/known-bad/` uses for audit checks. Each case is
 `prompt.md` (the ask: an agent case dispatches by `subagent_type`, a skill case invokes by `skill:`), `case.yaml` (a
@@ -13,8 +13,8 @@ agents, one planted-defect case and one clean control per agent, the same fires/
 | `finding.md` / `clean.md` | `regex` | the planted defect was found at its file, or the clean control got the clean verdict |
 | `criteria.md` | `llm` | the finding is the right one, sized right, with no manufactured extras |
 
-Four more for the `tech-humanize` skill (tag `tech-humanize`): two planted cases (English prose,
-Thai standup), a clean human-written control that must survive lightly edited, and a file-input
+Five for the `tech-humanize` skill (tag `tech-humanize`): three planted cases (English prose,
+Thai standup, Thai UI copy), a clean human-written control that must survive lightly edited, and a file-input
 case that proves the prose-only constraint (frontmatter and code block byte-identical, graded on
 the file's contents). Their `skill-fired.md` is `tool_used: Skill`; their regex graders assert a
 planted tell is absent (`not_contains`) or a source specific is kept (`contains`), and the loader

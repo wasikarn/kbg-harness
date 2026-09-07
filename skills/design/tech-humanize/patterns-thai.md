@@ -1,8 +1,8 @@
-# Thai-Specific Patterns (extends SKILL.md §1-§30)
+# Thai-Specific Patterns (extends `patterns-universal.md` §1-§30)
 
-> This file extends the catalog in `SKILL.md` with 12 more top-level patterns (§31-§42) that only Thai text needs: terminology & calque, anti-fabrication, connectives, register matrix, code-switching tells, AI-leaked closers. Read `SKILL.md` §0 Thai Foundations first, then come back here.
+> This file extends the catalog in `patterns-universal.md` with 12 more top-level patterns (§31-§42) that only Thai text needs: terminology & calque, anti-fabrication, connectives, register matrix, code-switching tells, AI-leaked closers. Read `SKILL.md` §0 (register and language gate) first, then come back here.
 >
-> ❌/✅ below is the notation for bad/good examples (like code // BAD / // GOOD), not the decorative emoji that §18 in `SKILL.md` says to cut from real writing.
+> ❌/✅ below is the notation for bad/good examples (like code // BAD / // GOOD), not the decorative emoji that §18 in `cue-sheet.md` says to cut from real writing.
 
 ---
 
