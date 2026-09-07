@@ -2,8 +2,6 @@
 name: ideate
 description: "Parallel divergent ideation (5 isolated agents, rotating frames, novelty/viability/fit scoring). Use when the question is open-ended. Say 'brainstorm'. Not for syntax, lookups, or closed-phrasing asks."
 argument-hint: "[problem-statement]"
-disable-model-invocation: false
-disable-model-invocation-reason: Auto-fire on vague prompts is load-bearing (catches prompts the model would otherwise default on). Cost is bounded by the 5-agent-per-wave cap (METHODOLOGY Rule 13) and the 2-wave structure below, not by this flag.
 model: inherit
 effort: high
 ---

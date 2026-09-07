@@ -79,14 +79,10 @@ npx lighthouse https://your-app.com --only-categories=performance
 Full 14-row pattern → complexity → better-alternative table (plus the hidden-constants
 caveat) in the Reference section below.
 
-### 3. React Performance Checklist
+### 3. React
 
-- [ ] `useMemo` for expensive computations; `useCallback` for functions passed to children
-- [ ] `React.memo` for frequently re-rendered components; proper dependency arrays in hooks
-- [ ] Stable object/callback references, not created inline in render
-- [ ] Virtualization for long lists (react-window, react-virtualized)
-- [ ] Lazy loading for heavy components (`React.lazy`); code splitting at route level
-- [ ] Stable unique keys (`item.id`), never array index
+Render churn (memoization, stable references, keys), long lists without virtualization, and
+route-level code splitting.
 
 ### 4. Bundle Size Optimization
 
@@ -99,22 +95,13 @@ caveat) in the Reference section below.
 | Lodash | Use lodash-es or import specific functions, not the whole library |
 | Large icons library | Import only needed icons |
 
-### 5. Database & Query Optimization
+### 5. Database & Query
 
-- [ ] Select only needed columns, never `SELECT *`
-- [ ] Batch or JOIN instead of N+1 queries in a loop
-- [ ] Indexes on frequently queried columns; composite indexes for multi-column queries
-- [ ] Connection pooling; query result caching
-- [ ] Pagination for large result sets; monitor slow query logs
+Query shape (N+1, over-selection), indexing, pooling, pagination, and slow-query evidence.
 
-### 6. Network & API Optimization
+### 6. Network & API
 
-- [ ] Parallel independent requests with `Promise.all`, not sequential awaits
-- [ ] Batch requests when possible; implement request caching with a TTL
-- [ ] Debounce rapid-fire requests (e.g. search-as-you-type)
-- [ ] Streaming for large responses; pagination for large datasets
-- [ ] GraphQL or API batching to reduce request count
-- [ ] Enable compression (gzip/brotli) on server
+Request parallelism and batching, caching with a TTL, debouncing, streaming, and compression.
 
 ### 7. Memory Leak Detection
 
@@ -124,8 +111,9 @@ Detect via Chrome DevTools Memory tab: take a heap snapshot, perform the action,
 
 ## Performance Testing
 
-**Budgets:** add a `bundlesize` entry to `package.json` capping `./build/static/js/*.js` at
-`200 kB` (gzipped) so CI fails on bundle growth.
+**Budgets:** add a `size-limit` entry to `package.json` (or a `bundlewatch` config) capping
+`./build/static/js/*.js` at `200 kB` (gzipped) so CI fails on bundle growth; `bundlesize` is
+unmaintained.
 
 **Web Vitals monitoring:** `web-vitals` v4 API — `import { onCLS, onINP, onLCP, onFCP,
 onTTFB } from 'web-vitals'` and register a reporter for each (CLS, INP — which replaced FID,

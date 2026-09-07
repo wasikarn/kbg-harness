@@ -5,6 +5,16 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.56] — 2026-09-08
+
+### Fixed
+
+- Prompt-audit leftovers: performance-optimizer's React/DB/network checklists collapsed to scope
+  lines (trained-default how-tos) and its `bundlesize` budget repointed at `size-limit` /
+  `bundlewatch` (bundlesize is unmaintained; verified); ideate's unconsumed
+  `disable-model-invocation-reason` field dropped; the failure-nudge `hooks.json` description
+  lost its dated audit receipt and now states the cap as 1.
+
 ## [1.1.55] — 2026-09-08
 
 ### Fixed
