@@ -1,0 +1,167 @@
+---
+name: compliance-audit
+description: "Compliance-audit: verify a finished implementation against its plan via one fresh-context, Codex-primary verifier that reruns the gauntlet itself."
+argument-hint: "[plan-path|pr-number|commit-range]"
+disable-model-invocation: true
+disable-model-invocation-reason: a done-declaration gate — the user decides when compliance is checked and what counts as compliant, not the model
+model: inherit
+effort: xhigh
+---
+
+# Implementation Compliance Audit
+
+Prove a finished implementation matches the plan that was approved for it — every planned
+requirement landed, no unexplained deviation, no regression. This is a conformance check against
+a specific prior plan, not a general code review: quality/security/style lenses belong to
+`mattpocock-skills:code-review` / `mh:security-auditor`; production readiness belongs to
+`mh:production-audit`. Pre-code mirror image: `mh:plan-reviewer` reviews the plan before code
+exists; this audits the diff after.
+
+**When to use / not:** use after a plan-driven change. Don't use for an unplanned diff
+(`mattpocock-skills:code-review`).
+
+## Core Principles
+
+- **Maker ≠ checker.** The agent that implemented the plan cannot be the sole grader of its own
+  work — `docs/reference/operating-model.md`'s "unifying crux". Phase 2 dispatches a fresh-context
+  verifier with no memory of the implementation session, primary on Codex — a different model
+  family, not just a fresh context window.
+- **Ground truth is the plan's text and the actual diff at a pinned commit** — not a summary of
+  what you remember doing.
+- **Falsify, don't rubber-stamp.** Deviations you already know about get pre-declared (Phase 2)
+  and then checked against what the verifier finds independently — a pre-declared deviation the
+  verifier also confirms is *justified*; one only you listed, with no sanctioning text or
+  citable sign-off, is not accepted just because you said so first.
+- **Per-item verdict, not a blended score.** Compliance is a checklist of booleans (CONFORMS /
+  DEVIATED / MISSING), not a graded quality signal. Report the open count, not a percentage.
+- **`pass` is never true on requirements alone.** It requires every requirement CONFORMS or is an
+  *accepted* DEVIATED, **and** the gauntlet exits 0, **and** `scope_ok` is true. A gauntlet that
+  can't be run (missing tool, timeout) is a failure to verify, never a skip-therefore-pass.
+- **No remediation in this version.** A real gap gets reported, not silently auto-fixed — see
+  Phase 3.
+
+---
+
+## Phase 1: Locate the Plan + Scope the Audit
+
+**Goal**: identify what was actually approved, and pin the exact revision before spending any
+verifier budget.
+
+**Actions**:
+1. Check whether the user supplied a plan path, PR number, or commit range. If not, prefer the
+   plan already in this conversation's context. **Don't trust the plan file's mtime as a
+   fallback**: Claude Code reuses one plan file per session, so a later unrelated plan-mode entry
+   silently overwrites the one you meant to audit. If neither conversation context nor the
+   user's own words give a clear source, ask explicitly which plan to audit rather than guessing
+   from a file timestamp.
+2. Extract every discrete requirement from the plan — numbered findings, phases, explicit "must"
+   statements — into a flat checklist. This is the audit's ground truth.
+3. Identify the diff to audit across **every** repo the plan touched (a multi-repo plan lists
+   each repo separately). State explicitly, not just "the commit range": the plan's own
+   version/source, the base SHA, and the head SHA.
+4. **Pin the revision safely.** This repo's tree is shared across concurrent sessions — a diff
+   checked at one revision while tests run against another silently produces a wrong verdict.
+   Create an isolated, non-moving checkout: `git worktree add --detach <path> <head-sha>`
+   (cleaned up after Phase 2). If the pinned SHA can't be cleanly checked out, the verdict is
+   "cannot verify" (`scope_ok: false`), never a silent pass/fail against the wrong tree.
+5. Present the requirement checklist in prose, plus any deviation you're already aware of. Gate
+   with `AskUserQuestion` **only when the plan source is genuinely ambiguous** (multi-repo, no
+   conversation context, no user-named path) — otherwise proceed; a wrong scope with one verifier
+   is a cheap re-run, not wasted fan-out budget. **Never enter plan mode for this**: it reuses
+   the session's one plan file, which would overwrite the very plan this audit exists to verify
+   against.
+
+---
+
+## Phase 2: Pre-Declare, Then One Codex-Primary Verifier
+
+**Goal**: separate "I already know this differs from the plan, here's why" from what the audit
+must discover independently, then get an independent answer from a different model family.
+
+**Actions**:
+1. If you already know of deviations, list each with its reason — this is a lightweight
+   paragraph, not a gate of its own. Carry it forward unopened; step 3 is where it gets checked,
+   not asserted. Starts empty if you have no first-hand deviation knowledge — step 3 still
+   catches anything real.
+2. Dispatch **one** verifier at the pinned worktree from step 1.4. Primary: `codex exec`. On
+   rate-limit or Codex's absence, fall back to a Claude `general-purpose` subagent (no new
+   bespoke agent type) — note "independence reduced for this pass" in the final report, matching
+   `docs/reference/codex-integration-map.md`'s established fallback language for
+   `/codex:review`/`/codex:adversarial-review`.
+   - **Sandbox contract**: `workspace-write`, scoped *only* to the disposable worktree — never
+     the shared main tree. This repo's own gauntlet writes (`python3 -m py_compile` leaves
+     `__pycache__` next to tracked `.py` files, plus its own log dir) — `read-only` would be
+     wrong here. Before/after the run, diff the worktree's tracked files against the pinned SHA;
+     any tracked-file change beyond expected build artifacts is itself a finding ("verifier
+     modified source"), never a silent pass. The worktree is discarded after, so leftover
+     untracked artifacts don't matter.
+   - The verifier receives **only** its slice of the plan's requirements plus the pinned SHA —
+     **not** your Phase 2 deviation list, **not** your narrative of what you did, and **never** a
+     plan-file path (it may already hold this audit's own scope by the time the verifier reads it).
+   - **Adversarial-completeness mandate** for any requirement whose own text names a security/
+     gate/auth/validation surface — read `references/verifier-brief.md` before writing the brief:
+     enumerate in-family bypass permutations from the actual validation code; in-family →
+     downgrades the verdict, out-of-family → known-gap noted separately, not folded in.
+   - The verifier **reruns the repo's real gauntlet command itself, in the pinned worktree** —
+     don't trust an in-session "green" claim carried over from implementation, and don't have
+     main re-run it directly (main reads and scores the returned output; the validator does the
+     re-verification — the same crux this file names).
+   - The verifier returns, per requirement: **CONFORMS** / **DEVIATED** (state what changed, and
+     whether the justification is *accepted* — sanctioned by the plan/requirement text itself, or
+     citable sign-off, not merely restated from the pre-declared list) / **MISSING**. Plus: the
+     exact gauntlet command run, the SHA tested, its exit code, and its **verbatim output or
+     tail** — never a summary; losing this loses the property the agent was kept around for.
+   - Escape hatch only, for genuinely large/multi-repo plans: fan out up to Rule 13's 5-per-wave
+     cap, one verifier per natural boundary. Not the default — the common case (single-repo,
+     single-phase) stays at exactly one verifier.
+
+---
+
+## Phase 3: Reconcile + Report (no remediation)
+
+**Goal**: falsify the pre-declared deviations against the independent finding, then report — not
+fix.
+
+**Actions**:
+1. Compare the verifier's independently-found deviations against Phase 2 step 1's pre-declared
+   list. Match on both sides *and* the justification is accepted → justified-and-confirmed.
+   Verifier found one you didn't list, or one you listed but couldn't sanction with plan text or
+   citable sign-off → an unflagged/unaccepted gap; it counts as an open item, `pass: false`.
+2. Report, in this order:
+   - One-line verdict headline: N/N conform, open-item count.
+   - Per-requirement table: **CONFORMS** / **DEVIATED (accepted)** / **DEVIATED (unaccepted)** /
+     **MISSING**. No blended percentage.
+   - The gauntlet run's exact command, SHA, exit code, and verbatim/tail output.
+   - `scope_ok` and any `unexpected_files[]` (diff touched something the plan never named).
+3. **No automated fixer, no re-verify-only-the-touched-item in this version.** A fixer that
+   re-verifies only what it touched risks missing a regression the fix caused elsewhere; not
+   building that path is simpler than trying to bound it correctly. If real gaps are found, the
+   report hands them back — fixing and re-running `/mh:compliance-audit` again is a separate,
+   later invocation, not an automatic loop. (A future version could add bounded remediation:
+   capped at 3 fix→verify rounds per Rule 13, full gauntlet rerun on the result, not just the
+   touched item — not in this build.)
+4. **Suggested next step:**
+   - All conform, nothing open → done; ship/merge if not already.
+   - Open items → they block "done." Consider `mh:post-mortem` only if a gap reveals a systemic
+     pattern, not for a one-off miss.
+
+**Done.**
+
+## Anti-Patterns
+
+- Auditing from memory of "what I think I did" instead of the actual diff.
+- Letting the implementing session's own verifier grade its own work — no fresh context, no audit.
+- Treating a pre-declared deviation as accepted just because it was listed first.
+- Reporting compliance as one blended percentage instead of a per-requirement verdict.
+- Trusting "gauntlet was green during implementation" without re-running it fresh.
+- Declaring done with an open MISSING or unaccepted DEVIATED still on the table.
+- Entering plan mode to gate audit scope — overwrites the plan being audited (Phase 1).
+- Running the verifier against the shared main tree instead of a pinned detached worktree.
+
+## Named Model
+
+Phase 2's fresh-context, Codex-primary dispatch is the verifier-separation / maker≠checker
+principle — `docs/reference/operating-model.md`'s "unifying crux": an LLM judging its own output
+is circular, and a different model family is a stronger separation than a fresh context window
+alone. Phase 3's falsify-don't-rubber-stamp step is the scientific-method lens: a claim survives
+by surviving an attempt to disprove it, not by being asserted twice.

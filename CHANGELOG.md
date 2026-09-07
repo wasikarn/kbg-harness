@@ -5,6 +5,72 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.44] — 2026-09-07
+
+### Added
+
+- `mh:compliance-audit`: brought back from `skills/review/compliance-audit/` at the pre-rebuild
+  tag, cut 2026-09-05 in the same blanket sweep as `mh:learn`. The old design (5 phases,
+  `effort: xhigh`, up to 5-way verifier fan-out plus a separate deterministic backstop agent —
+  6 agents in the common case) was rebuilt lean: exactly **one** fresh-context verifier by
+  default, Codex-primary (`codex exec`) with a Claude `general-purpose` fallback on rate-limit or
+  absence — a genuinely different model family is a stronger maker≠checker separation than a
+  fresh Claude context alone, matching the existing `/codex:review`/`/codex:adversarial-review`
+  fallback pattern in `docs/reference/codex-integration-map.md` (routing table updated with this
+  skill's row). Fan-out to Rule 13's 5-per-wave cap stays available only as an escape hatch for
+  genuinely large/multi-repo plans.
+  - `pass` now requires every requirement CONFORMS or is an *accepted* DEVIATED (plan-sanctioned
+    or citably signed off — not just self-declared before the check), **and** the gauntlet exits
+    0, **and** `scope_ok` is true — never true on requirements alone.
+  - The verifier reruns the repo's own gauntlet itself, inside an isolated `git worktree add
+    --detach` at the pinned head SHA (reusing this repo's own established pin-SHA pattern for a
+    shared, concurrently-edited tree) with a `workspace-write` sandbox scoped only to that
+    disposable worktree, and returns the exact command, SHA, exit code, and verbatim/tail output
+    — never a summary.
+  - No automated remediation in this version: a real gap is reported, not auto-fixed. Simpler to
+    guarantee correctly than a fixer that risks missing a regression it caused elsewhere by
+    re-verifying only what it touched.
+  - Reused the plan-mtime and plan-mode gotchas from the pre-rebuild design verbatim (Claude Code
+    reuses one plan file per session; entering plan mode to scope the audit overwrites the very
+    plan being audited).
+  - 7 eval cases (`evals/compliance-audit-{planted,clean,tests-fail,unaccepted-deviation,
+    wrong-sha,dirty-tree-isolated,plan-mismatch}`); runner updated with a slash-command routing
+    branch and bumped to 40.
+  - **Live-verified against a real historical commit in this repo** (GH #151's fix, `8eb787b9..
+    4bb93955`, not a synthetic fixture): the Codex-primary verifier, dispatched exactly per this
+    skill's Phase 2, independently traced the actual gate source and found two real structural
+    gaps in the currently-shipped `hooks/gates/subagent-spawn-guard.{sh,py}` — a shell fast-path
+    that fails open on a JSON-escaped `agent_id` key (a Unicode escape for the underscore), and a
+    Python truthiness check
+    that fails open on an empty-string or `null` `agent_id` — both proven at the gate's own input
+    boundary, neither yet confirmed reachable from Claude Code's actual runtime payload
+    serialization. Flagged separately for follow-up, not filed or fixed as part of this change.
+
+## [1.1.43] — 2026-09-07
+
+### Added
+
+- `mh:learn`: brought back from `skills/meta/learn/` at the pre-rebuild tag (`pre-rebuild-
+  v0.68.673`), cut 2026-09-05 as part of a blanket "native/plugins already cover this" sweep —
+  re-examined, the gap it fills is real and unfilled. Claude Code's native ambient auto-memory
+  (`autoMemoryEnabled`/`/memory`) fires in the moment on a single turn; it cannot see cross-turn
+  patterns (a workflow repeated three times, a correction whose generalizable rule only becomes
+  clear across the whole arc). This skill closes that gap with a retrospective whole-transcript
+  sweep, gated per batch through `AskUserQuestion` (no `disable-model-invocation` — the in-flow
+  gate is the safety), propose-only and permanent, not a dry-run default that graduates to
+  auto-write.
+  - Fixed a real correctness bug in the ported `find-transcript.sh`: the old locator picked the
+    project's most-recently-modified `.jsonl`, not necessarily *this* session's — wrong under
+    this repo's own concurrent-session pattern (commonly 50+ transcripts in one project dir).
+    Replaced with a deterministic construction from the native `CLAUDE_CODE_SESSION_ID` env var.
+    Regression-tested: `tests/skills/learn/test-find-transcript.sh` (4 assertions).
+  - Fixed the dedupe step for the memory store's current index-of-indexes shape (unindexed at
+    the old design's time): traversal of `MEMORY.md` → every `index-*.md` → candidate files is
+    now mandatory, not a best-effort skim.
+  - Added explicit injection-skepticism: transcript content is data, not instructions.
+  - 4 eval cases (`evals/learn-{planted,clean,injected-instruction,nested-duplicate}`); runner
+    (`tests/evals/test-eval-cases.sh`) updated with a `learn-*` routing branch and bumped to 33.
+
 ## [1.1.42] — 2026-09-07
 
 ### Added
