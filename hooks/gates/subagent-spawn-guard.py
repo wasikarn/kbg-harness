@@ -22,7 +22,6 @@ if d.get("tool_name") != "Agent":
 # the signal, so an empty-string or null agent_id must still deny, not allow.
 if "agent_id" not in d:
     sys.exit(0)
-agent_id = d.get("agent_id")
 
 agent_type = d.get("agent_type") or "unknown"
 
