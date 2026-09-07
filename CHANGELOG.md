@@ -5,6 +5,18 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.49] — 2026-09-07
+
+### Added
+
+- `evals/compliance-audit-wrong-sha-real`: the existing `wrong-sha` fixture only tested a SHA
+  that doesn't exist at all (fails loud via git error) — the plan's own "never a silent
+  wrong-tree verdict" concern is specifically about a SHA that *exists* but isn't what's actually
+  checked out, which is harder to catch since git raises no error. New fixture: `plan-head` is a
+  real, resolvable tag with a correct implementation, but `target-repo`'s branch tip is a later
+  decoy commit that deletes the files — proves the audit pins the exact named SHA in its own
+  checkout rather than trusting whatever's currently on disk. 41 eval cases total (was 40).
+
 ## [1.1.48] — 2026-09-07
 
 ### Fixed

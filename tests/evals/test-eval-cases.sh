@@ -128,7 +128,7 @@ PY
   then bad "$c: a grader is malformed"; continue; fi
   ok "$c"
 done
-[ "$n" -eq 40 ] || bad "expected 40 cases, found $n"
+[ "$n" -eq 41 ] || bad "expected 41 cases, found $n"
 
 echo "eval-cases: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
