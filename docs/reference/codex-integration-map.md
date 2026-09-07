@@ -17,6 +17,12 @@ cache version changes; no check parses it. Full reasoning: `docs/plans/codex-pai
 | `/codex:transfer` | user only (`disable-model-invocation: true`) | Claude near its own limit → hands the session to a resumable Codex thread. The reverse of the fallback direction above |
 | `/codex:status` | user only | job and review-gate status, read-only |
 | `/mh:compliance-audit` (mh's own skill, not a `codex@openai-codex` skill) | user only (`disable-model-invocation: true`) | Phase 2's verifier dispatches a raw `codex exec` (workspace-write, scoped to a disposable pinned worktree — not read-only, since it reruns the gauntlet) as primary, for stronger maker≠checker separation than a fresh Claude context alone; Claude-side alternative: a `general-purpose` subagent. On rate-limit or Codex absence, fall back to the Claude subagent — independence is lost for that pass, same fallback language as `/codex:review` above |
+| `/mh:deep-audit` (mh's own skill) | user or model (no `disable-model-invocation`) | Step 3's fresh-context checker dispatches `codex exec --sandbox read-only` (explicit flag, not the config-dependent default; no worktree, since the checker never writes and needs the current tree, not a pinned SHA) as primary; Claude-side alternative: an `Explore`/review agent (the pre-existing mechanism). On rate-limit, absence, timeout, auth failure, a schema-invalid result, or a semantic refusal (schema-valid JSON that still didn't do the review), fall back to the Claude agent — independence is lost for that pass, same fallback language as `/codex:review` / `/mh:compliance-audit` above. Unlike those, a failed fallback here doesn't just get noted: it hard-forces the skill's own Final Verdict to `fail` ("verification incomplete"), since deep-audit's rubric would otherwise let a checker-less run still pass on its other dimensions |
+
+`/mh:deep-audit`'s checker is read-only and never writes, so the "Silent-refusal gotcha" section's
+empty-diff detection method below doesn't apply to it — that method assumes a writer whose refusal
+shows up as "nothing changed" on disk. Its refusal signal is a schema-invalid or
+semantically-refusing final message instead, caught per the row above.
 
 ## Gate gap
 

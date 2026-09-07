@@ -5,6 +5,42 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.46] — 2026-09-07
+
+### Changed
+
+- `mh:deep-audit`: step 3's fresh-context checker is now Codex-primary (`codex exec --sandbox
+  read-only --cd <repo-root>`, explicit flags verified against the installed `codex-cli 0.153.4`
+  — a bare `codex exec` has no guaranteed sandbox, since CLI flags outrank every `config.toml`
+  layer and read-only is not a safe default assumption), falling back to the pre-existing Claude
+  `Explore`/review-agent path on rate-limit, absence, timeout, auth failure, a schema-invalid
+  result, or a semantic refusal (schema-valid JSON that still didn't do the review) — same
+  fallback language as `/codex:review`/`/mh:compliance-audit`, routing table updated with this
+  skill's row.
+  - New `--output-schema`-checked contract (`references/checker-output-schema.json`) plus a
+    semantic-evidence check on top of it: schema validity alone doesn't prove the checker didn't
+    refuse in prose. A `pass: false` result with real, evidenced findings is a successful run,
+    never a fallback trigger.
+  - Unlike compliance-audit, no worktree: the checker is read-only and needs the current tree
+    (uncommitted work included), not a pinned historical SHA. Scope staleness from this repo's
+    shared working tree is instead caught by a disk-content fingerprint (existence + hash per
+    in-scope path, not a git-diff representation) taken before and after the checker runs, with
+    one rebuild-and-retry on mismatch.
+  - If both the Codex and Claude paths fail, or scope is still unstable after the retry, this
+    hard-forces the skill's own Final Verdict to `fail, verification incomplete` — overriding
+    what the step-2 rubric total would otherwise say, since its "insufficient evidence" allowance
+    would otherwise let a checker-less run still pass on its remaining dimensions.
+  - `evals/deep-audit-{planted,clean}/graders/checker-fired.md` converted from a `tool_used:
+    Agent` check (which would false-negative on a `Bash`-dispatched `codex exec` call) to a
+    `type: llm` grader requiring either a successful Codex dispatch or a properly-attributed
+    fallback — skipping the Codex attempt outright, or accepting a failed Codex result as
+    success, both fail it. No new eval case or named `test-eval-cases.sh` branch needed (existing
+    `deep-audit-*` wildcards already cover it); case count unchanged at 40.
+  - Reviewed by Codex (`codex-review:plan`, 3 rounds) before implementation: caught that an
+    earlier draft's "`codex exec` defaults to read-only" claim doesn't hold once a config.toml
+    layer is present, that schema validity doesn't rule out a semantic refusal, and that a
+    checker-failure needed to gate the Final Verdict itself, not just get mentioned in the report.
+
 ## [1.1.45] — 2026-09-07
 
 ### Added

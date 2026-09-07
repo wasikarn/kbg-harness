@@ -48,16 +48,58 @@ decide; a guessed score is worse than none (Rule 14).
 Claim accuracy is scored on whether the claim was true when made; later evidence that makes it
 true is separate current-state work.
 
-## 3. Hunt gaps with a fresh-context checker
+## 3. Hunt gaps with a Codex-primary fresh-context checker
 
-The maker never grades its own work (`docs/reference/operating-model.md`). Dispatch one
-read-only fresh-context agent (`Explore`, or a review agent when the work fits one) in the
-`docs/reference/spawn-brief.md` shape, with the scope list and notes from step 1 and this brief:
-assume the session is complacent; find what it missed
-across correctness, edge cases, failure modes, hidden assumptions, regressions, missing checks,
-consistency between files (doc versus code, two docs disagreeing), and drift between intent and
-code; every finding cites one checkable fact (a path, a command,
-a line). It returns `{pass, findings[], scope_ok, unexpected_files[]}`.
+The maker never grades its own work (`docs/reference/operating-model.md`). Build the checker's
+brief in the `docs/reference/spawn-brief.md` shape, with the scope list and notes from step 1
+and this task: assume the session is complacent; find what it missed across correctness, edge
+cases, failure modes, hidden assumptions, regressions, missing checks, consistency between files
+(doc versus code, two docs disagreeing), and drift between intent and code; every finding cites
+one checkable fact (a path, a command, a line). Add one line to the brief itself: use no tool
+capable of mutation, this run is read-only-intended.
+
+**Fingerprint scope before dispatch.** For every path step 1 put in scope (committed-diff files,
+any staged/untracked/uncommitted files, any named out-of-git file — memory store, settings),
+record whether it exists and, if so, a content hash of its bytes on disk. Keep this manifest.
+
+**Dispatch, Codex primary:**
+```
+codex exec --sandbox read-only --cd <repo-root> \
+  --output-last-message <file> --output-schema <schema-file>
+```
+`<schema-file>` is `references/checker-output-schema.json` (this skill's own JSON Schema for
+`{pass, findings[], scope_ok, unexpected_files[]}`). This is sandboxed against model-generated
+shell commands (`codex exec --help`'s own wording) plus the brief's no-mutation line above — not
+an unqualified "read-only, guaranteed," since neither layer alone covers every tool an
+environment might load.
+
+**Accept the result only if all of:** `codex exec` exits 0; the output-last-message file parses
+against the schema with all four fields present; and the result shows real review evidence —
+findings that each cite one checkable fact, or an explicit, legitimate zero-findings pass (see
+below) — and does not state or imply it couldn't or didn't complete the review. Schema-valid
+JSON that still refuses in prose is not review evidence. A `pass: false` result **with real,
+evidenced findings is a successful run that found problems** — never a failure, never a fallback
+trigger.
+
+**On any other outcome** — non-zero exit, empty or malformed output, a schema mismatch, timeout,
+auth failure, or a semantic refusal — fall back to a Claude `Explore`/review agent (same brief,
+same no-mutation line) and note "independence reduced for this pass" in the final report,
+matching `docs/reference/codex-integration-map.md`'s established fallback language.
+
+**Re-fingerprint after the checker returns.** A mismatch against the pre-dispatch manifest — a
+changed hash, a path that appeared or disappeared — means a concurrent session touched scope
+mid-check (this repo runs concurrent sessions on one working tree): rebuild scope from git and
+re-run the checker once.
+
+**If the fallback also fails to produce a valid result, or the manifest is still unstable after
+that retry**, this is not a soft note: it hard-forces the Final Verdict below to **fail,
+reason "verification incomplete"** — overriding whatever step 2's rubric total would otherwise
+say, since its "insufficient evidence, left out of the total" allowance would otherwise let a
+checker-less run still pass on its remaining dimensions. Say plainly this means the audit
+couldn't verify the work, not that the work is wrong — the two are different claims.
+
+The checker returns `{pass, findings[], scope_ok, unexpected_files[]}` — its own return value,
+distinct from this skill's Final Verdict and report in "Final output" below.
 
 Reconcile its findings with your own. A finding survives only with a concrete trigger; a
 speculative "consider X" is dropped. Rank survivors by severity, impact, likelihood, confidence,
@@ -103,7 +145,9 @@ criteria. If the score did not move, say so and say why.
 ## Final output
 
 Line one is the **Final Verdict**: pass or fail against the threshold in step 2, with the
-reason and a confidence level, stated plainly. Then:
+reason and a confidence level, stated plainly — except when step 3's checker verification
+never completed (both the Codex and Claude paths failed, or scope stayed unstable after retry),
+which hard-forces `fail, verification incomplete` regardless of the step-2 total. Then:
 
 1. Baseline score (per dimension, weighted total)
 2. Findings, with the checker's and your own marked
