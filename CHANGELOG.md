@@ -5,6 +5,25 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.38] — 2026-09-07
+
+### Fixed
+
+- GH #148 (rescoped): `hooks/gates/test-integrity.sh` and `hooks/gates/config-write-guard.sh` still
+  embedded `python3 -c '...'` blocks, exposed to the same apostrophe-fragility bug class #146 fixed
+  in `irrecoverable.sh`/`verifier-protect.sh`/`merge-door.sh` — a single stray apostrophe in the
+  embedded Python silently closes the bash single-quote wrapper early, corrupting the whole gate
+  script into a syntax error and blocking tool use for every session sharing the tree.
+  `test-integrity.sh` already carried a dozen `'"'"'`-escaped apostrophes in its own prose comments
+  as a result. Both extracted to sibling `test-integrity.py`/`config-write-guard.py` (same pattern
+  as the already-extracted `irrecoverable.py`); stdin inherited directly, no lib-dir argv needed
+  since neither ever imported a shared `_hook_output` helper. Missing-sibling case fails open (ask
+  gates, not deny gates — matches each file's own python3-not-found fallback), unlike
+  `irrecoverable.sh`'s fail-closed. `db-write-gate.sh`, the third file #148 originally named, was
+  already removed in the v1.0.0 rebuild. All 34 existing cases in
+  `tests/hooks/test-test-integrity.sh` + `test-config-write-guard.sh` pass unchanged against the
+  refactored gates.
+
 ## [1.1.37] — 2026-09-07
 
 ### Fixed
