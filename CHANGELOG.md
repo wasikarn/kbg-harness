@@ -5,6 +5,30 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.42] — 2026-09-07
+
+### Added
+
+- GH #151: new gate `gate:agent:subagent-spawn-guard` (matcher `Agent`) denies a dispatched
+  subagent from calling the native `Agent` tool at all. The only prior nested-spawn coverage
+  (`irrecoverable.py`'s `_nested_spawn`) pattern-matched Bash command text for a `claude -p/
+  --agent/--bg/--worktree` invocation; nothing stopped a subagent from reaching the same
+  self-dispatch outcome through the `Agent` tool directly. Keys on `agent_id` presence (the
+  same discriminant `task-complete-separation.py` and `subagent-git-guard.py` already use,
+  not `agent_type`, which is also set for a legitimate top-level `claude --agent <name>` main
+  session) and deliberately ignores `tool_input.subagent_type`, so switching subagent type
+  (the evasion a rogue `fork` used in the 2026-08-31 incident) does not bypass it. Stateless,
+  per-call check — no session-scoped bookkeeping, so it does not run into the "no orchestration
+  layer of its own" objection that closed #135/#137. A two-axis code-review pass (Standards +
+  Spec) caught two follow-ups before ship: `docs/reference/operating-model.md`'s error-path
+  contract sentence ("a missing sibling script denies") was already false for 2 of 6 prior
+  gates and now a 3rd, fixed to state the per-gate posture explicitly; and `docs/reference/
+  codex-integration-map.md` / `docs/adr/0001-gate-codex-setup-not-rescue.md` claimed
+  `/codex:rescue` dispatch "stays ungated" — still true from the main session, but a *subagent*
+  attempting that dispatch is now denied as a side effect of this gate's blanket rule (it never
+  inspects `subagent_type`, so it isn't the codex-specific gate ADR-0001 declined to build);
+  both docs now say so. 8 new tests in `tests/hooks/test-gates.sh` (264/264 passing).
+
 ## [1.1.41] — 2026-09-07
 
 ### Fixed

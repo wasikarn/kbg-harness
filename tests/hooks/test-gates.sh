@@ -10,6 +10,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 IRRECOVERABLE="$ROOT/hooks/gates/irrecoverable.sh"
 TASK_COMPLETE="$ROOT/hooks/gates/task-complete-separation.sh"
 SUBAGENT_GIT_GUARD="$ROOT/hooks/gates/subagent-git-guard.sh"
+SUBAGENT_SPAWN_GUARD="$ROOT/hooks/gates/subagent-spawn-guard.sh"
 
 pass=0
 fail=0
@@ -62,6 +63,23 @@ if agent_id:
     d["agent_id"] = agent_id
 print(json.dumps(d))
 ' "$1" "$2"
+}
+
+# Build an Agent tool-call payload. $1=subagent_type for the dispatch (tool_input),
+# $2=agent_id of the CALLER (empty = main session), $3=agent_type of the caller
+# (optional, for the deny message only — the gate's logic keys on agent_id, not
+# this field, same distinction task-complete-separation.py documents).
+agent_payload() {
+  python3 -c '
+import json, sys
+subagent_type, agent_id, agent_type = sys.argv[1], sys.argv[2], sys.argv[3]
+d = {"tool_name": "Agent", "tool_input": {"prompt": "do work", "description": "task", "subagent_type": subagent_type}}
+if agent_id:
+    d["agent_id"] = agent_id
+if agent_type:
+    d["agent_type"] = agent_type
+print(json.dumps(d))
+' "$1" "$2" "${3-}"
 }
 
 # Expect the gate to BLOCK (exit 2).
@@ -780,6 +798,26 @@ test_deny "$SUBAGENT_GIT_GUARD" "subagent: git stash pop still denied" \
 test_deny "$SUBAGENT_GIT_GUARD" "subagent: git stash listing (not the list verb) still denied" \
   "$(bash_agent_payload 'git stash listing' fork)"
 
+echo ""
+echo "=== subagent-spawn-guard (GH #151: a dispatched subagent may not call the Agent tool itself) ==="
+test_deny "$SUBAGENT_SPAWN_GUARD" "subagent (general-purpose) calling Agent to spawn its own reviewer" \
+  "$(agent_payload 'general-purpose' 'agent-1' 'general-purpose')"
+test_deny "$SUBAGENT_SPAWN_GUARD" "subagent (fork) calling Agent with a DIFFERENT subagent_type still denied (closes the same-type-switch evasion from the 2026-08-31 fork-recursive-spawn incident -- the gate never inspects subagent_type)" \
+  "$(agent_payload 'general-purpose' 'agent-2' 'fork')"
+test_deny "$SUBAGENT_SPAWN_GUARD" "subagent with no agent_type recorded (agent_id alone is the signal) still denied" \
+  "$(agent_payload 'mh:silent-failure-hunter' 'agent-3' '')"
+test_allow "$SUBAGENT_SPAWN_GUARD" "main session calling Agent (no agent_id) allowed" \
+  "$(agent_payload 'general-purpose' '' '')"
+test_allow "$SUBAGENT_SPAWN_GUARD" "subagent calling a non-Agent tool (Bash) is out of scope for this gate" \
+  "$(bash_agent_payload 'ls -la' fork)"
+# Payloads below carry the literal "agent_id" substring so the bash fast-path lets them
+# through to python (a payload without it would fast-path-exit 0 before ever reaching the
+# json.load()/isinstance() branches these two tests target).
+test_allow "$SUBAGENT_SPAWN_GUARD" "malformed stdin past the fast-path (fail-safe allow)" \
+  '{"agent_id": invalid'
+test_allow "$SUBAGENT_SPAWN_GUARD" "valid JSON but non-object payload past the fast-path (fail-safe allow)" \
+  '["agent_id"]'
+
 echo "=== fast-path (bash pre-filter that skips python3 on commands that cannot match, added 2026-08-14) ==="
 # Irrecoverable gained a bash fast-path so a benign command skips the python3 cold-start.
 test_deny  "$IRRECOVERABLE" "r\"\"m -rf (quote-concatenation -> fast-path quote-strip)" \
@@ -866,6 +904,8 @@ test_documented_fastpath_allow "$IRRECOVERABLE" "irrecoverable: JSON \\u0024-esc
   '{"tool_name":"Bash","tool_input":{"command":"gi\u0024{x}t push --force origin develop"}}'
 test_nopython_allow "$TASK_COMPLETE" "task-complete-separation: subagent completion passes with note" \
   "$(taskupdate_payload 'completed' 'refactor-cleaner')"
+test_nopython_allow "$SUBAGENT_SPAWN_GUARD" "subagent-spawn-guard: subagent calling Agent passes with note" \
+  "$(agent_payload 'general-purpose' 'agent-1' 'general-purpose')"
 
 # Trash-fallback deny message (#93): with python3 present but NO trash CLI on PATH, the rm -rf
 # deny must still fire (rc=2) and the message must route to the user instead of prescribing a

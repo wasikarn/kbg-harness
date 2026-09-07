@@ -61,6 +61,18 @@
         ]
       },
       {
+        "id": "gate:agent:subagent-spawn-guard",
+        "matcher": "Agent",
+        "description": "Deny (subagent only): a subagent may not call the Agent tool to spawn its own reviewer/validator/subagent -- dispatch is the main session's job.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/subagent-spawn-guard.sh\"",
+            "timeout": 8
+          }
+        ]
+      },
+      {
         "id": "gate:task:complete-separation",
         "matcher": "TaskUpdate",
         "description": "Deny (subagent only): a subagent may not mark its own task completed; only the main session completes tasks.",

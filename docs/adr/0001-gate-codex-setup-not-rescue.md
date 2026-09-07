@@ -21,3 +21,13 @@ for the vendor-agnostic-floor fallback while this gap stands.
 - **Gate neither, document-only.** Rejected for `codex:setup`: the flag match is a one-line,
   zero-ambiguity trigger — cheaper to gate than to leave as a WARN a human has to notice
   after the fact.
+
+## Update (GH #151, 2026-09-07)
+
+`gate:agent:subagent-spawn-guard` ships as a blanket deny on every subagent-initiated
+Agent-tool call, `codex:codex-rescue` included — but it keys on the caller (`agent_id`
+presence), never on `subagent_type`, so it is not the "gate an Agent-tool dispatch by
+`subagent_type`" design this ADR declined above. That design question stays open; this ADR's
+decision is unchanged. Main-session dispatch of `/codex:rescue` — the normal path — is
+unaffected; only a subagent attempting the same dispatch is newly denied, as a side effect of
+the general rule, not a codex-specific gate riding on this trial.

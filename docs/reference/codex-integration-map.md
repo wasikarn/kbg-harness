@@ -12,7 +12,7 @@ cache version changes; no check parses it. Full reasoning: `docs/plans/codex-pai
 |---|---|---|
 | `/codex:review` | user or model | read-only diff review; Claude-side alternative: `mattpocock-skills:code-review`. On rate-limit or absence, run the Claude-side review instead, invoked by the operator — independence is lost for that pass |
 | `/codex:adversarial-review` | user or model | challenges a plan after `mattpocock-skills:grilling`; Claude-side alternative: `mh:plan-reviewer`. Same fallback as review |
-| `/codex:rescue` | **user or model** — ships without `disable-model-invocation`, and `codex:codex-rescue` is a full Agent-tool `subagent_type` | writes files through the Codex app-server, not Claude Code tools — see Gate gap below. The review-gate toggle is gated (ADR-0001); the rescue dispatch itself is not |
+| `/codex:rescue` | **user or model** — ships without `disable-model-invocation`, and `codex:codex-rescue` is a full Agent-tool `subagent_type` | writes files through the Codex app-server, not Claude Code tools — see Gate gap below. The review-gate toggle is gated (ADR-0001); the rescue dispatch itself carries no codex-specific gate. From the main session it stays fully ungated; a *subagent* attempting the same dispatch is denied as a side effect of `gate:agent:subagent-spawn-guard` (GH #151), which blocks every subagent-initiated Agent-tool call uniformly and was not built with codex in mind |
 | `/codex:setup` | **user or model** — ships without `disable-model-invocation` | the one surface mh puts a real gate on: `gate:skill:codex-setup-guard` asks before a model-invoked call carrying `--enable-review-gate` |
 | `/codex:transfer` | user only (`disable-model-invocation: true`) | Claude near its own limit → hands the session to a resumable Codex thread. The reverse of the fallback direction above |
 | `/codex:status` | user only | job and review-gate status, read-only |
@@ -24,9 +24,12 @@ pipeline — none of mh's other gates (`gate:bash:irrecoverable`, `gate:bash:sub
 `gate:task:complete-separation`, `gate:write:test-integrity`, `gate:write:config-guard`) see
 those writes. **This repo's own git hooks (`git-hooks/pre-commit`, `pre-push`) are the
 vendor-agnostic floor**: whatever wrote a file, the same lint, harness-audit, and gauntlet run
-before it ships, regardless of which agent produced it. ADR-0001 records why the rescue
-dispatch itself stays ungated rather than picking up a novel Agent-tool gate as a rider on
-this trial.
+before it ships, regardless of which agent produced it. ADR-0001 records why no codex-specific
+gate picks up the rescue dispatch as a rider on this trial. `gate:agent:subagent-spawn-guard`
+(GH #151, shipped after ADR-0001) denies it anyway when a *subagent* is the caller, but only
+as an instance of its blanket "no subagent dispatches Agent" rule — it never inspects
+`subagent_type`, so it is not the codex-specific gate ADR-0001 declined to build. Main-session
+dispatch of `/codex:rescue` (the normal path) is unaffected.
 
 Sandbox/approval note: no `~/.codex/config.toml` recommendation is needed for this pairing.
 The plugin hardcodes its own sandbox per call — `read-only` for `/codex:review` and

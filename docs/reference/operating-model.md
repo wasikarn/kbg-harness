@@ -12,6 +12,7 @@ step can undo. the PreToolUse entries in `hooks/hooks.json` are the whole list:
 |---|---|
 | `gate:bash:irrecoverable` | `rm -rf`, `find -delete`, `--no-verify`, `hooksPath` edits, `push --force`, `reset --hard`, `clean -f`, discarding `restore`/`checkout`, `branch -D`, `stash drop/clear`, `commit --amend`, `dd`, SQL `DROP`, `git add -A` outside a merge, nested `claude` spawns from a subagent |
 | `gate:bash:subagent-git-guard` | `git stash`/`reset`/`clean` from a dispatched subagent |
+| `gate:agent:subagent-spawn-guard` | a subagent calling the Agent tool to spawn its own reviewer/validator |
 | `gate:task:complete-separation` | a subagent marking its own task complete |
 | `gate:write:test-integrity` | asks before a write that weakens a test |
 | `gate:write:config-guard` | asks before a write to Claude Code settings `hooks`/`enabledPlugins` |
@@ -21,8 +22,10 @@ Advice is honest about being advice; no doc claims a check enforces a rule unles
 `hooks/gates/` does.
 
 Each gate owns its error path, and the policy is written in the gate, not assumed: input it
-cannot tokenize asks (`could not safely tokenize`), a missing sibling script denies (exit 2),
-and only a missing `python3` allows, announced on stderr (#93). `scripts/gate-canary.sh` proves
+cannot tokenize asks (`could not safely tokenize`); a missing `python3` always allows, announced
+on stderr (#93); a missing sibling script denies (exit 2) for `irrecoverable.py`, but allows
+(same stderr-note posture) for the three subagent-scoped gates (`subagent-git-guard`,
+`task-complete-separation`, `subagent-spawn-guard`). `scripts/gate-canary.sh` proves
 every staged gate still allows benign payloads. The table is the contract; the hook type is
 not. Claude Code's proposed function hooks (anthropics/claude-code#91870, prototype behind
 `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS` since 2.1.260; `claude plugin validate` already lists a
