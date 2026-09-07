@@ -48,8 +48,9 @@ Effort tiers: low = script wrapper or display, medium = deterministic tooling pl
 interpretation, high = normal judgment, xhigh = surfaces whose own procedure contains an
 independent re-check step, or an adversarial second-pass agent. A skill an agent preloads
 carries the same effort as its host. `skills/*/*/references/*.md` fragments stay unstamped.
-Official Claude Code also accepts `effort: max`; check 54 accepts it, but `max` is session-only
-in Claude Code, so it never goes in frontmatter.
+Official Claude Code also accepts `effort: max` in frontmatter (sub-agents reference); the
+fleet assigns it no tier because it means unbounded token spend on a shipped agent, so check 54
+WARNs on it. Bump per session with `/effort max` instead.
 
 **Reference files** (Anthropic Agent Skills best practices): one level deep from SKILL.md, and MCP tools named `ServerName:tool_name`
 (`qmd:query`, not `query`). A reference file must not carry `description:` frontmatter, or

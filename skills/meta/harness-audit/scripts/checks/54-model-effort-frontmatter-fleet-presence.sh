@@ -10,7 +10,8 @@
 # two-file edit for zero drift-catch value.
 #
 #   - either key missing               -> WARN (a new/edited surface dropped the convention)
-#   - effort not low|medium|high|xhigh|max -> WARN
+#   - effort not low|medium|high|xhigh    -> WARN (max is a valid Claude Code value but
+#     the fleet assigns it no tier: unbounded spend on a shipped agent; v1.1.54)
 #   - skill/command model != inherit   -> WARN unless the surface runs context: fork
 #     (a concrete pin on a main-thread surface switches the session model for the
 #     REST OF THE TURN — official skills.md frontmatter reference)
@@ -33,8 +34,9 @@ for _f in "${_me_files[@]}"; do
     warn "surface $_rel missing explicit effort: frontmatter (fleet convention v0.68.430 — every surface carries model: + effort:)"
   else
     case "$_effort" in
-      low|medium|high|xhigh|max) ;;
-      *) warn "surface $_rel effort='$_effort' is not a documented tier (low|medium|high|xhigh|max)" ;;
+      low|medium|high|xhigh) ;;
+      max) warn "surface $_rel pins effort: max — valid in Claude Code but the fleet assigns it no tier (unbounded spend on a shipped agent); use xhigh, or bump per session with /effort max" ;;
+      *) warn "surface $_rel effort='$_effort' is not a documented tier (low|medium|high|xhigh)" ;;
     esac
   fi
   case "$_rel" in

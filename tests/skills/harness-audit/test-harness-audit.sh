@@ -3,8 +3,8 @@
 #
 # audit.sh's fragment integrity guard catches LOST checks, not SILENT ones. Each
 # known-bad fixture below is paired with a clean one; the matching check must
-# FIRE on bad and stay SILENT on good. Per-check fixtures cover 04, 05, 20, 22, 28, 29, 70,
-# 71, 72; the fleet-bad / fleet-good pair covers the other twenty with at least one defect per
+# FIRE on bad and stay SILENT on good. Per-check fixtures cover 04, 05, 20, 22, 28, 29, 54,
+# 70, 71, 72; the fleet-bad / fleet-good pair covers the other twenty with at least one defect per
 # check (43 is driven by the env ceiling, not a planted defect).
 set -uo pipefail
 
@@ -145,6 +145,7 @@ unset MH_CODEX_DATA_DIR
 mkdir -p "$CODEX_TMP/cache/scripts"
 printf 'const VALID_REASONING_EFFORTS = new Set(["none", "minimal", "low", "medium", "high", "xhigh"]);\n' > "$CODEX_TMP/cache/scripts/codex-companion.mjs"
 export MH_CODEX_CACHE_DIR="$CODEX_TMP/cache"
+expect_warn   54 check-54-bad-effort-max
 expect_warn   72 check-72-bad-effort-drift
 expect_warn   72 check-72-bad-effort-missing
 expect_silent_match 72 check-72-good-effort-set 'matches the installed plugin'

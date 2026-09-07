@@ -5,6 +5,19 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.54] — 2026-09-07
+
+### Fixed
+
+- Deep-audit of 1.1.53 (checker: Claude `blind-spot-hunter`, Codex rate-limited): CHANGELOG had
+  described the rescue lane with the `codex exec` config key instead of the plugin's `--effort`
+  flag; the `max` ban's rationale was wrong (`max` is a valid frontmatter value per the sub-agents
+  reference; the fleet declines it for unbounded spend) and is now enforced by check 54 with a
+  known-bad fixture; the frontmatter-effort override claim is scoped to what the probe proved;
+  compliance-audit's `codex exec` names `--sandbox workspace-write --cd <worktree>` explicitly like
+  its deep-audit sibling; research note lost stale settings.json line refs and gained the
+  `sonnet[1m]` gateway case in its summary.
+
 ## [1.1.53] — 2026-09-07
 
 ### Changed
@@ -13,8 +26,9 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
   (claude 2.1.263, codex-cli 0.153.4): `plan-reviewer` and `blind-spot-hunter` move to
   `effort: xhigh`, `requirement-analyst` to `high` (frontmatter effort overrides the session level,
   per the official sub-agents reference). Both bare `codex exec` call sites (deep-audit,
-  compliance-audit) and audit/verify rescue briefs now pin `model_reasoning_effort=high`; the Codex
-  model stays unpinned. Note for the codex-pairing trial (baseline 2026-09-06, compare 2026-09-20):
+  compliance-audit) now pass `-c model_reasoning_effort=high`, and audit/verify rescue briefs pass
+  the plugin's `--effort high`; the Codex model stays unpinned. Note for the codex-pairing trial
+  (baseline 2026-09-06, compare 2026-09-20):
   Codex effort moved low→high from this version, so the read-out must account for it. Conventions
   docs carry the tier rule (never `fable` or `max` in agent frontmatter).
 
