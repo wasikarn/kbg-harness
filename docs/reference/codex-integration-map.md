@@ -16,8 +16,8 @@ cache version changes; no check parses it. Full reasoning: `docs/plans/codex-pai
 | `/codex:setup` | **user or model** — ships without `disable-model-invocation` | the one surface mh puts a real gate on: `gate:skill:codex-setup-guard` asks before a model-invoked call carrying `--enable-review-gate` |
 | `/codex:transfer` | user only (`disable-model-invocation: true`) | Claude near its own limit → hands the session to a resumable Codex thread. The reverse of the fallback direction above |
 | `/codex:status` | user only | job and review-gate status, read-only |
-| `/mh:compliance-audit` (mh's own skill, not a `codex@openai-codex` skill) | user only (`disable-model-invocation: true`) | Phase 2's verifier dispatches a raw `codex exec` (workspace-write, scoped to a disposable pinned worktree — not read-only, since it reruns the gauntlet) as primary, for stronger maker≠checker separation than a fresh Claude context alone; Claude-side alternative: a `general-purpose` subagent. On rate-limit or Codex absence, fall back to the Claude subagent — independence is lost for that pass, same fallback language as `/codex:review` above |
-| `/mh:deep-audit` (mh's own skill) | user or model (no `disable-model-invocation`) | Step 3's fresh-context checker dispatches `codex exec --sandbox read-only` (explicit flag, not the config-dependent default; no worktree, since the checker never writes and needs the current tree, not a pinned SHA) as primary; Claude-side alternative: an `Explore`/review agent (the pre-existing mechanism). On rate-limit, absence, timeout, auth failure, a schema-invalid result, or a semantic refusal (schema-valid JSON that still didn't do the review), fall back to the Claude agent — independence is lost for that pass, same fallback language as `/codex:review` / `/mh:compliance-audit` above. Unlike those, a failed fallback here doesn't just get noted: it hard-forces the skill's own Final Verdict to `fail` ("verification incomplete"), since deep-audit's rubric would otherwise let a checker-less run still pass on its other dimensions |
+| `/mh:compliance-audit` (mh's own skill, not a `codex@openai-codex` skill) | user only (`disable-model-invocation: true`) | Phase 2's verifier dispatches a raw `codex exec -c model_reasoning_effort=high` (workspace-write, scoped to a disposable pinned worktree — not read-only, since it reruns the gauntlet) as primary, for stronger maker≠checker separation than a fresh Claude context alone; Claude-side alternative: a `general-purpose` subagent. On rate-limit or Codex absence, fall back to the Claude subagent — independence is lost for that pass, same fallback language as `/codex:review` above |
+| `/mh:deep-audit` (mh's own skill) | user or model (no `disable-model-invocation`) | Step 3's fresh-context checker dispatches `codex exec --sandbox read-only -c model_reasoning_effort=high` (explicit flags, not the config-dependent default; no worktree, since the checker never writes and needs the current tree, not a pinned SHA) as primary; Claude-side alternative: an `Explore`/review agent (the pre-existing mechanism). On rate-limit, absence, timeout, auth failure, a schema-invalid result, or a semantic refusal (schema-valid JSON that still didn't do the review), fall back to the Claude agent — independence is lost for that pass, same fallback language as `/codex:review` / `/mh:compliance-audit` above. Unlike those, a failed fallback here doesn't just get noted: it hard-forces the skill's own Final Verdict to `fail` ("verification incomplete"), since deep-audit's rubric would otherwise let a checker-less run still pass on its other dimensions |
 
 `/mh:deep-audit`'s checker is read-only and never writes, so the "Silent-refusal gotcha" section's
 empty-diff detection method below doesn't apply to it — that method assumes a writer whose refusal
@@ -43,6 +43,14 @@ The plugin hardcodes its own sandbox per call — `read-only` for `/codex:review
 `/codex:adversarial-review`, `workspace-write` (never `danger-full-access`) for rescue's write
 path — as a structured parameter to its app-server, not a config file setting. `config.toml`
 only governs a bare `codex`/`codex exec` run by a human directly, outside the plugin.
+
+Model/effort note: mh pins the reasoning effort at every Codex call site (`-c
+model_reasoning_effort=high` on the two bare `codex exec` dispatches, `--effort high` on
+audit/verify rescue briefs) and never pins a model. Codex's bundled default is `gpt-6-astra` at
+effort `low` (codex-cli 0.153.4), too low for an independent checker; a pinned model slug would
+break the call site on the next catalog rotation. Putting `model_reasoning_effort` in
+`~/.codex/config.toml` instead was rejected: machine-local, and it bleeds into interactive Codex.
+Evidence: `docs/research/claude-code-codex-models-efforts-2026-09-07.md`.
 
 ## AGENTS.md
 

@@ -5,6 +5,19 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.53] — 2026-09-07
+
+### Changed
+
+- Model + effort policy, grounded in `docs/research/claude-code-codex-models-efforts-2026-09-07.md`
+  (claude 2.1.263, codex-cli 0.153.4): `plan-reviewer` and `blind-spot-hunter` move to
+  `effort: xhigh`, `requirement-analyst` to `high` (frontmatter effort overrides the session level,
+  per the official sub-agents reference). Both bare `codex exec` call sites (deep-audit,
+  compliance-audit) and audit/verify rescue briefs now pin `model_reasoning_effort=high`; the Codex
+  model stays unpinned. Note for the codex-pairing trial (baseline 2026-09-06, compare 2026-09-20):
+  Codex effort moved low→high from this version, so the read-out must account for it. Conventions
+  docs carry the tier rule (never `fable` or `max` in agent frontmatter).
+
 ## [1.1.52] — 2026-09-07
 
 ### Fixed

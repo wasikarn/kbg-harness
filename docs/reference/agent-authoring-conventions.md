@@ -28,10 +28,17 @@ Why: OWASP LLM01. Ticket bodies and specs are exactly where an attacker embeds i
 
 ## 3. Model assignment by cognitive load, not by default
 
-Every agent carries an explicit `model:` and `effort:` (check 54). Pin `model: opus` only when
-the value is judgment quality (`requirement-analyst`), not for mechanical work. Pinning a
-fresh-context verifier to a different model than the main session makes it independent by
-model as well as by context, a stronger form of item 4.
+Every agent carries an explicit `model:` and `effort:` (check 54). Frontmatter `effort:`
+overrides the session effort level (official sub-agents reference), so the pin is what runs.
+Tier rule: `model: opus` for judgment or adversarial work, `sonnet` for bounded review or
+mutation; `effort: xhigh` for adversarial second-pass surfaces (`plan-reviewer`,
+`blind-spot-hunter`), `high` for normal judgment, `medium`/`low` for mechanical work. The opus
+pins: `requirement-analyst` (readiness verdict), `plan-reviewer` and `blind-spot-hunter`
+(adversarial), `code-architect` and `backend-architect` (design trade-offs). Never pin `fable`
+in an agent (usage credits on subscriptions, and it loses model independence from a fable main
+session); never pin `max` (session-only in Claude Code). Pinning a fresh-context verifier to a
+different model than the main session makes it independent by model as well as by context, a
+stronger form of item 4. Evidence: `docs/research/claude-code-codex-models-efforts-2026-09-07.md`.
 
 ## 4. Verifier/maker separation for anything that grades
 

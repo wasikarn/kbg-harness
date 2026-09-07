@@ -1,0 +1,94 @@
+# Claude Code and Codex CLI: models and effort levels (2026-09-07)
+
+Question: what models and effort/reasoning levels do Claude Code and OpenAI Codex CLI expose as of 2026-09-07, and how are they selected?
+
+Installed binaries checked: `claude` 2.1.263, `codex-cli` 0.153.4 (`claude --version`, `codex --version`) [10][11].
+
+## Summary
+
+- Claude Code current lineup: Fable 5.1 (`claude-fable-5-1`, default `fable`), Opus 5, Sonnet 5, Haiku 4.5; legacy Fable 5, Opus 4.8/4.7/4.6/4.5, Sonnet 4.6/4.5 still available [1][2].
+- Claude effort levels: `low | medium | high | xhigh | max`; default `high` everywhere except Opus 4.7 (`xhigh`). `xhigh` needs Fable 5.x, Opus 5/4.8/4.7, or Sonnet 5; Opus 4.6/Sonnet 4.6 stop at `max` without `xhigh`; Haiku has no effort [1][3]. `ultracode` is a Claude Code mode (= `xhigh` + dynamic workflows), not an API level [1].
+- Claude model selection precedence: `/model` (session, `s` = session-only) > `--model` > `ANTHROPIC_MODEL` > settings `model` > `ANTHROPIC_DEFAULT_MODEL` > account default (Opus 5 on Max/Team Premium/Enterprise/API, Sonnet 5 on Pro/Team Standard) [1]. Effort: `CLAUDE_CODE_EFFORT_LEVEL` > `--effort` > `/effort` > `modelSettings.<model>.effortLevel` > `effortLevel` > model default [1]. Inside a subagent, the agent file's `effort:` frontmatter overrides the session effort level; `/tasks` shows the effective model and effort per subagent (CC >= 2.1.242) [17].
+- Fable 5.x, Opus 5, Sonnet 5 are natively 1M context; `[1m]` suffix applies to Opus 4.7+ and Sonnet 4.6 (usage credits on Pro and for Sonnet 4.6 on every subscription) [1][2]. Fable needs usage credits off Enterprise [1].
+- Codex CLI catalog as served to the installed 0.153.4 binary: `gpt-6-astra` (bundled default since 0.153.4), `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.4-mini` (retiring 2026-08-31, upgrade path Luna), plus hidden `gpt-reserve` and `codex-auto-review`; every model reports a 272,000-token context window [12][13].
+- Codex reasoning levels in the live catalog: `low | medium | high | xhigh | max` (+ `ultra` on Astra, Sol, Terra); defaults `low` for Astra/Sol, `medium` for the rest [12]. The config reference still documents `model_reasoning_effort = minimal | low | medium | high | xhigh` and "xhigh is model-dependent" — docs and binary disagree on `minimal`, `max`, `ultra` [5][12].
+- Codex selection: `codex -m/--model <slug>`, `-c model="..."`, `config.toml` `model` / `model_reasoning_effort` (also per `[profiles.<name>]`, `-p <profile>`), or the TUI `/model` picker [5][11][16].
+- Plan gating on Codex: Astra and Sol need ChatGPT Plus/Pro, Business, Enterprise or API key; Terra/Luna on all plans; `gpt-5.3-codex-spark` is Pro-only and does not appear in this account's catalog [6][12].
+
+## Claude Code
+
+Aliases and how they resolve (Anthropic API) [1][2]:
+
+| Model | id / alias | Context | Effort levels | How to select | Source |
+|---|---|---|---|---|---|
+| Claude Fable 5.1 | `claude-fable-5-1`; alias `fable`, `best` (where available); needs CC >= 2.1.255 | 1M native, 128K out | low, medium, high, xhigh, max; default high; adaptive thinking always on | `/model fable`, `--model fable`, `ANTHROPIC_DEFAULT_FABLE_MODEL` | [1][2][3][4] |
+| Claude Fable 5 (legacy) | `claude-fable-5`; `fable` before 2.1.255 | 1M native | low..max incl. xhigh | same as above with explicit id | [1][3] |
+| Claude Opus 5 | `claude-opus-5`; alias `opus`, `best` fallback; CC >= 2.1.219 | 1M native; auto-compact 200K unless 1M | low..max incl. xhigh; default high; fast mode supported (`/fast`, $10/$50) | `/model opus`, `opus[1m]` for gateways, `ANTHROPIC_DEFAULT_OPUS_MODEL` | [1][2][3][7] |
+| Claude Sonnet 5 | `claude-sonnet-5`; alias `sonnet`; CC >= 2.1.197 | 1M on Anthropic API; `sonnet[1m]` on gateways | low..max incl. xhigh; default high | `/model sonnet`, `ANTHROPIC_DEFAULT_SONNET_MODEL` | [1][2][3] |
+| Claude Haiku 4.5 | `claude-haiku-4-5-20251001`; alias `haiku` | 200K, 64K out | none (effort not supported); extended thinking | `/model haiku`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `CLAUDE_CODE_SUBAGENT_MODEL=haiku` | [1][2] |
+| Opus 4.8 / 4.7 (legacy) | `claude-opus-4-8`, `claude-opus-4-7` | 200K; `[1m]` suffix or auto-upgrade on Max/Team/Enterprise | low..max incl. xhigh; 4.7 default xhigh; 4.8 fast mode yes, 4.7 fast mode removed 2026-07-24 | `/model claude-opus-4-8[1m]` | [1][3][7] |
+| Opus 4.6 / Sonnet 4.6 (legacy) | `claude-opus-4-6`, `claude-sonnet-4-6` | 200K; `sonnet[1m]` needs usage credits on every subscription | low, medium, high, max (no xhigh); default high | `/model sonnet[1m]` | [1][3] |
+| `opusplan` | hybrid alias | `opusplan[1m]` variant | inherits per-model | Opus in plan mode, Sonnet for execution; `/model opusplan` | [1] |
+| `default` | alias | — | — | clears override; org default > `ANTHROPIC_DEFAULT_MODEL` > account default | [1] |
+
+Selection mechanics [1][8][9]:
+
+- `/model <alias|id>` switches and saves as user default; bare `/model` opens the picker (Enter saves, `s` session-only). `claude --model` for one session. `ANTHROPIC_MODEL` is session-only; `ANTHROPIC_DEFAULT_MODEL` (>= 2.1.236) sets the default for new sessions. `--help` on 2.1.263 lists `--model`, `--effort <level>`, `--fallback-model` [10].
+- Effort: `/effort` (slider), `/effort <level>`, `/effort auto`, `/effort ultracode` (>= 2.1.203), `s` in `/effort` for session-only (>= 2.1.257). Settings keys `effortLevel` (global) and `modelSettings.<model>.effortLevel` (per model; `/effort` saves per model since 2.1.248). `ultracode` is not accepted in `effortLevel` or `CLAUDE_CODE_EFFORT_LEVEL`. `max` and `ultracode` apply to the current session only [1][8][9].
+- Other switches: `/fast` toggles fast mode (Opus 5 default since 2.1.219; usage credits only on subscriptions); `fastMode`, `fastModePerSessionOptIn` settings; `CLAUDE_CODE_DISABLE_FAST_MODE=1` [7]. `CLAUDE_CODE_DISABLE_1M_CONTEXT=1` forces 200K. `MAX_THINKING_TOKENS=0` disables thinking except on Fable 5.x. `alwaysThinkingEnabled` via `/config` or Option+T [1].
+- Enterprise: `availableModels` + `enforceAvailableModels` restrict `/model`, `--model`, env, subagents, advisor, fast mode; managed list overrides user additions [1][8].
+- Operator's live config (verified on this machine): `~/.claude/settings.json` has `"model": "fable"`, `"fallbackModel": ["sonnet"]`, `"effortLevel": "xhigh"`, `"modelSettings": {"fable": {"effortLevel": "low"}}`, `"advisorModel": "opus"` [10]. So Fable runs at `low` here while every other model would get `xhigh`.
+- Doc vs binary: no disagreement found. Changelog 2.1.257 introduced Fable 5.1 as default Fable; 2.1.260 fixed the `/model` picker hiding Fable 5.1 for eligible orgs and `[1m]` on `ANTHROPIC_DEFAULT_FABLE_MODEL` [9].
+
+## Codex CLI
+
+Live catalog from `codex debug models` on 0.153.4 (cache fetched 2026-09-07T14:51Z) [12]:
+
+| Model | id / display | Context | Effort levels (default) | How to select | Source |
+|---|---|---|---|---|---|
+| Astra | `gpt-6-astra` (GPT-6-Astra); bundled default since 0.153.4 when no model configured | 272,000 | low, medium, high, xhigh, max, ultra (default low) | `/model`, `codex -m gpt-6-astra`, `model = "gpt-6-astra"`; Plus/Pro, Business, Enterprise, API key | [6][12][14] |
+| 5.6 Sol | `gpt-5.6-sol` | 272,000 | low..ultra (default low) | same; Plus/Pro and above | [6][12] |
+| 5.6 Terra | `gpt-5.6-terra` | 272,000 | low..ultra (default medium) | same; all plans | [6][12] |
+| 5.6 Luna | `gpt-5.6-luna` | 272,000 | low, medium, high, xhigh, max (default medium) | same; all plans | [6][12] |
+| GPT-5.5 (legacy) | `gpt-5.5` | 272,000 | low, medium, high, xhigh (default medium) | same; docs list as retiring 2026-08-31 yet still `visibility: list` in catalog | [6][12] |
+| GPT-5.4 Mini (legacy) | `gpt-5.4-mini` | 272,000 | low, medium, high, xhigh (default medium) | catalog carries `upgrade` → `gpt-5.6-luna`, `retirement_at` 2026-08-31T19:00Z | [6][12] |
+| 5.3 Codex Spark | `gpt-5.3-codex-spark` | — | — | docs: Pro-only text-only research preview; absent from this account's catalog | [6][12] |
+| hidden | `gpt-reserve`, `codex-auto-review` | 272,000 | low..max (default medium) | `visibility: hide`; not user-selectable in picker | [12] |
+
+Selection mechanics [5][11][15][16]:
+
+- Flags: `codex -m/--model <MODEL>`, `-c model="..."` (any config key via dotted TOML override), `-p/--profile <name>`; same on `codex exec`. `--help` on 0.153.4 shows no `--effort` flag; effort goes through `-c model_reasoning_effort="high"` or config [11].
+- `~/.codex/config.toml`: `model`, `model_reasoning_effort` (documented values `minimal | low | medium | high | xhigh`, "Responses API only; xhigh is model-dependent"), `model_reasoning_summary` (`auto | concise | detailed | none`), `model_verbosity` (`low | medium | high`), `model_context_window`, `model_provider` (default `openai`), `[model_providers.<id>]`, `[profiles.<name>]` [5][16].
+- Operator's config on this machine sets no top-level `model` or `model_reasoning_effort`; only `[profiles.ollama-launch-codex-app] model = "kimi-k2.6:cloud"` for a local Ollama provider, and `[tui.model_availability_nux]` markers for `gpt-5.5` and `gpt-6-astra` [11]. So the OpenAI default (Astra) applies.
+- GitHub release rust-v0.153.4 (2026-09-04): "Fixed Astra's visibility in the bundled model picker and made it the bundled default when no model is explicitly configured. (#42874)" [14].
+- Doc vs binary disagreements: (a) config reference lists `minimal` and omits `max`/`ultra`; the served catalog has no `minimal` and adds `max` and `ultra` [5][12]. (b) Docs label `gpt-5.5` and `gpt-5.4-mini` as retiring 2026-08-31, a week before today, yet both still appear as listable models [6][12]. (c) Docs use display names "Light/Medium/High/Extra High/Max/Ultra"; catalog slugs are `low/medium/high/xhigh/max/ultra` [6][12].
+
+## Open questions / unverified
+
+- Whether the Codex `/model` picker writes the chosen model and effort back to `config.toml`: not confirmed; the CLI reference and slash-command pages returned 404 at `learn.chatgpt.com` [15].
+- Whether `minimal` is still accepted by the 0.153.4 binary for any model (config reference says yes, catalog says no): not tested live [5][12].
+- Codex `ultra` semantics ("Maximum reasoning with automatic task delegation") come from catalog metadata only; no doc page found describing it [12].
+- `gpt-reserve` purpose: hidden in catalog, undocumented [12].
+- Claude `sonnet[1m]` behavior on the Anthropic API for Sonnet 5 (always 1M) vs gateways: from docs only, not exercised [1].
+- Claude Mythos 5.1/5 appear in the API effort docs but not in Claude Code's model-config page; assumed not selectable in Claude Code [1][3].
+- Claude Code `--help` text was grepped, not read in full; a `/model` picker screenshot was not taken [10].
+
+## Sources
+
+1. https://code.claude.com/docs/en/model-config — Claude Code model configuration (aliases, precedence, effort, 1M, plans).
+2. https://platform.claude.com/docs/en/about-claude/models/overview — Claude models overview (IDs, context, default effort, pricing).
+3. https://platform.claude.com/docs/en/build-with-claude/effort — effort parameter, per-model level support.
+4. https://platform.claude.com/docs/en/models/fable-5-1/overview — Fable 5.1 model page (linked from [2]; not fetched separately).
+5. https://learn.chatgpt.com/docs/config-file/config-reference — Codex config reference (redirect target of developers.openai.com/codex/config-reference).
+6. https://learn.chatgpt.com/docs/models — Codex models page (redirect target of developers.openai.com/codex/models).
+7. https://code.claude.com/docs/en/fast-mode — fast mode.
+8. https://code.claude.com/docs/en/settings — settings precedence; `effortLevel`, `modelSettings`, `availableModels`, `fallbackModel` notes.
+9. https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md — top version 2.1.263; entries 2.1.246–2.1.260.
+10. `claude --version` → `2.1.263 (Claude Code)`; `claude --help`; `~/.claude/settings.json` lines 183–186, 554–558.
+11. `codex --version` → `codex-cli 0.153.4`; `codex --help`; `codex exec --help`; `~/.codex/config.toml`.
+12. `codex debug models` and `~/.codex/models_cache.json` (`fetched_at` 2026-09-07T14:51:32Z, `client_version` 0.153.4).
+13. `codex debug --help` — documents `models` subcommand ("Render the raw model catalog as JSON").
+14. `gh release view -R openai/codex` → rust-v0.153.4, published 2026-09-04T23:25:48Z.
+15. https://learn.chatgpt.com/docs/cli-reference and /docs/slash-commands — both HTTP 404 on 2026-09-07.
+16. https://learn.chatgpt.com/docs/config-file/config-basic — `model = "gpt-5.6"` example, `model_reasoning_effort = "high"`, profiles.
+17. https://code.claude.com/docs/en/sub-agents — `effort` frontmatter field ("Overrides the session effort level"), `/tasks` model+effort display, `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`.

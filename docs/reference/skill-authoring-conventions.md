@@ -46,9 +46,10 @@ enforces re-verification; it is a human-cadence pointer.
 (a concrete pin on a main-thread skill switches the session model for the rest of the turn).
 Effort tiers: low = script wrapper or display, medium = deterministic tooling plus bounded
 interpretation, high = normal judgment, xhigh = surfaces whose own procedure contains an
-independent re-check step. A skill an agent preloads carries the same effort as its host.
-`skills/*/*/references/*.md` fragments stay unstamped. Official Claude Code also accepts
-`effort: max`; check 54 accepts it, but the fleet assigns it no meaning.
+independent re-check step, or an adversarial second-pass agent. A skill an agent preloads
+carries the same effort as its host. `skills/*/*/references/*.md` fragments stay unstamped.
+Official Claude Code also accepts `effort: max`; check 54 accepts it, but `max` is session-only
+in Claude Code, so it never goes in frontmatter.
 
 **Reference files** (Anthropic Agent Skills best practices): one level deep from SKILL.md, and MCP tools named `ServerName:tool_name`
 (`qmd:query`, not `query`). A reference file must not carry `description:` frontmatter, or
