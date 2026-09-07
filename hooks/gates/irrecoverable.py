@@ -128,10 +128,30 @@ def _mid_merge():
 # mentions do not trip it; the flag scan is quote-aware so a separator inside a
 # quoted prompt does not end it early. re.MULTILINE: a line inside an
 # interpreter-fed heredoc body is its own statement.
+# GH #152: `claude\b` alone matched mid-token (a path like /tmp/claude-501/...
+# contains a word-bounded "claude", since "-" is a non-word char), and the
+# forward flag scan did not stop at a newline, so a later unrelated line's
+# flag (e.g. `mkdir -p`) got attributed to that false match. Fixed by
+# requiring "claude" to end the token -- next char must not be an
+# identifier/path-continuation char (word char, "-", ".", "/") -- and by
+# treating an unquoted newline as a scan-stopping separator, same as &/;/|.
+# A code-review round on the first attempt caught two dangerous-direction
+# regressions before ship, both since covered by tests below: (1) an
+# allowlist-shaped exclusion (only \s;&|) rejected legitimate shell
+# metacharacters too, e.g. missing `claude>out.log -p x`; a denylist of
+# continuation chars is the correct shape. (2) a bare newline-stops-scan rule
+# also stopped at a backslash-continued newline (`claude \` + real newline +
+# `-p`), which is still ONE shell statement -- the scan now treats a
+# `\`-then-newline pair as non-breaking, matching how a real shell (and this
+# file's own _newlines_to_seps, used elsewhere) treats line continuations.
+# ponytail: only single-backslash continuation is tracked, not escape parity
+# (`\\` + newline, an even count, is NOT a continuation in real bash but is
+# treated as one here) -- habit-guard, not adversarial sandbox, same posture
+# as this file's other documented one-level-only unwraps.
 # ponytail: `cat <<EOF | bash` bodies are stripped as inert and not scanned,
 # add heredoc-body scanning if a nested-spawn bypass via heredoc is ever demonstrated.
 _SPAWN_ANCHOR_RE = re.compile(
-    r"(?:^|[|;&(]|&&|\|\|)\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:\S*/)?claude\b",
+    r"(?:^|[|;&(]|&&|\|\|)\s*(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:\S*/)?claude(?![-\w./])",
     re.MULTILINE,
 )
 _SPAWN_FLAG_RE = re.compile(r"-p\b|--print\b|--agent\b|--bg\b|--worktree\b")
@@ -141,12 +161,17 @@ _SPAWN_TOKEN_RE = re.compile(
 
 def _nested_spawn(c):
     for m in _SPAWN_ANCHOR_RE.finditer(c):
-        buf = []
+        buf, prev = [], ""
         for tok in _SPAWN_TOKEN_RE.finditer(c[m.end():]):
             t = tok.group()
-            if len(t) == 1 and t in "&;|":
+            if t == "\n" and prev == "\\":
+                buf.append(t)
+                prev = t
+                continue
+            if len(t) == 1 and t in "&;|\n":
                 break
             buf.append(t)
+            prev = t
         if _SPAWN_FLAG_RE.search("".join(buf)):
             return True
     return False

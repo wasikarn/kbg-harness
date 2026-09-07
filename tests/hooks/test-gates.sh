@@ -662,6 +662,29 @@ test_deny  "$IRRECOVERABLE" "spawn hidden behind a pipe inside a single-quoted p
 # flag.
 test_allow "$IRRECOVERABLE" "unrelated later command's flag does not leak back to claude" \
   "$(bash_agent_payload 'claude --version ; othertool -p' fork)"
+# GH #152: the anchor matched "claude" as a mid-token substring (a path segment
+# like /tmp/claude-501/... contains a word-bounded "claude"), and the forward
+# flag scan did not stop at a newline, so an unrelated later line's flag got
+# credited to that false match.
+test_allow "$IRRECOVERABLE" "GH #152 exact repro: scratchpad-shaped path plus a later mkdir -p on its own line" \
+  "$(bash_agent_payload $'BASE=/private/tmp/claude-501/foo\nmkdir -p "$BASE/work"' fork)"
+# Newline-as-separator control, independent of the mid-token anchor fix: a real
+# (flag-free) claude mention followed by an unrelated command's -p on the next
+# line must not leak back either -- the same property already covered above
+# for a ";" separator must also hold for "\n".
+test_allow "$IRRECOVERABLE" "unrelated later LINE's flag does not leak back to claude (newline, not semicolon)" \
+  "$(bash_agent_payload $'claude --version\nothertool -p' fork)"
+# Dangerous-direction control: a false substring match on an earlier line must
+# not blind the scan to a REAL spawn on a later line.
+test_deny  "$IRRECOVERABLE" "GH #152 control: false path-substring on line 1 does not mask a real spawn on line 2" \
+  "$(bash_agent_payload $'BASE=/private/tmp/claude-501/foo\nclaude -p "evil"' fork)"
+# code-review round on the GH #152 fix (before it shipped) caught two
+# dangerous-direction regressions the fix itself would have introduced --
+# both fixed, both locked in here so neither regresses again.
+test_deny  "$IRRECOVERABLE" "GH #152 review catch: a shell metacharacter (not just \\s;&|)) right after claude must still anchor" \
+  "$(bash_agent_payload 'claude>out.log -p "evil"' fork)"
+test_deny  "$IRRECOVERABLE" "GH #152 review catch: a backslash-continued line is still one statement, spawn on the continuation line still caught" \
+  "$(bash_agent_payload $'bash <<EOF\nclaude \\\\\n  -p "evil"\nEOF' fork)"
 
 # Heredoc-body stripping regression coverage.
 test_allow "$IRRECOVERABLE" "heredoc-authored commit message mentioning feat(claude): and --bg in unrelated prose lines no longer false-blocks (GH #121 exact repro)" \

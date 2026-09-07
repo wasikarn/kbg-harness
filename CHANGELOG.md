@@ -5,6 +5,23 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.41] — 2026-09-07
+
+### Fixed
+
+- GH #152: `hooks/gates/irrecoverable.py`'s nested-spawn detector false-positived on any
+  benign command containing a `claude`-prefixed path token (e.g. the scratchpad convention
+  `/tmp/claude-<pid>/...`) followed by an unrelated `-p`/`--agent`/`--bg`/`--worktree`/`--print`
+  flag later in the same command, even past a newline. `_SPAWN_ANCHOR_RE`'s `claude\b` matched
+  as a mid-token substring since `-` is a non-word char; the forward flag scan in `_nested_spawn`
+  only stopped at `&`/`;`/`|`, never a newline. Fixed by requiring `claude` to end its token
+  (denylist of identifier/path-continuation chars: word chars, `-`, `.`, `/`) and by treating an
+  unquoted newline as a scan-stopping separator. A code-review pass (Standards + Spec axes) on
+  the first attempt caught two dangerous-direction regressions it would have introduced — an
+  overly narrow allowlist missing shell metacharacters like `>`, and the newline-stop breaking a
+  backslash-continued line mid-statement — both fixed and locked in with dedicated tests before
+  shipping. 6 new tests in `tests/hooks/test-gates.sh`.
+
 ## [1.1.40] — 2026-09-07
 
 ### Fixed
