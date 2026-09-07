@@ -41,6 +41,18 @@ Pre-`1.0.0`: breaking changes may land in any `0.x` release.
     layer is present, that schema validity doesn't rule out a semantic refusal, and that a
     checker-failure needed to gate the Final Verdict itself, not just get mentioned in the report.
 
+### Fixed
+
+- `mh:deep-audit`: applying `mattpocock-skills:writing-for-agents` to the Codex-primary checker
+  above, in the same pass, surfaced a negation bug the skill predicts by name — "use no tool
+  capable of mutation" in the checker's brief is a prohibition, and the live-verification run for
+  it had already hit its exact failure mode: Codex read the negation, avoided `Bash` entirely
+  (even safe reads), reached for a blocked MCP tool instead, and returned a schema-valid refusal.
+  Reframed positively — "reading files and running read-only commands is expected and required"
+  — matching the wording that fixed the live retry. Also collapsed a duplicated statement of the
+  hard-fail-verdict trigger condition (stated in full in step 3, restated in "Final output") into
+  a single source of truth with a pointer.
+
 ## [1.1.45] — 2026-09-07
 
 ### Added

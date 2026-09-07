@@ -55,8 +55,9 @@ brief in the `docs/reference/spawn-brief.md` shape, with the scope list and note
 and this task: assume the session is complacent; find what it missed across correctness, edge
 cases, failure modes, hidden assumptions, regressions, missing checks, consistency between files
 (doc versus code, two docs disagreeing), and drift between intent and code; every finding cites
-one checkable fact (a path, a command, a line). Add one line to the brief itself: use no tool
-capable of mutation, this run is read-only-intended.
+one checkable fact (a path, a command, a line). Add one line to the brief itself: this run is
+investigation-only — reading files and running read-only commands (`git log`, `git diff`, `cat`,
+`rg`) is expected and required.
 
 **Fingerprint scope before dispatch.** For every path step 1 put in scope (committed-diff files,
 any staged/untracked/uncommitted files, any named out-of-git file — memory store, settings),
@@ -82,9 +83,9 @@ evidenced findings is a successful run that found problems** — never a failure
 trigger.
 
 **On any other outcome** — non-zero exit, empty or malformed output, a schema mismatch, timeout,
-auth failure, or a semantic refusal — fall back to a Claude `Explore`/review agent (same brief,
-same no-mutation line) and note "independence reduced for this pass" in the final report,
-matching `docs/reference/codex-integration-map.md`'s established fallback language.
+auth failure, or a semantic refusal — fall back to a Claude `Explore`/review agent (same brief)
+and note "independence reduced for this pass" in the final report, matching
+`docs/reference/codex-integration-map.md`'s established fallback language.
 
 **Re-fingerprint after the checker returns.** A mismatch against the pre-dispatch manifest — a
 changed hash, a path that appeared or disappeared — means a concurrent session touched scope
@@ -145,9 +146,8 @@ criteria. If the score did not move, say so and say why.
 ## Final output
 
 Line one is the **Final Verdict**: pass or fail against the threshold in step 2, with the
-reason and a confidence level, stated plainly — except when step 3's checker verification
-never completed (both the Codex and Claude paths failed, or scope stayed unstable after retry),
-which hard-forces `fail, verification incomplete` regardless of the step-2 total. Then:
+reason and a confidence level, stated plainly — check step 3's hard-fail override first; when it
+fires, it wins regardless of the step-2 total. Then:
 
 1. Baseline score (per dimension, weighted total)
 2. Findings, with the checker's and your own marked
