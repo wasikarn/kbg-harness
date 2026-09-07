@@ -5,6 +5,17 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.45] — 2026-09-07
+
+### Added
+
+- `sensor:bash:failure-diagnose-nudge` (GH #153): new `PostToolUse:Bash` sensor. On a non-zero
+  exit it injects a diagnose-before-retry nudge via `additionalContext` -- advisory only, never
+  blocks. Capped at 3 nudges per distinct failing command per session (a small local counter
+  file keyed by the hook payload's own `session_id`), and fails open with a stderr announcement
+  if `python3` is missing (GH #93 posture) -- fixing the two gaps a trialed reference
+  implementation had (uncapped nudging, silent fail-open).
+
 ## [1.1.44] — 2026-09-07
 
 ### Added

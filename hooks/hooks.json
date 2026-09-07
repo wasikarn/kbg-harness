@@ -121,6 +121,20 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "id": "sensor:bash:failure-diagnose-nudge",
+        "matcher": "Bash",
+        "description": "Advisory only, never blocks: on a non-zero exit, nudge diagnose-before-retry via additionalContext. Capped at 3 per distinct failing command per session.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sensors/failure-diagnose-nudge.sh\"",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "id": "stop:cost-tracker",
