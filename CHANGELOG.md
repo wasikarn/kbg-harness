@@ -5,6 +5,18 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.40] — 2026-09-07
+
+### Fixed
+
+- GH #150: `hooks/gates/codex-setup-guard.sh` was the last gate still embedding a `python3 -c
+  '...'` block — closes the sweep #146 started. Not yet bitten (no `'"'"'`-escaped apostrophes
+  found), unlike the 4 gates fixed in #148/#149. Extracted to sibling `codex-setup-guard.py`;
+  stdin inherited directly (this gate never pre-captured it), missing-sibling fails open matching
+  its own ask-not-deny posture. No dedicated test file existed for this gate — verified by hand:
+  all 5 payload shapes (trigger, two non-trigger Skill calls, non-Skill tool, missing-sibling)
+  behave identically before and after.
+
 ## [1.1.39] — 2026-09-07
 
 ### Fixed
