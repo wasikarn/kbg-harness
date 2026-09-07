@@ -40,3 +40,8 @@ graphify-out/
 
 # claude plugin eval runs (evals/README.md)
 evals/results/
+
+# Stray top-level scratch entries from throwaway sandbox trials (nested git
+# repos used to trial third-party plugins in isolation) — never repo content.
+/bar/
+/sandbox/
