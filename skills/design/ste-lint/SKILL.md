@@ -35,10 +35,12 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/ste-lint.py" [path] [--mode procedural|desc
   frozen-dir exclusion — an explicit ask is a deliberate ask.
 - `--mode auto` (default): classifies each sentence as procedural (an
   instruction — gets the 20-word limit) or descriptive (gets 25) by a
-  simple heuristic, and labels every guess. Every finding from a guessed
-  sentence is advisory, not confirmed, since a wrong guess changes which
-  limit applies. Pass `--mode procedural` or `--mode descriptive` to apply
-  one limit to everything instead of guessing.
+  simple heuristic, and labels every guess. A word-count finding on a
+  guessed sentence is advisory, not confirmed, since a wrong guess changes
+  which limit applies — its other findings (a semicolon, a contraction)
+  stay confirmed either way, since neither depends on the guess. Pass
+  `--mode procedural` or `--mode descriptive` to apply one limit to
+  everything instead of guessing.
 - Exit code: `0` no confirmed findings, `1` at least one confirmed finding,
   `2` the check itself was incomplete (a file couldn't be read, or PyYAML
   was unavailable so a skill's `description` frontmatter couldn't be

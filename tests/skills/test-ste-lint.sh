@@ -129,6 +129,31 @@ trap 'trash "$TMP" "$OUTSIDE" "$OUTSIDE-dir" "$TMP2" 2>/dev/null || true' EXIT
   code=$?
   chmod 755 noaccess
   [ "$code" -eq 2 ] || { echo "FAIL: unreadable directory expected exit 2, got $code"; exit 1; }
+
+  # A same-tree symlink alias that resolves to a frozen path must not bypass
+  # the frozen-dir exclusion just because its own tracked name doesn't start
+  # with a frozen prefix (deep-audit finding: is_frozen() only checked the
+  # lexical git-relative name, never the resolved target).
+  trash noaccess 2>/dev/null || true  # leftover fixture from the check above
+  mkdir -p docs/research
+  printf 'Frozen; must not scan.\n' > docs/research/real.md
+  git add docs/research/real.md && git commit -q -m "add frozen research file"
+  ln -s docs/research/real.md alias.md
+  out=$(python3 "$SCRIPT" --json)
+  echo "$out" | /usr/bin/grep -q '"path": "alias.md"' && { echo "FAIL: symlink alias into a frozen dir was scanned"; exit 1; }
+  true
+) || FAIL=1
+
+TMP3="$(mktemp -d)"
+trap 'trash "$TMP" "$OUTSIDE" "$OUTSIDE-dir" "$TMP2" "$TMP3" 2>/dev/null || true' EXIT
+(
+  # Running outside a git repository entirely is a tool error (exit 2),
+  # never an uncaught traceback (deep-audit finding: repo_root() propagated
+  # git's CalledProcessError, crashing with the interpreter's default exit 1).
+  cd "$TMP3" || exit 1
+  python3 "$SCRIPT" --json > /dev/null 2>&1
+  code=$?
+  [ "$code" -eq 2 ] || { echo "FAIL: outside a git repo expected exit 2, got $code"; exit 1; }
 ) || FAIL=1
 
 [ "$FAIL" -eq 0 ] && echo "PASS: test-ste-lint" || { echo "FAIL: test-ste-lint"; exit 1; }

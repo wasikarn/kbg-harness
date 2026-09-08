@@ -5,6 +5,50 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.59] — 2026-09-08
+
+### Fixed
+
+- Deep-audit of 1.1.57/1.1.58 (checker: Codex, fresh worktree, high effort): `ste-lint.py`'s
+  sentence splitter cut sentences at an abbreviation's period (e.g. "No. 1"), letting a real
+  over-length sentence evade the word-count check entirely; inline-code spans protected only the
+  word count, so a semicolon or contraction inside example code was still reported as a confirmed
+  prose violation; Rule 8.6 quoted text was never merged into one word, inflating counts;
+  list-item markers were counted as words, and a list item wrapped across two lines was checked
+  as two short, individually-compliant halves; doubly-nested parentheses broke both the outer
+  count and the Rule 8.5 nested check; `~~~` and indented fenced code blocks weren't recognized;
+  a same-tree symlink could alias a frozen path under a non-frozen name; an explicit path outside
+  the repo, and running outside a git repo at all, both misreported "clean" or crashed instead of
+  a tool error; a YAML block-scalar frontmatter description's finding line pointed at the wrong
+  source line; number+unit merging missed negative numbers and plain seconds ("10 s"). This
+  entry backfills the missing 1.1.57/1.1.58 CHANGELOG entries below. Re-verification (fresh
+  Claude context, own repros + 3 mutation tests) found 4 more, self-inflicted by the fixes above:
+  a URL glued to a semicolon lost that semicolon; Rule 8.6's quote merge missed curly quotes; a
+  wrapped list item's two lines both reported the item's start line instead of each one's own;
+  and the new `--selftest` assertion for the explicit-path-outside-repo fix depended on cwd being
+  a git repo. All four closed in the same pass.
+
+## [1.1.58] — 2026-09-08
+
+### Fixed
+
+- Compliance-audit of 1.1.57 (checker: Codex, pinned worktree, high effort): `ste-lint.py`'s
+  ancestor-directory symlink escape (frozen-dir/repo-boundary check only resolved the leaf path),
+  a `git diff ... HEAD` failure in a brand-new repo with no commits yet, an explicit nonexistent
+  path or unreadable directory silently reporting "clean" instead of a tool error, and
+  `check_frontmatter` silently discarding advisory findings.
+
+## [1.1.57] — 2026-09-08
+
+### Added
+
+- `mh:ste-lint`: a report-only skill that checks Markdown prose against a partial, mechanical
+  subset of ASD-STE100 (Simplified Technical English) writing rules — sentence word-count limits,
+  paragraph length, semicolons, contractions confirmed by a deterministic script; passive voice,
+  `-ing` forms, stacked auxiliaries, non-American spelling, long noun runs reported as advisory
+  heuristics. Never edits a scanned file — a style checker can't verify a rewrite preserved
+  meaning.
+
 ## [1.1.56] — 2026-09-08
 
 ### Fixed
