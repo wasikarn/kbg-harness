@@ -1,6 +1,6 @@
 ---
 name: tech-humanize
-description: "Humanize dev/tech writing (English/Thai) to sound natural, not AI-generated. Use when editing chat, standup/PR/commit, UI copy, or prose/ticket/spec/ADR. Don't use for translation."
+description: "Humanize dev/tech writing (English/Thai) to sound natural, not AI-generated. Use when editing chat, standup/PR/commit, UI copy, or prose/ticket/spec/ADR. Don't use for translation/STE — see ste-lint."
 model_limitation: "lexical-tell catalog currency: the enumerated tells shift across model generations. Re-validated 2026-09-07 against Wikipedia's Signs of AI writing. Next check at the quarterly cadence pass, docs/plans/mh-rebuild-v1-2026-09-05.md"
 metadata:
   origin: kbg-native

@@ -32,6 +32,7 @@ for d in "$EVALS"/*/; do
     ideate-*)        /usr/bin/grep -q 'skill: "mh:ideate"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     deep-audit-*)    /usr/bin/grep -q 'skill: "mh:deep-audit"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     cost-report-*)   /usr/bin/grep -q 'skill: "mh:cost-report"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
+    ste-lint-*)      /usr/bin/grep -q 'skill: "mh:ste-lint"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     *) /usr/bin/grep -q 'subagent_type: "mh:' "$d/prompt.md" || { bad "$c: prompt.md does not name a subagent_type"; continue; } ;;
   esac
 
@@ -87,6 +88,15 @@ PY
     deep-audit-*)                 sample='**Final Verdict:** pass (7.8/10, confidence high)' ;;
     cost-report-planted)          sample=$'=== Cost summary ===\nnote: 1 of 3 rows predate dedup_usage (2026-09-04)\ntotal:     $10.0000  (3 sessions)' ;;
     cost-report-clean)            sample='Cost tracker not set up: /tmp/x/metrics/costs.jsonl not found. Enable the stop:cost-tracker hook and finish a session first.' ;;
+    ste-lint-planted)             sample='notes.md line 5: rule 8.1 semicolon
+notes.md line 3: rule 6.3 31 words (limit 25)
+Do not skip the smoke test; a failed smoke test blocks the release.' ;;
+    ste-lint-clean)               sample='status.md: no confirmed findings
+The build is green. Tests pass. Deploy is ready.' ;;
+    ste-lint-file-prose-only)     sample='mixed.md line 3: rule 8.1 semicolon
+```bash
+echo "a;b"
+```' ;;
     *) sample='' ;;
   esac
   [ -n "$sample" ] || { bad "$c: no verdict sample in test-eval-cases.sh (add one to the case list)"; continue; }
@@ -96,10 +106,18 @@ PY
   if [ "$sample" = FIXTURE ]; then
     sample=$(cat "$ws"/*.md "$ws"/*/*.md 2>/dev/null)
   fi
-  if ! python3 - "$d/graders" "$sample" <<'PY'
+  # ste-lint reports rather than rewrites: a `wrong` sample proves a last_message
+  # grader would reject an incorrect report, not just accept a correct one.
+  wrong=''
+  case "$c" in
+    ste-lint-planted)         wrong='status.md: no confirmed findings, file is clean.' ;;
+    ste-lint-file-prose-only) wrong='mixed.md line 6: rule 8.1 semicolon inside the code block' ;;
+  esac
+  if ! python3 - "$d/graders" "$sample" "$wrong" <<'PY'
 import sys, os, re
 bad = 0
 sample = sys.argv[2]
+wrong = sys.argv[3] if len(sys.argv) > 3 else ""
 for f in sorted(os.listdir(sys.argv[1])):
     s = open(os.path.join(sys.argv[1], f)).read()
     m = re.match(r"---\n([\s\S]*?)\n---\n", s)
@@ -120,15 +138,17 @@ for f in sorted(os.listdir(sys.argv[1])):
         want = "match: not_contains" not in m.group(1)
         if bool(re.search(p.group(1), sample, flags)) != want:
             print(f"  {f}: pattern {'rejects' if want else 'matches'} the verdict sample {sample!r}"); bad = 1
-    elif os.path.basename(os.path.dirname(sys.argv[1])).startswith("tech-humanize-"):
+    elif os.path.basename(os.path.dirname(sys.argv[1])).startswith(("tech-humanize-", "ste-lint-")):
         if not re.search(p.group(1), sample, flags | re.M):
             print(f"  {f}: pattern does not match the scaffolded fixture, so it cannot discriminate"); bad = 1
+        if wrong and "target: last_message" in m.group(1) and re.search(p.group(1), wrong, flags | re.M):
+            print(f"  {f}: pattern matches a deliberately wrong report, so it cannot discriminate"); bad = 1
 sys.exit(bad)
 PY
   then bad "$c: a grader is malformed"; continue; fi
   ok "$c"
 done
-[ "$n" -eq 41 ] || bad "expected 41 cases, found $n"
+[ "$n" -eq 44 ] || bad "expected 44 cases, found $n"
 
 echo "eval-cases: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
