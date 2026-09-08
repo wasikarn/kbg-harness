@@ -37,7 +37,14 @@ PAREN_RE = re.compile(r"\(([^()]*)\)")
 NUMBER_RE = re.compile(r"^\d+(\.\d+)?$")
 SENT_SPLIT_RE = re.compile(r'(?<=[.!?])\s+(?=[A-Z0-9"`(])')
 MD_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")
-CONTRACTION_RE = re.compile(r"\b\w+n't\b|\b\w+'(?:re|ve|ll|d|m)\b", re.IGNORECASE)
+# 's is ambiguous with a possessive ("the dog's bone"), so it's only treated
+# as a contraction after a closed list of words that actually contract to 's
+# ("it's", "that's", ...) -- never a bare \w+'s.
+CONTRACTION_RE = re.compile(
+    r"\b\w+n['’]t\b"
+    r"|\b\w+['’](?:re|ve|ll|d|m)\b"
+    r"|\b(?:it|he|she|that|there|here|what|who|let|where|how|when|why)['’]s\b",
+    re.IGNORECASE)
 PASSIVE_RE = re.compile(r"\b(?:is|are|was|were|be|been|being)\s+\w+ed\b", re.IGNORECASE)
 ING_RE = re.compile(r"\b(?:is|are|was|were|be|been|being)\s+\w+ing\b", re.IGNORECASE)
 AUX_STACK_RE = re.compile(
@@ -68,7 +75,10 @@ IMPERATIVE_STARTS = {
     "stop", "update", "edit", "move", "copy", "build", "test",
 }
 
-FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---\n", re.DOTALL)
+# The closing "---" needs a following newline OR end-of-string, so frontmatter
+# that ends exactly at EOF (no trailing blank line) still parses instead of
+# silently falling through to be scanned as body text.
+FRONTMATTER_RE = re.compile(r"\A---\n(.*?\n)---(?:\n|\Z)", re.DOTALL)
 
 
 def normalize_tok(tok):
@@ -199,7 +209,10 @@ def check_frontmatter(fm_text, fm_start_line):
 
     try:
         data = yaml.safe_load(fm_text)
-    except yaml.YAMLError as e:
+    except (yaml.YAMLError, ValueError) as e:
+        # ValueError: PyYAML's SafeLoader resolves some scalars (e.g. an
+        # implicit timestamp like "2026-99-99") by calling datetime.date(...),
+        # which raises ValueError rather than YAMLError on an invalid value.
         errors.append({"rule": "tooling", "message": f"malformed frontmatter YAML: {e}"})
         return confirmed, advisory, errors
 
@@ -282,7 +295,7 @@ def scan_markdown_file(path, mode):
     try:
         with open(path, "r", encoding="utf-8") as f:
             text = f.read()
-    except OSError as e:
+    except (OSError, UnicodeDecodeError) as e:
         errors.append({"rule": "tooling", "message": f"could not read file: {e}"})
         return confirmed, advisory, errors
 
@@ -315,12 +328,20 @@ def _in_repo(root, full_path):
 
 def default_targets(root):
     changed = set()
-    cmds = (["git", "diff", "--name-only", "-z", "HEAD"],
-            ["git", "ls-files", "--others", "--exclude-standard", "-z"])
-    for cmd in cmds:
+    scan_errors = []
+    head_ok = subprocess.run(["git", "rev-parse", "--verify", "-q", "HEAD"],
+                              cwd=root, capture_output=True).returncode == 0
+    # A repo with no commits yet has no HEAD to diff against; fall back to
+    # --cached so staged files in a brand-new repo are still found instead
+    # of the diff command failing and being silently swallowed as "clean".
+    diff_cmd = (["git", "diff", "--name-only", "-z", "HEAD"] if head_ok
+                else ["git", "diff", "--name-only", "-z", "--cached"])
+    for cmd in (diff_cmd, ["git", "ls-files", "--others", "--exclude-standard", "-z"]):
         try:
             out = subprocess.run(cmd, cwd=root, capture_output=True, check=True)
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
+            scan_errors.append({"rule": "tooling",
+                                 "message": f"git command failed ({' '.join(cmd)}): {e}"})
             continue
         for part in out.stdout.split(b"\x00"):
             if part:
@@ -333,29 +354,41 @@ def default_targets(root):
         full = os.path.join(root, rel)
         if not os.path.isfile(full):
             continue
-        if os.path.islink(full) and not _in_repo(root, full):
+        # realpath() resolves every ancestor path segment, not just a
+        # symlinked leaf -- a plain file reached through a symlinked
+        # ancestor directory must be caught too, so this check always runs,
+        # not only when the leaf itself is a symlink.
+        if not _in_repo(root, full):
             continue
         result.append(full)
-    return result
+    return result, scan_errors
 
 
 def explicit_targets(root, arg_path):
     full = os.path.abspath(arg_path)
+    scan_errors = []
+    if not _in_repo(root, full):
+        return [], scan_errors
     if os.path.isfile(full):
-        return [full]
+        return [full], scan_errors
+    if not os.path.isdir(full):
+        scan_errors.append({"rule": "tooling", "message": f"path does not exist: {arg_path}"})
+        return [], scan_errors
+
+    def on_walk_error(exc):
+        scan_errors.append({"rule": "tooling", "message": f"could not list directory: {exc}"})
+
     result = []
-    for dirpath, dirnames, filenames in os.walk(full):
-        dirnames[:] = [d for d in dirnames
-                       if not os.path.islink(os.path.join(dirpath, d))
-                       or _in_repo(root, os.path.join(dirpath, d))]
+    for dirpath, dirnames, filenames in os.walk(full, onerror=on_walk_error):
+        dirnames[:] = [d for d in dirnames if _in_repo(root, os.path.join(dirpath, d))]
         for fn in filenames:
             if not fn.endswith(".md"):
                 continue
             fp = os.path.join(dirpath, fn)
-            if os.path.islink(fp) and not _in_repo(root, fp):
+            if not _in_repo(root, fp):
                 continue
             result.append(fp)
-    return sorted(result)
+    return sorted(result), scan_errors
 
 
 def format_finding(f):
@@ -371,6 +404,8 @@ def format_finding(f):
 
 
 def print_human(result):
+    for e in result.get("errors", []):
+        print(f"[error] {e['message']}")
     for f in result["files"]:
         print(f["path"])
         for c in f["confirmed"]:
@@ -396,9 +431,10 @@ def main():
         return
 
     root = repo_root()
-    targets = explicit_targets(root, args.path) if args.path else default_targets(root)
+    targets, scan_errors = (explicit_targets(root, args.path) if args.path
+                             else default_targets(root))
 
-    files_out, any_confirmed, any_error = [], False, False
+    files_out, any_confirmed, any_error = [], False, bool(scan_errors)
     for fp in targets:
         confirmed, advisory, errors = scan_markdown_file(fp, args.mode)
         any_confirmed = any_confirmed or bool(confirmed)
@@ -407,7 +443,7 @@ def main():
                            "advisory": advisory, "errors": errors})
 
     exit_code = 2 if any_error else (1 if any_confirmed else 0)
-    result = {"files": files_out, "exit_code": exit_code}
+    result = {"files": files_out, "errors": scan_errors, "exit_code": exit_code}
     print(json.dumps(result, indent=2)) if args.json else print_human(result)
     sys.exit(exit_code)
 
@@ -466,6 +502,14 @@ def _selftest():
     confirmed, _ = check_text_block("It's fine. We won't do that.", 1, "descriptive", "test")
     assert any(f["rule"] == "4.2" for f in confirmed)
 
+    # Curly apostrophe contractions are caught too, not just the straight one.
+    confirmed, _ = check_text_block("We don’t stop.", 1, "descriptive", "test")
+    assert any(f["rule"] == "4.2" for f in confirmed), confirmed
+
+    # A genuine possessive is not mistaken for a contraction.
+    confirmed, _ = check_text_block("Check the dog's bone before you leave.", 1, "descriptive", "test")
+    assert not any(f["rule"] == "4.2" for f in confirmed), confirmed
+
     # Frontmatter: top-level description is found, not a nested metadata.description.
     fm = ('name: x\nmetadata:\n  description: "nested, not this one"\n'
           'description: "' + words26.rstrip(".") + '"\n')
@@ -503,6 +547,30 @@ def _selftest():
     confirmed, _, errors = check_frontmatter(fm_block, 2)
     assert not errors, errors
     assert any(f["rule"] == "6.3" for f in confirmed), confirmed
+
+    # A YAML scalar that resolves via a ValueError (an invalid implicit
+    # date/timestamp), not a YAMLError, is still a tool error, not a crash.
+    _, _, errors = check_frontmatter("description: 2026-99-99\n", 2)
+    assert errors and "malformed" in errors[0]["message"], errors
+
+    # Frontmatter closing exactly at EOF (no trailing blank line) still
+    # parses, instead of falling through and being scanned as body text.
+    fm_start, _, body, _ = extract_frontmatter('---\ndescription: "hi"\n---')
+    assert fm_start is not None and body == "", (fm_start, body)
+
+    # An unreadable file (chmod 000) is a tool error (exit 2), never a
+    # crash or a silent "clean" pass.
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as tf:
+        tf.write(b"Some text.\n")
+        unreadable_path = tf.name
+    os.chmod(unreadable_path, 0)
+    try:
+        _, _, errors = scan_markdown_file(unreadable_path, "auto")
+    finally:
+        os.chmod(unreadable_path, 0o644)
+        os.unlink(unreadable_path)
+    assert errors and "could not read" in errors[0]["message"], errors
 
     print("ste-lint.py selftest ok")
 

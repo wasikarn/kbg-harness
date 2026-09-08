@@ -80,6 +80,55 @@ assert lines == [1], lines
   python3 "$SCRIPT" mixed.md > /dev/null
   after=$(shasum -a 256 mixed.md)
   [ "$before" = "$after" ] || { echo "FAIL: mixed.md mutated by a report-only run"; exit 1; }
+
+  # Ancestor-directory symlink escape: the leaf file is a plain tracked
+  # file, but a directory further up the path is later replaced with a
+  # symlink pointing outside the repo. realpath() must still catch this
+  # even though the leaf itself was never a symlink (the bug this replaces
+  # only checked os.path.islink() on the leaf, not each ancestor segment).
+  mkdir -p "$OUTSIDE-dir"
+  printf 'Outside secret; must not scan.\n' > "$OUTSIDE-dir/child.md"
+  mkdir -p replaced
+  printf 'Placeholder; will be replaced.\n' > replaced/child.md
+  git add replaced/child.md && git commit -q -m "add replaced dir"
+  trash replaced
+  ln -s "$OUTSIDE-dir" replaced
+  out=$(python3 "$SCRIPT" --json)
+  echo "$out" | /usr/bin/grep -q 'replaced/child.md' && { echo "FAIL: ancestor-symlink escape was scanned"; exit 1; }
+  true
+) || FAIL=1
+
+TMP2="$(mktemp -d)"
+trap 'trash "$TMP" "$OUTSIDE" "$OUTSIDE-dir" "$TMP2" 2>/dev/null || true' EXIT
+(
+  cd "$TMP2" || exit 1
+
+  # A git repo with no HEAD yet (no commits) must still find staged files,
+  # not silently report "clean" because `git diff ... HEAD` has nothing to
+  # diff against.
+  git init -q
+  git config user.email t@t.test
+  git config user.name t
+  printf 'Do not use this; it is not allowed.\n' > staged.md
+  git add staged.md
+  out=$(python3 "$SCRIPT" --json)
+  echo "$out" | /usr/bin/grep -q '"path": "staged.md"' || { echo "FAIL: staged.md not found in a repo with no HEAD yet"; exit 1; }
+
+  # An explicit path that does not exist is a tool error (exit 2), never a
+  # silent "clean" (files: [], exit 0).
+  python3 "$SCRIPT" does-not-exist.md --json > /dev/null 2>&1
+  code=$?
+  [ "$code" -eq 2 ] || { echo "FAIL: nonexistent explicit path expected exit 2, got $code"; exit 1; }
+
+  # An explicit directory that can't be listed (chmod 000) is a tool error
+  # (exit 2), never a silent "clean".
+  mkdir noaccess
+  printf 'Do not use this; it is not allowed.\n' > noaccess/x.md
+  chmod 000 noaccess
+  python3 "$SCRIPT" noaccess --json > /dev/null 2>&1
+  code=$?
+  chmod 755 noaccess
+  [ "$code" -eq 2 ] || { echo "FAIL: unreadable directory expected exit 2, got $code"; exit 1; }
 ) || FAIL=1
 
 [ "$FAIL" -eq 0 ] && echo "PASS: test-ste-lint" || { echo "FAIL: test-ste-lint"; exit 1; }

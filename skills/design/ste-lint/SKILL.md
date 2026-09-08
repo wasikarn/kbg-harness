@@ -62,6 +62,20 @@ just the `description` value; every other frontmatter key is left alone.
 See `rules.md` for the full rule list, `Load when:` starting any real scan
 or interpreting a finding.
 
+## Judgment tier (apply by hand — not scripted)
+
+- **5.2 / 5.3** — one instruction per sentence, imperative form. Bad: "Open
+  the panel and check the connector." Good: "Open the panel. Check the
+  connector."
+- **6.5** — one topic per paragraph. A paragraph that drifts from setup to
+  verification to cleanup should split into three.
+- **9.3** — avoid phrasal verbs. Bad: "Set up the environment before you
+  carry out the test." Good: "Configure the environment. Do the test."
+- **9.4 / 1.11** — one term per concept, used consistently. Don't call the
+  same thing "skill" in one paragraph and "plugin" in the next.
+
+Full rule list, citations, and the confirmed/advisory tiers: `rules.md`.
+
 ## Boundary vs. `tech-humanize`
 
 They pull in opposite directions on purpose: `tech-humanize` wants varied
