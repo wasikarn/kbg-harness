@@ -36,7 +36,9 @@ which implies mh sequences or supervises Codex's work.
 A Markdown session-summary document, written by mh's own `/mh:handoff` skill (`skills/workflow/
 handoff/`) to a path mh controls, distinct from `mattpocock-skills:handoff` — the upstream skill
 mh deliberately does not delegate to or detect (`docs/adr/0002-mh-controlled-handoff-path.md`),
-since its own instructions name no write tool and no output path.
+since its own instructions name no write tool and no output path. The term covers both directions:
+`session:handoff-surface` reads and inlines an unread one at `SessionStart`; `session:handoff-nudge`
+nudges the model, once per session right after a compact, to suggest writing one.
 _Avoid_: "the handoff skill" without a prefix, ambiguous between mh's and mattpocock's; "handoff
 file" for anything still in `staging/` — it isn't a handoff until published to `pending/`.
 

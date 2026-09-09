@@ -45,6 +45,18 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "id": "session:handoff-nudge",
+        "matcher": "compact",
+        "description": "Nudge the model to suggest /mh:handoff to the user after a compact, once per session; silent otherwise. Matcher fires only on compact -- the opposite of session:handoff-surface's exclusion.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/handoff-nudge.sh\"",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PreToolUse": [

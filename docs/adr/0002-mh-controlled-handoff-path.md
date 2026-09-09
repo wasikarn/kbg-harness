@@ -136,3 +136,23 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
   actually changed — the guard failed open in exactly the scenario it exists for. Each fallback is
   now a distinct literal instead of a shared empty one, so a `stat` failure at either point always
   mismatches and fails closed.
+- **A fourth `SessionStart` hook nudges the *write* side, since the first three only ever read
+  what already exists.** `session:handoff-nudge` fires once per session, only on `matcher:
+  "compact"`, and suggests to the model (via injected `additionalContext`, not directly to the
+  user — `mh:handoff` is `disable-model-invocation: true`, so the model can only relay the
+  suggestion in its own reply) that this would be a good moment to run `/mh:handoff`. `session_id`
+  is the key for "once per session"; it is delivered on every hook event's stdin including
+  `SessionStart` per the official docs (`code.claude.com/docs/en/hooks`'s common-input-fields
+  list), confirmed independently by the paired `codex@openai-codex` plugin's own `SessionStart`
+  handler reading the same field. This is the one `SessionStart` hook in this repo that reads
+  stdin — every other one avoids it only because none of them need anything it carries. The claim
+  is one atomic `mkdir` on a `${TMPDIR:-/tmp}/mh-handoff-nudge/<session_id>` marker (no trailing
+  slash on the base — a trailing-slash path silently defeats a `[ -L ]` symlink check, reproduced
+  live during plan review), and the nudge prints only if that `mkdir` succeeds: this prevents a
+  *duplicate* claim, nothing more. It does not make a lost print recoverable (if the print itself
+  fails after a successful claim, that session's one nudge is gone), and if `$TMPDIR` is cleared
+  or rotates mid-session the marker can vanish and the session may nudge again — both accepted,
+  best-effort, not a guarantee, same posture as the read side above. `session_id` is validated as
+  a real, non-empty JSON string before use (a `null`/boolean/number value stringifies into
+  something that would otherwise pass a bare character-class regex) and rejected outright if it is
+  `.`, `..`, or contains anything outside `[A-Za-z0-9._-]`.

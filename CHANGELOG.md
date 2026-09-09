@@ -3,6 +3,23 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.63] — 2026-09-10
+
+### Added
+
+- `session:handoff-nudge`: a 4th `SessionStart` hook, `matcher: "compact"`, that nudges the model
+  (once per session, via injected context) to suggest `/mh:handoff` to the user right after a
+  compact — the write-side counterpart to `session:handoff-surface`'s read side. Design went
+  through 3 rounds of Codex plan review: `session_id` (the once-per-session key) is validated as
+  a real, non-empty JSON string and rejected if it's `.`, `..`, or contains anything outside
+  `[A-Za-z0-9._-]` — a naive extraction was live-reproduced stringifying `null`/`true`/a number
+  into a false-positive match; the marker base directory is defined without a trailing slash after
+  live-reproducing that a trailing slash silently defeats a symlink check, and is rejected outright
+  if it's a pre-planted symlink or has a foreign owner; the claim is one atomic `mkdir`, which
+  prevents a duplicate claim but is explicitly documented as *not* making a lost print recoverable.
+  14 new tests, including a `session_id` type-confusion suite and a curated-PATH `python3`-missing
+  case. Full design history: `docs/adr/0002-mh-controlled-handoff-path.md`.
+
 ## [1.1.62] — 2026-09-10
 
 ### Fixed
