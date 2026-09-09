@@ -180,5 +180,32 @@ else
   bad "expected subdir and root to match, got '$SUBDIR_OUT' vs '$ROOT_OUT'"
 fi
 
+# --- compliance-audit finding, live-reproduced: the collision precheck
+# only proves the destination is absent at check time -- if something else
+# creates a directory there before mv runs, mv -n moves the staged file
+# INTO that directory instead of failing, and the old code reported the
+# directory itself as a successfully published path. A shimmed mv
+# deterministically simulates that race (creates the destination directory,
+# then defers to the real mv) so the publish helper's post-move validation
+# is exercised without relying on real concurrency. ---
+MVSHIM_DIR=$(mktemp -d)
+cat > "$MVSHIM_DIR/mv" <<'SHIMEOF'
+#!/usr/bin/env bash
+# handoff-path.sh's --publish always calls: mv -n "$SRC" "$DEST"
+if [ "$1" = "-n" ] && [ "$#" -eq 3 ]; then
+  mkdir -p "$3"
+fi
+exec /bin/mv "$@"
+SHIMEOF
+chmod +x "$MVSHIM_DIR/mv"
+P6=$(run)
+printf 'would-be-published content\n' > "$P6"
+if OUT=$(PATH="$MVSHIM_DIR:$PATH" run --publish "$P6" 2>&1); then
+  bad "publish reported success despite the destination becoming a directory mid-race: $OUT"
+else
+  ok "publish detects a destination-directory race after the precheck and fails loud instead of silently reporting the directory as the published path"
+fi
+trash "$MVSHIM_DIR" 2>/dev/null || true
+
 echo "handoff/handoff-path: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

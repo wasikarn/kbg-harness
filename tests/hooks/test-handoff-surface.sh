@@ -307,5 +307,121 @@ else
   bad "expected matcher 'startup|resume|clear', got '$MATCHER'"
 fi
 
+# --- compliance-audit finding: a here-string (<<<) always appends its own
+# trailing newline even when the content already ends in one, which
+# silently overcounted a document at exactly MAX_LINES (300) by one and
+# falsely flagged it truncated. A document with exactly 300 properly
+# newline-terminated lines must NOT be reported truncated. ---
+H=$(fresh_home)
+P=$(alloc "$H"); python3 -c "
+for i in range(300):
+    print('exactline %d' % i)
+" > "$P"
+PUB=$(publish "$H" "$P")
+OUT=$(surface "$H" 2>"$H/err")
+if ! echo "$OUT" | grep -q 'truncated at' && echo "$OUT" | grep -q 'exactline 299' && [ -f "$(consumed_path "$PUB")" ]; then
+  ok "a document with exactly 300 newline-terminated lines is not falsely flagged truncated"
+else
+  bad "exact-300-line document was falsely truncated: $(echo "$OUT" | tail -c 200)"
+fi
+
+# --- compliance-audit finding: the "first line captured yet" state used to
+# be "$capped is empty", which can't tell "nothing captured" from "the
+# first line is itself blank" -- a genuine leading blank line was silently
+# dropped and every following line shifted up with no separator. ---
+H=$(fresh_home)
+P=$(alloc "$H"); python3 -c "
+print('')
+for i in range(400):
+    print('blankline %d' % i)
+" > "$P"
+PUB=$(publish "$H" "$P")
+OUT=$(surface "$H" 2>"$H/err")
+FIRSTBODY=$(echo "$OUT" | grep -A1 'mh:handoff, unread' | tail -n1)
+if [ -z "$FIRSTBODY" ] && echo "$OUT" | grep -q 'blankline 298' && ! echo "$OUT" | grep -q 'blankline 299'; then
+  ok "a genuine leading blank line survives truncation instead of being silently dropped"
+else
+  bad "leading blank line was lost: first body line was '$FIRSTBODY'"
+fi
+
+# --- compliance-audit finding: there was no aggregate LINE budget, only an
+# aggregate BYTE budget -- four small documents (well under the byte
+# budget) at exactly 300 lines each total 1200 lines, over the 900-line
+# aggregate cap (3x per-file). The three oldest must be shown and consumed;
+# the newest must stay pending, same oldest-first fairness as the byte
+# budget already has. ---
+H=$(fresh_home)
+declare -a AGGPUBS=()
+for label in aggA aggB aggC aggD; do
+  P=$(alloc "$H")
+  python3 -c "
+for i in range(300):
+    print('$label line %d' % i)
+" > "$P"
+  AGGPUBS+=("$(publish "$H" "$P")")
+  sleep 1.1
+done
+OUT=$(surface "$H" 2>"$H/err")
+if echo "$OUT" | grep -q 'aggA line 0' && echo "$OUT" | grep -q 'aggB line 0' && echo "$OUT" | grep -q 'aggC line 0' \
+  && ! echo "$OUT" | grep -q 'aggD line 0' \
+  && [ -f "$(consumed_path "${AGGPUBS[0]}")" ] && [ -f "$(consumed_path "${AGGPUBS[1]}")" ] && [ -f "$(consumed_path "${AGGPUBS[2]}")" ] \
+  && [ -f "${AGGPUBS[3]}" ] && [ ! -s "$H/err" ]; then
+  ok "aggregate line budget (900 = 3x300) admits the three oldest 300-line documents and leaves the newest pending"
+else
+  bad "aggregate line budget not enforced: $(echo "$OUT" | tail -c 300)"
+fi
+
+# --- compliance-audit finding, live-reproduced: ls -tr on a directory that
+# matches the handoff-*.md glob (no -d) expands into that directory's own
+# children as BARE basenames -- the loop then resolves those bare names
+# relative to the hook's own cwd, not pending/, and can read + move an
+# unrelated file that happens to share a name there. Uses a throwaway git
+# repo as cwd (never the real matt-harness tree) so the project dir the
+# hook resolves matches where the fixture was planted. ---
+FIXTURE_REPO=$(mktemp -d); EXTRA_TRASH+=("$FIXTURE_REPO")
+(cd "$FIXTURE_REPO" && git init -q -b main >/dev/null 2>&1)
+H=$(fresh_home)
+PEND=$(cd "$FIXTURE_REPO" && HOME="$H" bash "$HELPER" --dir)/pending
+mkdir -p "$PEND"
+DIRMATCH="$PEND/handoff-19700101T000003.dirmatch.md"
+mkdir -p "$DIRMATCH"
+printf 'irrelevant\n' > "$DIRMATCH/decoy.md"
+printf 'CWD_OUTSIDE_SENTINEL\n' > "$FIXTURE_REPO/decoy.md"
+OUT=$(cd "$FIXTURE_REPO" && HOME="$H" bash "$HOOK" 2>"$H/err")
+if ! echo "$OUT" | grep -q CWD_OUTSIDE_SENTINEL && [ -f "$FIXTURE_REPO/decoy.md" ] && [ -d "$DIRMATCH" ] && [ ! -s "$H/err" ]; then
+  ok "a directory matching the pending glob never leaks its children's bare names into cwd-relative file resolution"
+else
+  bad "directory-glob enumeration leaked into cwd: out='$OUT' decoy_survived=$([ -f "$FIXTURE_REPO/decoy.md" ] && echo yes || echo no)"
+fi
+
+# --- compliance-audit finding: content was read into memory once (for
+# printing) but the archive step later mv's whatever is on disk at that
+# later point -- if the file changed in between, the archived copy could
+# differ from what was actually printed. A stat shim simulates that change
+# by returning a different size/mtime snapshot on the second call (the
+# move-time recheck) than the first (the read-time snapshot); the file
+# must be printed (already captured in memory) but left pending, not
+# archived, on a mismatch. ---
+H=$(fresh_home)
+P=$(alloc "$H"); printf 'content that must not be archived if it appears to change mid-run\n' > "$P"
+PUB=$(publish "$H" "$P")
+STAT_SHIM_DIR=$(mktemp -d); EXTRA_TRASH+=("$STAT_SHIM_DIR")
+STAT_COUNTER=$(mktemp); EXTRA_TRASH+=("$STAT_COUNTER")
+printf '0' > "$STAT_COUNTER"
+cat > "$STAT_SHIM_DIR/stat" <<EOF
+#!/usr/bin/env bash
+n=\$(cat "$STAT_COUNTER")
+n=\$((n + 1))
+printf '%s' "\$n" > "$STAT_COUNTER"
+if [ "\$n" -le 1 ]; then printf '111 1111111111\n'; else printf '222 2222222222\n'; fi
+EOF
+chmod +x "$STAT_SHIM_DIR/stat"
+OUT=$(HOME="$H" PATH="$STAT_SHIM_DIR:$PATH" bash "$HOOK" 2>"$H/err")
+if echo "$OUT" | grep -q 'content that must not be archived' && [ -f "$PUB" ] && [ ! -s "$H/err" ]; then
+  ok "a file whose snapshot differs between read and move is printed from memory but left pending, never archived on a mismatch"
+else
+  bad "snapshot-mismatch guard failed: out='$OUT' pub_exists=$([ -f "$PUB" ] && echo yes || echo no)"
+fi
+
 echo "hooks/handoff-surface: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

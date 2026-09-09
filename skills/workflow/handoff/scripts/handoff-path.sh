@@ -31,6 +31,10 @@
 # used by the SessionStart surfacer, which must stay silent (never create an
 # empty state dir machine-wide) when a project has never run /mh:handoff.
 set -uo pipefail
+umask 077  # belt-and-suspenders: every dir/file below is also chmod'd
+           # explicitly to 0700/0600, but this closes the window between
+           # mkdir/mktemp/mv and that chmod call, and the chmod checks below
+           # still fail loud if the filesystem rejects it outright.
 
 fail() { echo "handoff-path: $1" >&2; exit 1; }
 
@@ -76,14 +80,22 @@ case "${1:-}" in
     PUB_NAME="${BASE_NAME#.}.md"
     PENDING_DIR="$PROJECT_DIR/pending"
     mkdir -p "$PENDING_DIR" 2>/dev/null || fail "could not create $PENDING_DIR"
-    chmod 700 "$PROJECT_DIR" "$PENDING_DIR" 2>/dev/null
+    chmod 700 "$PROJECT_DIR" "$PENDING_DIR" 2>/dev/null || fail "could not set permissions (0700) on $PROJECT_DIR or $PENDING_DIR"
 
     DEST="$PENDING_DIR/$PUB_NAME"
     [ -e "$DEST" ] && fail "publish collided with an existing document at $DEST -- refusing to overwrite; the staged draft is still at $STAGED_REAL"
 
     mv -n "$STAGED_REAL" "$DEST" 2>/dev/null
     [ ! -e "$STAGED_REAL" ] || fail "publish did not complete -- $STAGED_REAL is still present after mv"
-    chmod 600 "$DEST" 2>/dev/null
+    # mv -n's postcondition check above only proves the source is gone, not
+    # that DEST is the plain file we expect: if DEST turned into a directory
+    # between the collision check and this mv, mv moves the source *into*
+    # it instead of failing, and the source-gone check alone would still
+    # report success against the wrong path. Also catches STAGED_REAL being
+    # swapped for a symlink after the earlier -L check: mv of a symlink
+    # source produces a symlink destination, which this rejects too.
+    [ -f "$DEST" ] && [ ! -L "$DEST" ] || fail "publish landed somewhere unexpected -- $DEST is not a plain regular file after mv (directory collision or symlink swap)"
+    chmod 600 "$DEST" 2>/dev/null || fail "could not set permissions (0600) on $DEST"
 
     printf '%s\n' "$DEST"
     exit 0
@@ -91,7 +103,7 @@ case "${1:-}" in
   "")
     STAGING_DIR="$PROJECT_DIR/staging"
     mkdir -p "$STAGING_DIR" 2>/dev/null || fail "could not create $STAGING_DIR"
-    chmod 700 "$PROJECT_DIR" "$STAGING_DIR" 2>/dev/null
+    chmod 700 "$PROJECT_DIR" "$STAGING_DIR" 2>/dev/null || fail "could not set permissions (0700) on $PROJECT_DIR or $STAGING_DIR"
 
     TS="$(date -u +%Y%m%dT%H%M%S)"
     TARGET=$(mktemp "$STAGING_DIR/.handoff-$TS.XXXXXX") || fail "could not reserve a staging file"

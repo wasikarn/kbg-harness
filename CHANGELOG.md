@@ -5,6 +5,33 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.61] — 2026-09-10
+
+### Fixed
+
+- `mh:handoff` / `session:handoff-surface`: a Codex-primary `mh:compliance-audit` against
+  `docs/adr/0002-mh-controlled-handoff-path.md` found 14 real defects the original test suites
+  missed. Fixed: a `<<<` here-string appending its own trailing newline falsely truncated a
+  document at exactly the 300-line cap; a `$capped`-emptiness sentinel that couldn't tell "nothing
+  captured" from "the first line is blank" silently dropped a genuine leading blank line; no
+  aggregate *line* budget existed at all (only bytes), so several documents at the per-file line
+  cap but under the byte cap all showed with no ceiling; `ls -tr` without `-d` could expand a
+  directory matching the `handoff-*.md` glob into its children's bare basenames, resolved relative
+  to the hook's cwd rather than `pending/`; content read once into memory for printing could be
+  archived from a since-changed on-disk file, so the archive could differ from what was actually
+  shown (closed with a size+mtime snapshot re-checked before the move); publish's postcondition
+  check proved the source was gone but not that the destination was a plain file, so a directory
+  or symlink landing at the destination between the check and `mv` was reported as a successful
+  publish; every `chmod` call had its result silently discarded, leaving a real gap between
+  `mkdir`/`mv` and the explicit 0700/0600 (now `umask 077` up front plus checked, fail-loud
+  `chmod` calls); a few `printf`/`basename` failure paths leaked to stderr instead of staying
+  silent per the hook's own contract. Two audit findings were checked and confirmed non-issues:
+  bare `grep` in the new tests matches every existing test file in the repo (the `command grep`
+  convention is for runtime scripts), and the audit's own sandboxed gauntlet failure was its
+  sandbox's `trash` behavior hitting an unrelated pre-existing test, not a regression. 6 new
+  regression tests added (41 total), each independently confirmed to fail against the pre-fix code
+  before the fix, not just pass after it.
+
 ## [1.1.60] — 2026-09-10
 
 ### Added

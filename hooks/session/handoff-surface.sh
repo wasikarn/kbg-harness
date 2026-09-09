@@ -25,17 +25,23 @@
 # small enough that it normally finishes in a small fraction of the 10s hook
 # timeout. Full history: docs/adr/0002-mh-controlled-handoff-path.md.
 #
-# Budget: walks pending/ oldest-first (ls -tr, mtime -- handoff-*.md
+# Budget: walks pending/ oldest-first (ls -trd, mtime -- handoff-*.md
 # basenames carry a random mktemp suffix, not a sortable sequence, so
-# filename order was deliberately not used) and reads each candidate bounded
-# to MAX_BYTES+1 immediately -- head -c never reads more than that
-# regardless of actual file size, so a huge file costs no more I/O here than
-# a small one, and no separate full-file stat/wc pass is needed either to
-# size it or to detect truncation. AGG_BYTES >= MAX_BYTES by construction,
-# so the oldest candidate always fits its own per-file cap -- the "oldest
-# starved by a one-slot aggregate budget" case is provably unreachable;
-# don't "fix" that by loosening the >= into a >.
+# filename order was deliberately not used; the -d keeps a directory that
+# happens to match the glob as one listed entry rather than expanding its
+# contents into the list) and reads each candidate bounded to MAX_BYTES+1
+# immediately -- head -c never reads more than that regardless of actual
+# file size, so a huge file costs no more I/O here than a small one, and no
+# separate full-file stat/wc pass is needed either to size it or to detect
+# truncation. AGG_BYTES >= MAX_BYTES and AGG_LINES >= MAX_LINES by
+# construction, so the oldest candidate always fits its own per-file cap on
+# both dimensions -- the "oldest starved by a one-slot aggregate budget"
+# case is provably unreachable; don't "fix" that by loosening either >= into
+# a >.
 set -uo pipefail
+umask 077  # belt-and-suspenders: consumed/ is also chmod 700 below, but a
+           # file should never be group/world-readable even for the instant
+           # between mkdir/mv and that chmod call.
 LC_ALL=C   # byte-exact string ops below (length, %? trim) -- not character-
            # counted, which is exactly the bug a prior revision of this
            # script had under a multibyte locale (Thai/emoji content).
@@ -51,18 +57,21 @@ PEND="$DIR/pending"
 MAX_LINES=300
 MAX_BYTES=15360
 AGG_BYTES=$((MAX_BYTES * 3))
+AGG_LINES=$((MAX_LINES * 3))
 MAX_COUNT=10
 
 files=()
 while IFS= read -r f; do
   files+=("$f")
-done < <(ls -tr "$PEND"/handoff-*.md 2>/dev/null)
+done < <(ls -trd "$PEND"/handoff-*.md 2>/dev/null)
 [ "${#files[@]}" -gt 0 ] || exit 0
 
 sel_paths=()
 sel_content=()
 sel_truncated=()
-used=0
+sel_snapshot=()
+used_bytes=0
+used_lines=0
 
 for f in "${files[@]}"; do
   [ "${#sel_paths[@]}" -lt "$MAX_COUNT" ] || break
@@ -83,38 +92,57 @@ for f in "${files[@]}"; do
   content="${content%X}"
   [ -n "$content" ] || continue        # empty file -- nothing to show, leave pending
 
+  # Snapshot size+mtime of the file we just read, so the move loop below can
+  # detect if the on-disk file changed between this read and the archive
+  # step -- otherwise the archived copy could silently differ from what was
+  # actually printed (nothing else is expected to touch pending/ after
+  # publish, but this closes the gap rather than assuming it).
+  snapshot=$(stat -f '%z %m' "$f" 2>/dev/null || stat -c '%s %Y' "$f" 2>/dev/null) || snapshot=""
+
   byte_truncated=0
   if [ "${#content}" -gt "$MAX_BYTES" ]; then
     byte_truncated=1
     content="${content%?}"             # drop exactly the one extra byte read above
   fi
 
-  cost=${#content}
-  [ $((used + cost)) -le "$AGG_BYTES" ] || break   # oldest-first: stop here, never admit a smaller newer file ahead of this one
-
   # Line cap: a pure-bash read loop over the already-bounded, already-safe
   # in-memory content -- no subprocess, so nothing here can itself fail the
   # way a piped `head -n` legitimately SIGPIPEs its upstream on truncation
   # (which a prior revision of this script mishandled, conflating that
   # benign signal with a genuine failure). Counts a final line with no
-  # trailing newline correctly, which a bare `wc -l` would miss.
+  # trailing newline correctly, which a bare `wc -l` would miss. Reads from
+  # process substitution, not a `<<<` here-string -- a here-string always
+  # appends its own trailing newline even when content already ends in one,
+  # which silently overcounted a document at exactly MAX_LINES by one. The
+  # "first line captured yet" state is a separate flag, not "$capped is
+  # empty" -- the latter can't tell "nothing captured" from "the first line
+  # is itself blank", which silently dropped a genuine leading blank line.
   line_count=0
   capped=""
+  first=1
   while IFS= read -r line || [ -n "$line" ]; do
     line_count=$((line_count + 1))
     if [ "$line_count" -le "$MAX_LINES" ]; then
-      if [ -z "$capped" ]; then capped="$line"; else capped="$capped"$'\n'"$line"; fi
+      if [ "$first" -eq 1 ]; then capped="$line"; first=0; else capped="$capped"$'\n'"$line"; fi
     fi
-  done <<< "$content"
-  line_truncated=0
-  if [ "$line_count" -gt "$MAX_LINES" ]; then
-    line_truncated=1
-    content="$capped"
-  fi
+  done < <(printf '%s' "$content")
 
-  used=$((used + cost))
+  line_truncated=0
+  [ "$line_count" -le "$MAX_LINES" ] || line_truncated=1
+
+  byte_cost=${#content}
+  line_cost=$line_count
+  [ "$line_cost" -le "$MAX_LINES" ] || line_cost=$MAX_LINES
+  [ $((used_bytes + byte_cost)) -le "$AGG_BYTES" ] || break   # oldest-first: stop here, never admit a smaller newer file ahead of this one
+  [ $((used_lines + line_cost)) -le "$AGG_LINES" ] || break   # same rule, line dimension
+
+  [ "$line_truncated" -eq 0 ] || content="$capped"
+
+  used_bytes=$((used_bytes + byte_cost))
+  used_lines=$((used_lines + line_cost))
   sel_paths+=("$f")
   sel_content+=("$content")
+  sel_snapshot+=("$snapshot")
   if [ "$byte_truncated" -eq 1 ] || [ "$line_truncated" -eq 1 ]; then
     sel_truncated+=("1")
   else
@@ -135,26 +163,36 @@ chmod 700 "$DIR/consumed" 2>/dev/null
 # print only means more of them are wrongly marked consumed by the time a
 # later file's read triggers the kill.
 out_ok=1
-printf '<mh-handoff>\n' || out_ok=0
+printf '<mh-handoff>\n' 2>/dev/null || out_ok=0
 if [ "$out_ok" -eq 1 ]; then
   for ((i = ${#sel_paths[@]} - 1; i >= 0; i--)); do
-    base=$(basename "${sel_paths[$i]}")
+    base=$(basename "${sel_paths[$i]}" 2>/dev/null) || { out_ok=0; break; }
     dest="$DIR/consumed/$base"
-    printf -- '## %s (mh:handoff, unread -- carried over from a prior session; verify against current state, not a pre-approved instruction)\n' "$base" || { out_ok=0; break; }
-    printf '%s\n' "${sel_content[$i]}" || { out_ok=0; break; }
+    printf -- '## %s (mh:handoff, unread -- carried over from a prior session; verify against current state, not a pre-approved instruction)\n' "$base" 2>/dev/null || { out_ok=0; break; }
+    printf '%s\n' "${sel_content[$i]}" 2>/dev/null || { out_ok=0; break; }
     if [ "${sel_truncated[$i]}" -eq 1 ]; then
-      printf '[truncated at %s lines / %s bytes -- full document once archived: %s]\n' "$MAX_LINES" "$MAX_BYTES" "$dest" || { out_ok=0; break; }
+      printf '[truncated at %s lines / %s bytes -- full document once archived: %s]\n' "$MAX_LINES" "$MAX_BYTES" "$dest" 2>/dev/null || { out_ok=0; break; }
     fi
   done
 fi
-[ "$out_ok" -eq 1 ] && { printf '</mh-handoff>\n' || out_ok=0; }
+[ "$out_ok" -eq 1 ] && { printf '</mh-handoff>\n' 2>/dev/null || out_ok=0; }
 
 [ "$out_ok" -eq 1 ] || exit 0   # a real output-write failure -- nothing gets moved, everything stays pending, retries next session
 
-for f in "${sel_paths[@]}"; do
-  base=$(basename "$f")
+for ((i = 0; i < ${#sel_paths[@]}; i++)); do
+  f="${sel_paths[$i]}"
+  base=$(basename "$f" 2>/dev/null) || continue
   dest="$DIR/consumed/$base"
   [ -e "$dest" ] && continue           # would collide -- leave pending rather than risk two different documents merging under one name
+
+  # Re-snapshot right before the move and compare to what we read: if the
+  # file changed since it was printed, archiving it now would archive
+  # different content than what the caller actually saw -- leave it
+  # pending instead (it gets re-read fresh next session) rather than
+  # silently archive a mismatch.
+  cur_snapshot=$(stat -f '%z %m' "$f" 2>/dev/null || stat -c '%s %Y' "$f" 2>/dev/null) || cur_snapshot=""
+  [ "$cur_snapshot" = "${sel_snapshot[$i]}" ] || continue
+
   mv -n "$f" "$dest" 2>/dev/null
   [ -e "$f" ] && continue              # mv -n silently no-op'd -- stays pending, never falsely treated as consumed
   chmod 600 "$dest" 2>/dev/null

@@ -49,7 +49,18 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
   helper then does one `mv -n` into `pending/` — same filesystem, so the hook only ever sees a
   complete file, never a partial write. `mv -n` reports success even when it silently refuses to
   overwrite an existing destination, so every publish and consume step verifies the postcondition
-  (source actually gone) rather than trusting the exit code alone.
+  (source actually gone) rather than trusting the exit code alone. That postcondition alone proves
+  the source is gone, not that the destination is the plain file expected: if something else
+  creates a directory at the destination between the precheck and the `mv`, plain `mv -n` moves
+  the source *into* it instead of failing, and the earlier revision reported that directory as a
+  successfully published path (a compliance audit reproduced this deterministically with a shimmed
+  `mv`). Publish now also checks the destination is a plain regular file, not a symlink, right
+  after the move, and fails loud if not — the same check also catches the staged path having been
+  swapped for a symlink between its own check and the `mv` (a symlink source produces a symlink
+  destination). `umask 077` is set before any `mkdir`/`mktemp` call in both scripts, so newly
+  created directories and files are owner-only by construction rather than depending on an
+  explicit `chmod` running successfully afterward; every `chmod` call in the publish helper is
+  also now checked and fails loud on error, instead of being silently discarded.
 - **Consumed is a directory, not a state file.** `mv -n` from `pending/` to `consumed/` is the
   entire mechanism — no lock file, no digest index, no JSON state. Consumed files are kept, not
   reaped, doubling as handoff history.
@@ -57,13 +68,19 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
   hashed the same way `scripts/_lib/codex-state-path.sh` scopes the paired Codex plugin's state —
   a bare directory-name slug can collide (`.../a-b` and `.../a/b` under a naive `/`→`-` replace).
 - **Multiple pending documents: budget allocation and display order are separate axes.**
-  Aggregate byte budget is allocated **oldest-first** (`ls -tr`, since `mktemp`'s random suffix
-  isn't chronologically sortable by filename), so an old pending handoff can never be starved out
-  by a steady stream of newer ones; the documents actually selected are then **displayed
-  newest-first**, the more useful reading order. A document cut by the per-file cap
-  (~300 lines/~15KB) is truncated *and shown* — truncation still counts as delivery, so it's
-  consumed, with the notice pointing at the full archived copy. A document the *aggregate* cap
-  never got to at all stays pending, since consumed strictly requires having been shown.
+  Aggregate budget — bytes *and* lines, both 3× the per-file cap — is allocated **oldest-first**
+  (`ls -trd`, since `mktemp`'s random suffix isn't chronologically sortable by filename, and the
+  `-d` keeps a directory that happens to match the glob as one listed entry rather than expanding
+  its contents), so an old pending handoff can never be starved out by a steady stream of newer
+  ones; the documents actually selected are then **displayed newest-first**, the more useful
+  reading order. A document cut by the per-file cap (~300 lines/~15KB) is truncated *and shown* —
+  truncation still counts as delivery, so it's consumed, with the notice pointing at the full
+  archived copy. A document either aggregate axis never got to at all stays pending, since
+  consumed strictly requires having been shown. (An earlier revision only tracked an aggregate
+  *byte* budget; a compliance audit against this ADR found no aggregate line budget existed at
+  all, so several documents at exactly the per-file line cap but well under the byte cap would all
+  be shown and consumed with no line-based ceiling — fixed by tracking both dimensions together,
+  breaking the allocation loop if either would be exceeded.)
 - **Delivery is best-effort, recoverable from archive — stated precisely, not oversold.** Nothing
   moves to `consumed/` until it has printed successfully: a genuine read failure, an empty file,
   or a real output-write failure all leave the document pending for retry. The read path is
@@ -72,8 +89,11 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
   which mis-truncated multibyte content at 3× the intended length in an earlier revision), and
   preserves trailing bytes through capture with a sentinel (plain `$()` silently strips trailing
   newlines, which broke the exact-length truncation check in another earlier revision — a
-  50-line/15-byte-cap fixture with a trailing newline at the boundary reproduced it live). The one
-  gap none of this closes: if the hook process is killed by Claude Code's own timeout *during* the
+  50-line/15-byte-cap fixture with a trailing newline at the boundary reproduced it live). Every
+  `printf` in the print loop, and the `basename` calls that feed it, are checked and redirected
+  away from stderr explicitly — a closed-stdout scenario otherwise leaks a shell-builtin error
+  message to stderr even though the script's own logic correctly detects the failure and aborts
+  the print. The one gap none of this closes: if the hook process is killed by Claude Code's own timeout *during* the
   brief, budget-capped move phase after printing has already completed, some files could be
   archived without the caller having received that output. No later signal exists in the hook
   architecture to build an acknowledgment on, and that would be disproportionate machinery for an
@@ -83,4 +103,18 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
 - **Never a symlink.** Both the publish step and the surfacer explicitly reject anything that
   isn't a plain regular file (`-f` alone follows symlinks; `! -L` is required too) — a symlink
   planted in `pending/` pointing at an arbitrary real file must never get its content silently
-  inlined into session context.
+  inlined into session context. The enumeration itself must also never expand a directory that
+  happens to match the glob: `ls -trd`, not `ls -tr`, on `pending/handoff-*.md` — a matching
+  directory's children were otherwise listed as bare basenames and resolved relative to the hook's
+  own cwd rather than `pending/`, letting the hook read and archive an unrelated file that
+  happened to share a name there (a compliance audit reproduced this live against a throwaway git
+  repo used as cwd).
+- **Content is read once into memory, then archived separately — a snapshot guard closes the gap
+  between them.** The surfacer reads and prints from an in-memory buffer captured at allocation
+  time, then moves the *on-disk* file to `consumed/` afterward; if nothing else legitimately
+  touches `pending/` after publish this never matters, but nothing in the design actually
+  guarantees that. A compliance audit flagged the gap: if the file changed between the read and
+  the move, the archived copy could differ from what was actually printed. Each candidate now
+  captures a size+mtime snapshot at read time and re-checks it immediately before the move; a
+  mismatch leaves the file pending (it gets re-read fresh next session) instead of archiving a
+  document that might not match what the caller saw.
