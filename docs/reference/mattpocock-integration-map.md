@@ -22,7 +22,8 @@ the `mattpocock-skills` cache version changes. No check parses this table.
 | implement, to-spec, to-tickets | user | the spec-to-ship chain; mh names no step of it |
 | prototype | model | deferred: no mh surface produces throwaway spikes |
 | triage | user | deferred: mh no longer ships a triage-labels doc |
-| wayfinder, handoff, teach, wait-what | user | deferred: their former mh touchpoints were deleted in the v1.0.0 rebuild |
+| handoff | user | deliberately not routed to. mh ships its own `mh:handoff` (`skills/workflow/handoff/`) instead of detecting or delegating to this skill — its own `SKILL.md` names no write tool and no output path/filename convention, so nothing about it could be relied on for auto-surfacing. `docs/adr/0002-mh-controlled-handoff-path.md` |
+| wayfinder, teach, wait-what | user | deferred: their former mh touchpoints were deleted in the v1.0.0 rebuild |
 | wizard | model | deferred |
 | writing-for-agents | model | `CLAUDE.md` Authoring section; `docs/reference/skill-authoring-conventions.md` |
 

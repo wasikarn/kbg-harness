@@ -52,7 +52,9 @@ commit and one push running zero gates. Verify with `test -d "$(git config core.
   Pre-commit needs 0 CRIT. Copy the new `agents/*.md` into the currently loaded cache dir by
   hand before committing; the next `claude plugin update` loads a fresh versioned dir anyway
   (the old dir and its hand copy stay behind, harmless), and the agent is usable after the
-  next restart without waiting for it (2026-09-06, v1.1.18).
+  next restart without waiting for it (2026-09-06, v1.1.18). Check 02 (skill loadability) is the
+  same trap for a brand-new `skills/<bucket>/<name>/` — same fix: hand-copy it into the loaded
+  cache dir before committing (confirmed 2026-09-10, `mh:handoff`, v1.1.60).
 - **The plugin runs every hook machine-wide.** A gate crash locks out every session that has
   `mh@wasikarn` enabled, not just sessions in this repo. A missing sibling `.py` or lib module
   must fail open with a diagnostic, never exit non-zero.

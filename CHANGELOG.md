@@ -5,6 +5,22 @@ All notable changes to `mh` are documented here. Format loosely follows
 
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
+## [1.1.60] — 2026-09-10
+
+### Added
+
+- `mh:handoff` and `session:handoff-surface`: mh writes its own session-handoff document to a
+  path it controls, instead of detecting or delegating to `mattpocock-skills:handoff` (whose own
+  `SKILL.md` names no write tool and no output path/filename convention, ruled out after two
+  Codex review rounds on the originally planned `PostToolUse` detection design). `/mh:handoff`
+  publishes atomically (`staging/` -> `pending/` via `mktemp` + `mv -n` with a postcondition
+  check, since `mv -n` exits 0 even on a silent no-op collision); the 4th `SessionStart` hook
+  inlines unread documents newest-first at the next `startup`/`resume`/`clear` (deliberately not
+  `compact`, so a session doesn't re-consume its own just-written handoff), allocating its
+  per-invocation budget oldest-first so an old pending document can't be starved by a stream of
+  newer ones. Delivery is best-effort, recoverable from archive, not a guarantee -- full design
+  history and the accepted residual gap: `docs/adr/0002-mh-controlled-handoff-path.md`.
+
 ## [1.1.59] — 2026-09-08
 
 ### Fixed
