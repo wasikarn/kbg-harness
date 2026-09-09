@@ -33,6 +33,18 @@
             "timeout": 10
           }
         ]
+      },
+      {
+        "id": "session:handoff-surface",
+        "matcher": "startup|resume|clear",
+        "description": "Inline any unread mh:handoff documents for this project, newest-first, then archive them; silent when none pending. Matcher excludes compact so the session that just wrote a handoff doesn't immediately re-consume it.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/handoff-surface.sh\"",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PreToolUse": [
