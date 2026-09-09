@@ -3,6 +3,31 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.62] — 2026-09-10
+
+### Fixed
+
+- `session:handoff-surface`: a `/mh:deep-audit` pass (Codex primary was rate-limited; fell back to
+  a fresh-context Claude checker, independence reduced for this pass) found 3 real defects the
+  compliance-audit's own fresh-context pass missed. The size+mtime snapshot guard meant to prevent
+  archiving stale content failed *open*, not closed, when `stat` is unavailable in `PATH`: both the
+  read-time and move-time snapshots fell back to the same empty string, which then compared equal
+  regardless of whether the content actually changed — fixed with a distinct literal fallback per
+  call site, so a `stat` failure at either point always mismatches. The consume-side `pending/` ->
+  `consumed/` move lacked the post-`mv` plain-regular-file check the publish side already carries
+  for the identical directory-collision race (fixed there in v1.1.61) — a directory materializing
+  at the destination between the precheck and the move was silently `chmod 600`'d, stripping its
+  own execute bit; the consume step now skips the `chmod` on anything that isn't a plain regular
+  file after the move, mirroring the publish-side guard. `MAX_COUNT=10`, the per-invocation
+  document-count cap, was undocumented in the ADR and the script's own header comment, and untested
+  past a 4-document fixture — documented in both places and covered by a 12-document test asserting
+  the cap holds at exactly the 10 oldest. A fourth finding (no lock across two SessionStart
+  invocations racing on the same `pending/` dir) was accepted as a documented limitation rather
+  than fixed with a lock: both deliveries are to genuinely distinct fresh sessions, so it's
+  duplicate delivery, not corruption, and a `flock`-style mutex would add a hang/deadlock risk to a
+  hook whose one hard contract is to never block session start. 3 new regression tests added (28
+  total in this suite), each independently confirmed to fail against the pre-fix code.
+
 Pre-`1.0.0`: breaking changes may land in any `0.x` release.
 
 ## [1.1.61] — 2026-09-10

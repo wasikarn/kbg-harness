@@ -37,7 +37,10 @@
 # construction, so the oldest candidate always fits its own per-file cap on
 # both dimensions -- the "oldest starved by a one-slot aggregate budget"
 # case is provably unreachable; don't "fix" that by loosening either >= into
-# a >.
+# a >. A third budget, MAX_COUNT, caps how many documents get selected at
+# all, independent of bytes/lines -- it bounds per-file overhead a stream of
+# many tiny documents could otherwise rack up while still fitting the
+# byte/line aggregates.
 set -uo pipefail
 umask 077  # belt-and-suspenders: consumed/ is also chmod 700 below, but a
            # file should never be group/world-readable even for the instant
@@ -58,7 +61,10 @@ MAX_LINES=300
 MAX_BYTES=15360
 AGG_BYTES=$((MAX_BYTES * 3))
 AGG_LINES=$((MAX_LINES * 3))
-MAX_COUNT=10
+MAX_COUNT=10  # third, independent budget dimension: bounds per-file overhead
+              # (a header line per document) that a stream of many tiny
+              # documents could rack up while still fitting the byte/line
+              # aggregate budgets above
 
 files=()
 while IFS= read -r f; do
@@ -96,8 +102,14 @@ for f in "${files[@]}"; do
   # detect if the on-disk file changed between this read and the archive
   # step -- otherwise the archived copy could silently differ from what was
   # actually printed (nothing else is expected to touch pending/ after
-  # publish, but this closes the gap rather than assuming it).
-  snapshot=$(stat -f '%z %m' "$f" 2>/dev/null || stat -c '%s %Y' "$f" 2>/dev/null) || snapshot=""
+  # publish, but this closes the gap rather than assuming it). The fallback
+  # on a stat failure must NOT be a shared value like "" -- two independent
+  # failures (read-time and move-time) would then compare equal regardless
+  # of whether the content actually changed, silently reopening the exact
+  # gap this guard exists to close. Each call site's fallback is a distinct
+  # literal string instead, so a stat failure at either point always
+  # mismatches and fails closed (file stays pending) rather than open.
+  snapshot=$(stat -f '%z %m' "$f" 2>/dev/null || stat -c '%s %Y' "$f" 2>/dev/null) || snapshot="stat-unavailable-at-read"
 
   byte_truncated=0
   if [ "${#content}" -gt "$MAX_BYTES" ]; then
@@ -190,11 +202,18 @@ for ((i = 0; i < ${#sel_paths[@]}; i++)); do
   # different content than what the caller actually saw -- leave it
   # pending instead (it gets re-read fresh next session) rather than
   # silently archive a mismatch.
-  cur_snapshot=$(stat -f '%z %m' "$f" 2>/dev/null || stat -c '%s %Y' "$f" 2>/dev/null) || cur_snapshot=""
+  cur_snapshot=$(stat -f '%z %m' "$f" 2>/dev/null || stat -c '%s %Y' "$f" 2>/dev/null) || cur_snapshot="stat-unavailable-at-move"
   [ "$cur_snapshot" = "${sel_snapshot[$i]}" ] || continue
 
   mv -n "$f" "$dest" 2>/dev/null
   [ -e "$f" ] && continue              # mv -n silently no-op'd -- stays pending, never falsely treated as consumed
+  # The [ -e "$dest" ] precheck above only proves the destination was absent
+  # at check time -- if something else creates a directory there before this
+  # mv runs, mv -n moves the source INTO it instead of failing (same race
+  # skills/workflow/handoff/scripts/handoff-path.sh's --publish already
+  # guards against). Source is already gone at this point either way, so the
+  # only thing left to protect is not chmod-ing whatever actually landed.
+  [ -f "$dest" ] && [ ! -L "$dest" ] || continue
   chmod 600 "$dest" 2>/dev/null
 done
 

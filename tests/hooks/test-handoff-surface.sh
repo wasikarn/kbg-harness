@@ -423,5 +423,91 @@ else
   bad "snapshot-mismatch guard failed: out='$OUT' pub_exists=$([ -f "$PUB" ] && echo yes || echo no)"
 fi
 
+# --- deep-audit finding: the size+mtime snapshot guard must fail CLOSED,
+# not open, when stat is unavailable -- a stat failure at read-time and at
+# move-time must never both fall back to the same shared value, or the
+# mismatch check trivially "passes" regardless of whether content actually
+# changed. ---
+H=$(fresh_home)
+P=$(alloc "$H"); printf 'must stay pending when stat is unavailable\n' > "$P"
+PUB=$(publish "$H" "$P")
+STATFAIL_DIR=$(mktemp -d); EXTRA_TRASH+=("$STATFAIL_DIR")
+cat > "$STATFAIL_DIR/stat" <<'SHIMEOF'
+#!/usr/bin/env bash
+exit 1
+SHIMEOF
+chmod +x "$STATFAIL_DIR/stat"
+OUT=$(HOME="$H" PATH="$STATFAIL_DIR:$PATH" bash "$HOOK" 2>"$H/err")
+if echo "$OUT" | grep -q 'must stay pending when stat is unavailable' && [ -f "$PUB" ] && [ ! -s "$H/err" ]; then
+  ok "snapshot guard fails closed (leaves the file pending) when stat is unavailable, not open"
+else
+  bad "snapshot guard failed open without stat: out='$OUT' pub_exists=$([ -f "$PUB" ] && echo yes || echo no)"
+fi
+
+# --- deep-audit finding: the consume-side mv (pending/ -> consumed/) lacked
+# the same post-mv plain-regular-file check the publish side already has for
+# an identical race -- the [-e "$dest"] precheck only proves absence at
+# check time, so something creating a directory at $dest before mv -n runs
+# moves the source INTO it instead of failing, and the old code went on to
+# chmod 600 whatever landed there (stripping a directory's own execute bit).
+# A shimmed mv reproduces the race deterministically, same technique as
+# tests/skills/handoff/test-handoff-path.sh's publish-side race test. Since
+# umask 077 makes mkdir create the shimmed directory at mode 700, the
+# distinguishing signal is whether that mode survives: 700 if the chmod was
+# correctly skipped, 600 if the old code ran chmod on it regardless. ---
+H=$(fresh_home)
+P=$(alloc "$H"); printf 'consume race content\n' > "$P"
+PUB=$(publish "$H" "$P")
+MVSHIM_DIR=$(mktemp -d); EXTRA_TRASH+=("$MVSHIM_DIR")
+cat > "$MVSHIM_DIR/mv" <<'SHIMEOF'
+#!/usr/bin/env bash
+# handoff-surface.sh's consume step always calls: mv -n "$SRC" "$DEST"
+if [ "$1" = "-n" ] && [ "$#" -eq 3 ]; then
+  mkdir -p "$3"
+fi
+exec /bin/mv "$@"
+SHIMEOF
+chmod +x "$MVSHIM_DIR/mv"
+CONS_DIR="$(dirname "$(dirname "$PUB")")/consumed"
+OUT=$(HOME="$H" PATH="$MVSHIM_DIR:$PATH" bash "$HOOK" 2>"$H/err")
+DEST="$CONS_DIR/$(basename "$PUB")"
+DEST_MODE=""
+[ -d "$DEST" ] && DEST_MODE=$(stat -f '%Lp' "$DEST" 2>/dev/null || stat -c '%a' "$DEST" 2>/dev/null)
+if echo "$OUT" | grep -q 'consume race content' && [ "$DEST_MODE" = "700" ] && [ ! -s "$H/err" ]; then
+  ok "a destination-directory race on the consume side is never chmod'd -- old code stripped the directory's own mode instead"
+else
+  bad "consume-side directory-collision race not handled safely: out='$OUT' dest_is_dir=$([ -d "$DEST" ] && echo yes || echo no) dest_mode=$DEST_MODE"
+fi
+
+# --- deep-audit finding: MAX_COUNT (10) was documented in the plan but
+# untested at any scale beyond the 4-document aggregate-budget fixture --
+# 12 tiny documents (each far under every byte/line cap) must still stop at
+# exactly the 10 oldest, leaving the 2 newest pending. ---
+H=$(fresh_home)
+declare -a COUNTPUBS=()
+for i in $(seq 1 12); do
+  P=$(alloc "$H"); printf 'countdoc %02d\n' "$i" > "$P"
+  COUNTPUBS+=("$(publish "$H" "$P")")
+  sleep 1.1   # distinct mtimes for ls -tr ordering
+done
+OUT=$(surface "$H" 2>"$H/err")
+SHOWN=0
+for i in $(seq 1 10); do
+  idx=$((i - 1))
+  if echo "$OUT" | grep -q "countdoc $(printf '%02d' "$i")" && [ -f "$(consumed_path "${COUNTPUBS[$idx]}")" ]; then
+    SHOWN=$((SHOWN + 1))
+  fi
+done
+STILL_PENDING=0
+for i in 11 12; do
+  idx=$((i - 1))
+  [ -f "${COUNTPUBS[$idx]}" ] && STILL_PENDING=$((STILL_PENDING + 1))
+done
+if [ "$SHOWN" -eq 10 ] && [ "$STILL_PENDING" -eq 2 ] && [ ! -s "$H/err" ]; then
+  ok "MAX_COUNT caps selection at the 10 oldest documents, leaving the 2 newest pending"
+else
+  bad "MAX_COUNT cap not enforced correctly: shown=$SHOWN still_pending=$STILL_PENDING"
+fi
+
 echo "hooks/handoff-surface: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

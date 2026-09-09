@@ -60,7 +60,11 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
   destination). `umask 077` is set before any `mkdir`/`mktemp` call in both scripts, so newly
   created directories and files are owner-only by construction rather than depending on an
   explicit `chmod` running successfully afterward; every `chmod` call in the publish helper is
-  also now checked and fails loud on error, instead of being silently discarded.
+  also now checked and fails loud on error, instead of being silently discarded. The surfacer's
+  own `pending/` → `consumed/` move carries the identical plain-regular-file check after its own
+  `mv -n` — a deep-audit pass found the first revision of that fix had only landed on the publish
+  side, leaving the consume side open to the same directory-collision race (and to a `chmod` on
+  whatever actually landed there instead of the intended file).
 - **Consumed is a directory, not a state file.** `mv -n` from `pending/` to `consumed/` is the
   entire mechanism — no lock file, no digest index, no JSON state. Consumed files are kept, not
   reaped, doubling as handoff history.
@@ -80,7 +84,10 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
   *byte* budget; a compliance audit against this ADR found no aggregate line budget existed at
   all, so several documents at exactly the per-file line cap but well under the byte cap would all
   be shown and consumed with no line-based ceiling — fixed by tracking both dimensions together,
-  breaking the allocation loop if either would be exceeded.)
+  breaking the allocation loop if either would be exceeded.) A third, independent cap bounds the
+  **count** of documents selected per invocation (10) regardless of bytes/lines — a stream of many
+  tiny documents could otherwise all fit the byte/line aggregates while still costing real overhead
+  (one header line printed per document).
 - **Delivery is best-effort, recoverable from archive — stated precisely, not oversold.** Nothing
   moves to `consumed/` until it has printed successfully: a genuine read failure, an empty file,
   or a real output-write failure all leave the document pending for retry. The read path is
@@ -99,7 +106,13 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
   architecture to build an acknowledgment on, and that would be disproportionate machinery for an
   advisory nudge — mitigated by keeping the whole invocation small enough to normally finish in a
   fraction of the 10-second hook timeout, not solved by pretending the mechanism guarantees more
-  than it does.
+  than it does. **A second, separate residual gap, named rather than engineered around: two
+  sessions starting at nearly the same moment in the same project can both read and print the
+  same pending document** — no lock guards the read-print-archive sequence. Both delivery attempts
+  are legitimate (each is a genuinely fresh session that hasn't seen the content yet), so this is
+  duplicate delivery, not corruption; a flock-style mutex would close it but adds a hang/deadlock
+  risk to a hook whose one hard contract is to never block session start, which is a worse trade
+  for an advisory nudge than an occasional repeat.
 - **Never a symlink.** Both the publish step and the surfacer explicitly reject anything that
   isn't a plain regular file (`-f` alone follows symlinks; `! -L` is required too) — a symlink
   planted in `pending/` pointing at an arbitrary real file must never get its content silently
@@ -117,4 +130,9 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
   the move, the archived copy could differ from what was actually printed. Each candidate now
   captures a size+mtime snapshot at read time and re-checks it immediately before the move; a
   mismatch leaves the file pending (it gets re-read fresh next session) instead of archiving a
-  document that might not match what the caller saw.
+  document that might not match what the caller saw. A deep-audit pass then found the guard's own
+  failure mode: when `stat` itself is unavailable, both the read-time and move-time snapshots fell
+  back to the same empty string, which compared equal regardless of whether the content had
+  actually changed — the guard failed open in exactly the scenario it exists for. Each fallback is
+  now a distinct literal instead of a shared empty one, so a `stat` failure at either point always
+  mismatches and fails closed.
