@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: "Writes a session handoff document to a path mh manages and auto-surfaces at the next session start. Use when the user says 'write a handoff' or types /mh:handoff before ending a session. Don't use mid-task."
+description: "Writes a session handoff document to a path mh manages, auto-surfacing it at the next session start. Use when the user types /mh:handoff."
 argument-hint: "[what will the next session be used for?]"
 disable-model-invocation: true
 disable-model-invocation-reason: writes a canonical doc the user decides to end a session with — never a step the model chains into on its own
