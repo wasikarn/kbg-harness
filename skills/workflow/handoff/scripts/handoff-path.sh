@@ -5,11 +5,12 @@
 # Storage: $HOME/.claude/state/mh-handoffs/<slug>-<hash>/{staging,pending,consumed}/
 # Scoped to git repo root (falls back to physical cwd outside a repo) so a
 # handoff written from a subdirectory still surfaces from anywhere in the
-# same repo, and two different repos never collide. <slug>-<hash> mirrors
-# scripts/_lib/codex-state-path.sh's derivation: basename sanitized to
-# [a-zA-Z0-9._-], plus the first 16 hex chars of sha256(realpath) for
-# collision-freedom (a bare slug alone can collide -- two repos both named
-# "app" on different disks, or .../a-b vs .../a/b under a naive "/" -> "-").
+# same repo, and two different repos never collide. <slug>-<hash> is
+# scripts/_lib/slug-hash.sh's derivation, shared with
+# scripts/_lib/codex-state-path.sh: basename sanitized to [a-zA-Z0-9._-],
+# plus the first 16 hex chars of sha256(realpath) for collision-freedom (a
+# bare slug alone can collide -- two repos both named "app" on different
+# disks, or .../a-b vs .../a/b under a naive "/" -> "-").
 #
 # Default (no args): mkdir -p's staging/ (0700), atomically reserves a name
 # via mktemp, prints the staging path. Nothing is published yet -- the
@@ -33,23 +34,16 @@ set -uo pipefail
 
 fail() { echo "handoff-path: $1" >&2; exit 1; }
 
+HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$HERE/../../../../scripts/_lib/slug-hash.sh"
+
 # Project root: git repo root, falling back to physical cwd outside a repo.
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || ROOT="$(pwd -P)"
 [ -n "$ROOT" ] || fail "could not determine a project root"
 
-BASE=$(basename "$ROOT")
-SLUG=$(printf '%s' "$BASE" | LC_ALL=C sed -E 's/[^a-zA-Z0-9._-]+/-/g; s/^-+//; s/-+$//')
-[ -n "$SLUG" ] || SLUG="workspace"
+SLUGHASH=$(slug_hash "$ROOT") || fail "no sha256 tool available (shasum or sha256sum)"
 
-if command -v shasum >/dev/null 2>&1; then
-  HASH=$(printf '%s' "$ROOT" | shasum -a 256 | cut -c1-16)
-elif command -v sha256sum >/dev/null 2>&1; then
-  HASH=$(printf '%s' "$ROOT" | sha256sum | cut -c1-16)
-else
-  fail "no sha256 tool available (shasum or sha256sum)"
-fi
-
-PROJECT_DIR="$HOME/.claude/state/mh-handoffs/$SLUG-$HASH"
+PROJECT_DIR="$HOME/.claude/state/mh-handoffs/$SLUGHASH"
 
 case "${1:-}" in
   --dir)
