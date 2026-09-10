@@ -16,6 +16,7 @@ step can undo. the PreToolUse entries in `hooks/hooks.json` are the whole list:
 | `gate:task:complete-separation` | a subagent marking its own task complete |
 | `gate:write:test-integrity` | asks before a write that weakens a test |
 | `gate:write:config-guard` | asks before a write to Claude Code settings `hooks`/`enabledPlugins` |
+| `gate:skill:codex-setup-guard` | asks before a model-invoked `Skill(codex:setup)` call carrying `--enable-review-gate` |
 
 Everything not in that table is advice: METHODOLOGY.md text, skill prose, agent guardrails.
 Advice is honest about being advice; no doc claims a check enforces a rule unless a file in

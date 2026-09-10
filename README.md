@@ -3,7 +3,7 @@
 A Claude Code plugin (`mh@wasikarn`) that composes `mattpocock-skills` instead of duplicating
 it — checked first, before any native surface gets built. Beyond that, it adds only what native
 Claude Code and the plugins it sits next to (`ponytail`, `diagram-design`, `qmd`) can't already
-do: 6 deny/ask gates, a 4 KB methodology injected at session start, and a small set of skills and
+do: 7 deny/ask gates, a 4 KB methodology injected at session start, and a small set of skills and
 agents that earned their place.
 
 ## How it works
@@ -40,7 +40,7 @@ The plugin ships `defaultEnabled: false`; add `"mh@wasikarn": true` to `settings
 `enable` did not. Same-version edits never reach the cache — bump `plugin.json` before
 `claude plugin update`. Uninstall: `/plugin uninstall mh@wasikarn`.
 
-## The 6 gates (`hooks/hooks.json`)
+## The 7 gates (`hooks/hooks.json`)
 
 | gate | effect |
 |---|---|

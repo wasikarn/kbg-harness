@@ -3,6 +3,19 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.75] — 2026-09-10
+
+### Fixed
+
+- **"6 gates" was stale prose drift in two docs** — `hooks.json` has had 7 PreToolUse gates
+  since `gate:skill:codex-setup-guard` shipped (v1.1.5), but `README.md`'s heading/intro and
+  `docs/reference/operating-model.md`'s gate table never caught up. `README.md`'s table itself
+  already listed all 7 rows correctly; only its "## The 6 gates" heading and the intro's "6
+  deny/ask gates" needed the count fixed. `operating-model.md`'s table was missing the
+  `gate:skill:codex-setup-guard` row entirely, despite the surrounding prose claiming it's "the
+  whole list" — added. Noted as an explicit out-of-scope follow-up during v1.1.74's
+  `hooks.json`/id-registry work, fixed now.
+
 ## [1.1.74] — 2026-09-10
 
 ### Fixed
