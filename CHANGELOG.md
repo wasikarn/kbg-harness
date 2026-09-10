@@ -3,6 +3,27 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.77] — 2026-09-10
+
+### Changed
+
+- **`docs/reference/spawn-brief.md`'s `Done-when` gains an EXPECT half**, the one item worth
+  adopting from an audit of the `unlazy` skill (`docs/research/unlazy-adoption-audit-2026-09-10.md`):
+  exit status alone was already flagged as insufficient evidence
+  (`harness-engineering-checklist-article-audit-2026-09-07.md:16` scored this "advice"-tier
+  covered, not fully closed); now the field also requires a task-relevant assertion on the
+  output — literal string, count, or structured field — since a skipped suite exits 0 too, and a
+  file existing isn't evidence of its content.
+- **`skills/review/compliance-audit/SKILL.md`'s plan-file-reuse rationale corrected** (3 spots):
+  the prior text claimed Claude Code always overwrites one plan file per session. Checked against
+  `~/.claude/plans/` and session transcripts on CC 2.1.267 — a session entering plan mode twice
+  wrote two distinct, uniquely-named files, neither overwritten. Both existing rules ("don't trust
+  mtime," "never enter plan mode to gate audit scope") survive on corrected grounds (multiple
+  files can coexist per session; plan mode is read-only and blocks the worktree pin + gauntlet
+  run), not the original overwrite claim. This also killed the top-ranked build candidate from the
+  same audit (a plan-text-sealing sensor) — its whole premise was this exact race, now
+  unconfirmed at best.
+
 ## [1.1.76] — 2026-09-10
 
 ### Fixed

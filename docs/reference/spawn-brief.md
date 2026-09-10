@@ -13,7 +13,10 @@ The shape every dispatched subagent prompt takes. Short on purpose; the constrai
 <explicit paths; everything else is read-only>
 
 ## Done-when
-<observable: a passing command, a file that exists, a grep that returns 0 hits>
+<observable and pre-stated before starting: exit status plus a task-relevant assertion on the
+output — a literal string, a count (tests run/failed/skipped), or a structured field, whichever
+fits. Exit 0 alone is not evidence (a skipped suite exits 0). A file existing is not evidence
+either — check the content that has to be there, not just presence, or a stale file passes free.>
 
 Constraints: stage by explicit path only, never stash/reset/checkout/add -A; delete with `trash`;
 return `NEEDS-DECISION <question>` instead of guessing; a ruling made within your own authority

@@ -49,10 +49,11 @@ verifier budget.
 **Actions**:
 1. Check whether the user supplied a plan path, PR number, or commit range. If not, prefer the
    plan already in this conversation's context. **Don't trust the plan file's mtime as a
-   fallback**: Claude Code reuses one plan file per session, so a later unrelated plan-mode entry
-   silently overwrites the one you meant to audit. If neither conversation context nor the
-   user's own words give a clear source, ask explicitly which plan to audit rather than guessing
-   from a file timestamp.
+   fallback**: each plan-mode entry writes its own uniquely-named file under `~/.claude/plans/`
+   (verified 2026-09-10 on CC 2.1.267), so mtime alone doesn't tell you which of several plan
+   files in a session is the one that was actually approved — newest isn't necessarily it. If
+   neither conversation context nor the user's own words give a clear source, ask explicitly
+   which plan to audit rather than guessing from a file timestamp.
 2. Extract every discrete requirement from the plan — numbered findings, phases, explicit "must"
    statements — into a flat checklist. This is the audit's ground truth.
 3. Identify the diff to audit across **every** repo the plan touched (a multi-repo plan lists
@@ -66,9 +67,9 @@ verifier budget.
 5. Present the requirement checklist in prose, plus any deviation you're already aware of. Gate
    with `AskUserQuestion` **only when the plan source is genuinely ambiguous** (multi-repo, no
    conversation context, no user-named path) — otherwise proceed; a wrong scope with one verifier
-   is a cheap re-run, not wasted fan-out budget. **Never enter plan mode for this**: it reuses
-   the session's one plan file, which would overwrite the very plan this audit exists to verify
-   against.
+   is a cheap re-run, not wasted fan-out budget. **Never enter plan mode for this**: plan mode is
+   read-only and blocks step 4's `git worktree add --detach` and the Phase 2 gauntlet run this
+   audit needs to actually execute.
 
 ---
 
@@ -164,7 +165,7 @@ fix.
 - Reporting compliance as one blended percentage instead of a per-requirement verdict.
 - Trusting "gauntlet was green during implementation" without re-running it fresh.
 - Declaring done with an open MISSING or unaccepted DEVIATED still on the table.
-- Entering plan mode to gate audit scope — overwrites the plan being audited (Phase 1).
+- Entering plan mode to gate audit scope — its read-only mode blocks the worktree pin and gauntlet run (Phase 1).
 - Running the verifier against the shared main tree instead of a pinned detached worktree.
 
 ## Named Model
