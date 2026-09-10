@@ -3,6 +3,35 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.72] — 2026-09-10
+
+### Fixed
+
+- **`docs/reference/mattpocock-integration-map.md` row 18 cited a boundary line that never
+  named the skill it claimed to cover.** The row read `grill-me, to-questionnaire |
+  agents/requirement-analyst.md boundary line`, but that file's actual boundary-line text
+  (`## Scope vs /mattpocock-skills:grill-me and mattpocock-skills:grilling`) names only
+  `grill-me` and `grilling` — never `to-questionnaire`. Caught by a Claude fallback plan-review
+  (Codex rate-limited again, same usage-limit error as v1.1.71) reading the cited file directly
+  rather than trusting the row's own claim. `to-questionnaire` dropped from row 18; a
+  repo-wide grep found no other mh surface names it either — it had a real touchpoint
+  pre-rebuild (`CHANGELOG.md:2046`, matt's v1.2 sync, v0.68.262) that was lost in the v1.0.0
+  rebuild, the same way `wayfinder`'s was, just never marked `deferred` the way wayfinder's row
+  was. A second fresh-context fallback pass re-verified the fix against the actual files
+  (requirement-analyst.md, the CHANGELOG citation, 3 unrelated rows spot-checked clean) before
+  this shipped.
+
+### Changed
+
+- **4 previously-`deferred` or falsely-cited `mattpocock-skills` rows given honest touchpoints**
+  in the integration map: `wait-what`, `teach`, `to-questionnaire`, and `wizard` are now
+  documented as user↔agent gap-closers with no mh wrapper — each works as a direct
+  `/mattpocock-skills:<name>` invocation, since none of them writes to a hard-to-find path the
+  way `handoff` used to (the reason `mh:handoff` exists at all, `docs/adr/0002`). No new mh
+  surface was built: `ask-matt` and `to-spec` were confirmed already covered by existing rows
+  and left alone. `docs/reference/composer-not-creator.md` gains a short pointer at the
+  integration map so a future touchpoint gets checked against it before it's added twice.
+
 ## [1.1.71] — 2026-09-10
 
 ### Fixed

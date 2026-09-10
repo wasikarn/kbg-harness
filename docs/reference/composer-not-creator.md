@@ -23,6 +23,12 @@ without them, the installed plugins are the only source.
 A clone reached via `claude --add-dir` loads none of its own CLAUDE.md by default; set
 `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1` if you need its instructions, not just its files.
 
+## Which mattpocock skill routes where
+
+`docs/reference/mattpocock-integration-map.md` tracks, per installed `mattpocock-skills` skill,
+whether mh routes to it, defers, or ships its own surface instead — re-check it before adding a
+new touchpoint so a second one doesn't drift from the first.
+
 ## Vetting a third-party plugin or skill
 
 A skill gives Claude new capabilities through instructions and code, so treat installing one

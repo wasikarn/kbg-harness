@@ -15,7 +15,7 @@ the `mattpocock-skills` cache version changes. No check parses this table.
 | domain-modeling | model | `CLAUDE.md` Authoring section (root `CONTEXT.md` + `docs/adr/`, created lazily) |
 | grill-with-docs, improve-codebase-architecture | user | paths into domain-modeling; unrouted from mh prose |
 | grilling | model | escalation for a contested call; no mh pointer. Main session only (its research step dispatches a subagent) |
-| grill-me, to-questionnaire | user | `agents/requirement-analyst.md` boundary line (live interview vs analyzing a written requirement) |
+| grill-me | user | `agents/requirement-analyst.md` boundary line (live interview vs analyzing a written requirement) |
 | research | model | `CLAUDE.md` research section defers to it after qmd/context7. Main session only |
 | resolving-merge-conflicts | model | adjacent to `gate:bash:irrecoverable`: its "stage everything" step is why `git add -A` is allowed while `MERGE_HEAD` exists |
 | setup-matt-pocock-skills | user | `README.md` Install section. Re-running regenerates its output files from scratch |
@@ -24,8 +24,9 @@ the `mattpocock-skills` cache version changes. No check parses this table.
 | triage | user | deferred: mh no longer ships a triage-labels doc |
 | handoff | user | deliberately not routed to. mh ships its own `mh:handoff` (`skills/workflow/handoff/`) instead of detecting or delegating to this skill — its own `SKILL.md` names no write tool and no output path/filename convention, so nothing about it could be relied on for auto-surfacing. `docs/adr/0002-mh-controlled-handoff-path.md` |
 | writing-fragments | user | `hooks/sensors/fragments-arm.sh`, `hooks/sensors/fragments-capture.sh`, `hooks/session/fragments-surface.sh` — unlike `handoff`, mh detects and captures a **pointer** to this skill's own artifact rather than writing a duplicate, since the artifact is the user's actual creative work. Lives in upstream's unregistered `skills/in-progress/` watch list below — can vanish or reshape without warning. `docs/adr/0003-writing-fragments-pointer-capture.md` |
-| wayfinder, teach, wait-what | user | deferred: their former mh touchpoints were deleted in the v1.0.0 rebuild |
-| wizard | model | deferred |
+| wayfinder | user | deferred: its former mh touchpoint was deleted in the v1.0.0 rebuild |
+| teach, wait-what, to-questionnaire | user | user↔agent gap-closers with no mh wrapper — each works as a direct `/mattpocock-skills:<name>` invocation, unlike `handoff` above, since none writes to a hard-to-find path. `to-questionnaire` had a real touchpoint pre-rebuild (`CHANGELOG.md:2046`, v0.68.262) that was lost the same way `wayfinder`'s was (row above), just never marked `deferred` until this pass caught the stale row-18 citation (2026-09-10) |
+| wizard | model | user↔agent gap-closer for manual-only steps (credentials, third-party dashboards); no mh wrapper needed, it reaches for itself the moment a step needs a human (2026-09-10) |
 | writing-for-agents | model | `CLAUDE.md` Authoring section; `docs/reference/skill-authoring-conventions.md` |
 
 ## Reverse handoffs
