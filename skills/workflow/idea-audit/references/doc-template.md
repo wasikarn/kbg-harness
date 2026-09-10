@@ -1,7 +1,9 @@
 # Idea-audit artifact template
 
-Load before writing the Phase 4 artifact. Fill every section; drop none. No frontmatter — matches
-this repo's `docs/research/<topic>-audit-<date>.md` convention.
+Load before writing the Phase 4 artifact. Fill every section; drop none. Usually no frontmatter —
+most of this repo's `docs/research/<topic>-audit-<date>.md` files have none, though a few do
+(including the exact file SKILL.md Phase 3 names as the scoring-table shape to copy); frontmatter
+is not a hard requirement either way, match whichever this artifact's own topic is closer to.
 
 ```markdown
 # <source name> adoption audit (<date>)

@@ -51,7 +51,8 @@ own frame, never the other's output.
 
 **Save the source before dispatching Phase 1** (the host does this, not Agent A — a subagent
 pasting source text through its own dispatch prompt would itself violate the untrusted-source
-rule above):
+rule above). Every check below except the last is resolvable pre-dispatch, with no dependency on
+Agent A; the last one only becomes checkable after Phase 1 returns:
 
 - **Pasted text:** the host writes it verbatim to `<scratchpad>/idea-audit-source-<slug>.md`
   (the session scratchpad directory already provided in the environment — never a repo-relative
@@ -64,23 +65,38 @@ rule above):
 - **Local file:** copy verbatim to the same scratchpad path.
 - **URL:** fetch raw bytes, not `WebFetch` — `WebFetch`'s HTML-to-Markdown extraction is lossy
   and a model-processed derivative is exactly the paraphrase the untrusted-source rule exists to
-  route around, dressed up as a citable file. `curl -fsSL --max-time 30 -w '%{http_code}' <url>
-  -o <path>`; require HTTP 200 **and** a size floor (a 404 page or bot-wall interstitial can be a
-  small-but-nonzero exit-0 file — verified live: a nonexistent-repo raw URL returns exit 0 and a
-  14-byte "404: Not Found" body). Then confirm at least one phrase Agent A actually read from the
-  source appears in the saved file. **Any of these three checks failing routes to the banner
-  path below — never silent acceptance of unvalidated content as primary evidence.**
+  route around, dressed up as a citable file. `curl -fsSL --max-time 30 <url> -o <path>`. The `-f`
+  flag fails the command outright on a hard HTTP error (404, 5xx) — verified
+  live: curl exits non-zero and writes no output file at all on a real 404, so that failure alone
+  is already sufficient to route to the banner path below, no separate check needed for it. Still
+  require a size floor — it guards what `-f` does *not* catch: a **soft** failure that still
+  returns HTTP 200 with useless content (a bot-wall interstitial, a login page, a tiny redirect
+  stub). **Curl failing outright, or the file falling under the size floor, routes to the banner
+  path below — never silent acceptance of unvalidated content as primary evidence.** (The
+  phrase-match check is a third guard, but it can't run yet — see "Post-hoc corroboration" below,
+  after Agent A exists.)
 - **Banner path** (raw fetch unavailable or failed validation): save whatever was retrieved,
   prefixed with `<!-- WebFetch-derived, lossy extraction, not the raw source -->` on line 1. Any
   claim resting only on a banner-marked file is graded `insufficient evidence` in Phase 2/3, never
   `MATCH`/`GAP` — it cannot be confirmed against the actual source.
 
-**Agent A — Claims.** Read the source (the saved copy, or fetch again if simpler — same content).
-Extract concrete claims. Tag each `Verified?`: `Yes — observed directly` / `Author-asserted` /
+**Agent A — Claims.** Read the saved scratchpad copy from the step above, not a fresh fetch of its
+own — a second independent fetch (or `WebFetch`) can return different content than what got saved
+(a paraphrase, a different page revision), silently breaking the point of saving a verbatim copy:
+Agent A's claims and Phase 2's attacker would then be checking two different texts. Extract
+concrete claims. Tag each `Verified?`: `Yes — observed directly` / `Author-asserted` /
 `Not independently checkable`. For anything checkable against this repo's own state, check it now
 — the root cause of a real incident in this repo was a checkable claim (session transcripts) that
 nobody checked before it shipped. **A single checked instance is not verification** — if more than
 one instance of a claim's subject exists, check more than one before calling it settled.
+
+**Post-hoc corroboration, now checkable (after Phase 1 returns):** confirm that at least one
+distinctive phrase Agent A's report quotes from the source actually appears in the saved
+scratchpad file. Given the read-the-saved-copy rule above, a mismatch here does **not** mean the
+saved file itself is bad — it means Agent A didn't follow that rule (read something else, or
+misquoted/hallucinated a phrase). Don't banner-downgrade a saved file that's actually fine; instead
+flag it as a Phase-1 compliance gap and treat Agent A's un-corroborated claims as
+`Not independently checkable` rather than trusting them, before Phase 2 ever sees the reports.
 
 **Agent B — Fit.** Analyze the live host repo: existing overlap (composer-not-creator shape —
 `docs/reference/composer-not-creator.md` if present), architecture fit, blast radius, what
@@ -99,12 +115,21 @@ codex exec --sandbox read-only -c model_reasoning_effort=high --cd <repo-root> \
 
 Effort pinned to `high` for the same reason as `deep-audit`: Codex's bundled default under-powers
 an independent checker; model left to Codex's default. The brief (`references/attacker-brief.md`)
-names the scratchpad source path — **cited by relative filename only** (`idea-audit-source-
-<slug>.md:N`), never the absolute path. The absolute scratchpad path embeds the operator's home
-directory; if it ever reached a citation in the Phase 4 artifact, `docs/research/` is the one
-directory where this repo's own hardcoded-path hooks (`git-hooks/pre-commit`,
-`scripts/run-gauntlet.sh`) deliberately don't scan — this skill is its own backstop here, not the
-repo's hooks (see Phase 4).
+gives the attacker the scratchpad source's **absolute path so it can actually open the file** —
+`codex exec --help`'s own flag semantics say `-s`/`--sandbox` governs what a shell command can
+*write*, and `--add-dir <DIR>` is documented only as "additional directories that should be
+**writable**," with no analogous flag for extending read access; nothing in Codex's documented CLI
+surface says `read-only` confines reads to `--cd`'s directory (this is an inference from documented
+flag semantics, not a live-reproduced test — Codex was rate-limited while writing this; re-confirm
+live the first time this skill actually runs, and tighten this note if that run says otherwise).
+The Claude fallback's `Read` tool is unaffected by cwd either way, so this only matters for the
+Codex primary. That absolute path is for **reading only** — every citation in the attacker's
+*output*, and
+anything that later reaches the Phase 4 artifact, uses the relative filename alone
+(`idea-audit-source-<slug>.md:N`), never the absolute path. The absolute path embeds the
+operator's home directory; `docs/research/` is the one directory where this repo's own
+hardcoded-path hooks (`git-hooks/pre-commit`, `scripts/run-gauntlet.sh`) deliberately don't
+scan — this skill is its own backstop against that leak, not the repo's hooks (see Phase 4).
 
 **Accept the result only if:** `codex exec` exits 0; the output file parses against the schema
 with `pass` and `findings[]` present, each finding's `summary`/`evidence` present; the result
@@ -119,12 +144,14 @@ schema mismatch, timeout, auth failure, or a semantic refusal (schema-valid JSON
 actually check anything). On any of these: fall back to `general-purpose`, carrying
 `references/attacker-brief.md` as its full prompt — **not** `mh:plan-reviewer`, which hard-stops
 when handed a summary rather than a plan artifact (`agents/plan-reviewer.md`). Note "independence
-reduced for this pass," matching `docs/reference/codex-integration-map.md`'s established fallback
-language. **Dispatch the fallback with `disallowedTools: ["Write", "Edit", "NotebookEdit"]`** —
-unlike the Codex primary, the Claude fallback has no sandbox, so the tool grant itself has to
-carry the read-only constraint, not just a prose instruction; capture `git status --porcelain`
-before and after as a backstop. The brief itself also states plainly: *you write nothing; report
-findings only in your final message.*
+is lost for that pass," matching `docs/reference/codex-integration-map.md`'s established fallback
+wording exactly (the map's own idea-audit row should carry the same phrase — cross-check it).
+**Dispatch the fallback with `disallowedTools: ["Write", "Edit", "NotebookEdit"]`** — this removes
+the three most direct write paths, but the fallback still has `Bash` (unlike the Codex primary, it
+has no sandbox), so a shell redirect could still write a file despite the grant; the tool grant
+alone does not carry the constraint. The real backstop is behavioral: capture
+`git status --porcelain` before and after and treat any diff as a violation. The brief itself also
+states plainly: *you write nothing; report findings only in your final message.*
 
 **If the fallback also fails, or every finding fails the citation-shape check**, Phase 3 marks the
 adversarial criterion `insufficient evidence` (never scores it as a passed check silently).
@@ -162,8 +189,9 @@ anchor (a METHODOLOGY rule, YAGNI, maker≠checker, an ADR), labeled explicitly 
 ## Phase 4: Durable artifact
 
 Default: `docs/research/<topic>-audit-<date>.md` in the *host* repo, matching this repo's own
-convention when present — `references/doc-template.md` has the literal shape (header block, no
-frontmatter; the hedging sentence, never asserted as fact; `## Method`; the comparison table;
+convention when present — `references/doc-template.md` has the literal shape (header block,
+usually no frontmatter; the hedging sentence, never asserted as fact; `## Method`; the comparison
+table;
 `## Shipped` or an explicit "nothing — read-only pass" plus why; `## Deliberately not shipped`;
 `## Decision score`; `## Open questions` with revisit triggers as observable events; reserved
 space for a future `**Correction (date, mechanism):**` amendment). When the host repo has no such
@@ -194,9 +222,10 @@ Python `os.remove`).
 
 - `references/doc-template.md` — the header-block + section-order skeleton for the Phase 4
   artifact. **Load before writing the artifact.**
-- `references/attacker-brief.md` — both Phase 1 outputs, the scratchpad source path (relative
-  citation only), the primary-source mandate, the n-of-1 warning, the untrusted-source rule, the
-  explicit "writes nothing" rule, the Done-when quoted from `spawn-brief.md`, the
+- `references/attacker-brief.md` — both Phase 1 outputs, the scratchpad source's absolute path
+  (for the attacker to read the file) paired with the relative-filename-only citation rule (for
+  what it may write back), the primary-source mandate, the n-of-1 warning, the untrusted-source
+  rule, the explicit "writes nothing" rule, the Done-when quoted from `spawn-brief.md`, the
   unreachable-evidence-class note, entity-normalized matching guidance. **Load before dispatching
   Phase 2.**
 - `references/attacker-output-schema.json` — `{pass, findings[{summary, evidence}]}`,

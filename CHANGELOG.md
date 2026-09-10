@@ -3,6 +3,33 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.81] — 2026-09-11
+
+### Fixed
+
+- **`mh:idea-audit` deep-audit (Correctness/Claim-accuracy pass), 6.3→8.9/10, PASS.** A
+  Codex-fallback (`general-purpose`, Codex still rate-limited until 2026-09-15) fresh-context
+  checker found 7 issues in the skill shipped as v1.1.79/80: 2 HIGH — the Phase 2 attacker
+  (`--cd <repo-root>`) had no way to reach the saved source file, which lives at an absolute path
+  outside the repo, under a citation rule that forbade passing that absolute path; and the
+  documented `curl -fsSL` URL-fetch behavior ("verified live: exit 0 on a 404") described the
+  command's pre-`-f` variant, not the one actually shipped. Plus 2 MEDIUM (a self-contradictory
+  check ordering; "independence reduced" wording drift from `codex-integration-map.md`'s
+  established "independence is lost"), 2 LOW (Agent A allowed to re-fetch instead of reading the
+  saved copy; `disallowedTools` overclaiming what it blocks), 1 cosmetic (a "no frontmatter" claim
+  contradicted by the file named as its own model to copy). Fixed all 7: split read-access (now an
+  absolute path) from citation (still relative-only); corrected the curl narrative and moved the
+  phrase-match check to a genuine post-hoc step; aligned wording; required Agent A to read only the
+  saved copy; corrected the tool-grant claim to name the real backstop (a `git status` diff check);
+  softened the frontmatter claim. A round-1 fresh-context validator on those fixes then caught 5
+  *new* problems the fixes themselves introduced (a "confirmed empirically" claim that wasn't
+  actually confirmed anywhere and couldn't be re-tested live; a deleted check definition; a stale
+  rationale after a related fix changed the design out from under it; a stale Bundled-resources
+  summary; a vestigial curl flag) — fixed those too, replacing the unverifiable claim with a
+  properly-hedged inference from `codex exec --help`'s own documented flag semantics. A round-2
+  validator found zero further issues. `docs/reference/codex-integration-map.md` and
+  `skills/workflow/idea-audit/references/{attacker-brief,doc-template}.md` also touched.
+
 ## [1.1.80] — 2026-09-11
 
 ### Fixed
