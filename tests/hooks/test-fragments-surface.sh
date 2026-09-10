@@ -160,6 +160,25 @@ else
   bad "stale lock/pointer sweep incomplete: lock_exists=$([ -e "$ARM_BASE/stale.lock" ] && echo yes || echo no) pointer_exists=$([ -e "$ARM_BASE/stale.current" ] && echo yes || echo no)"
 fi
 
+# --- deep-audit regression: a bare "*" glob never matches dotfiles, so a
+# stale ".ptr.XXXXXX" orphan (fragments-arm.sh's own pointer-publish
+# scratch file, left behind by a kill between its creation and rename) must
+# still be swept -- live-reproduced surviving indefinitely before this fix ---
+T=$(fresh_tmpdir)
+REPO7=$(fresh_repo)
+ARM_BASE7="$T/mh-fragments-arm"
+mkdir -p "$ARM_BASE7"
+: > "$ARM_BASE7/.ptr.orphan123"
+OLD_TS7=$(( $(date +%s) - 3600 ))
+OLD_STAMP7=$(date -r "$OLD_TS7" +%Y%m%d%H%M.%S 2>/dev/null || date -d "@$OLD_TS7" +%Y%m%d%H%M.%S)
+touch -t "$OLD_STAMP7" "$ARM_BASE7/.ptr.orphan123" 2>/dev/null
+run_surface "$REPO7" "$T" >/dev/null 2>/dev/null
+if [ ! -e "$ARM_BASE7/.ptr.orphan123" ]; then
+  ok "a stale dotfile pointer-publish scratch file (.ptr.*) is swept, not invisible to the bare glob"
+else
+  bad "a stale .ptr.* orphan survived the sweep"
+fi
+
 # --- symlink + foreign-owner rejection on the state tree: a documents dir
 # pre-planted as a symlink is never followed, nothing surfaced through it ---
 T=$(fresh_tmpdir)

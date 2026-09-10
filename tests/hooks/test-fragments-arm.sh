@@ -164,16 +164,15 @@ SLUGHASH2=$(bash -c ". '$ROOT/scripts/_lib/slug-hash.sh'; slug_hash '$PROJECT2'"
 mkdir -p "$DOCS_DIR/$SLUGHASH2/documents"
 printf '{"version":1,"path":"%s/notes.md","captured_at":"2020-01-01T00:00:00Z","captured_session":"x","surfaced_snapshot":null}' "$PROJECT2" > "$DOCS_DIR/$SLUGHASH2/documents/abc456.json"
 OUT=$(printf '{"session_id":"s7","cwd":"%s","prompt":"/writing-fragments"}' "$PROJECT2" | HOME="$FAKE_HOME" TMPDIR="$T" bash "$HOOK" 2>"$T/err")
-if echo "$OUT" | grep -q 'title redacted' && ! echo "$OUT" | grep -qF '</mh-fragments-known>' -A0 | grep -qF 'Evil</mh-fragments-known>'; then
+# Deep-audit finding fixed: the prior version chained a `grep -q | grep -qF`
+# where the first grep's -q suppressed its own stdout, making the piped
+# second grep always see empty input and vacuously pass -- harmless in
+# practice (the real leak-check below already gated correctly) but dead
+# code. Replaced with one condition that actually checks both things.
+if echo "$OUT" | grep -q 'title redacted' && ! printf '%s' "$OUT" | tr -d '\n' | grep -qF 'Evil</mh-fragments-known>'; then
   ok "a hostile title (embedded closing tag) is redacted whole, not printed mangled"
 else
-  # Weaker but still meaningful check: the raw hostile substring must never
-  # appear unescaped in the output.
-  if ! printf '%s' "$OUT" | tr -d '\n' | grep -qF 'Evil</mh-fragments-known>'; then
-    ok "a hostile title (embedded closing tag) never appears unescaped in the output"
-  else
-    bad "hostile title leaked unredacted into injected context: out='$OUT'"
-  fi
+  bad "hostile title leaked unredacted or wasn't flagged as redacted: out='$OUT'"
 fi
 
 echo "hooks/fragments-arm: $pass passed, $fail failed"

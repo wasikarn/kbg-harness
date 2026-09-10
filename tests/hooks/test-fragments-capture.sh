@@ -202,5 +202,22 @@ else
   bad "an expired marker should never capture: docs='$(find "$DOCS" -name '*.json' 2>/dev/null)'"
 fi
 
+# --- deep-audit regression: a RELATIVE typed candidate ("./frags.md") must
+# anchor on the payload's own cwd, not whatever cwd the hook process
+# happens to run in -- live-reproduced capturing nothing when the two
+# diverge before this fix ---
+T=$(fresh_tmpdir)
+REPO=$(fresh_repo)
+arm "c9" "$T" "$REPO" "./frags.md"
+printf '# Title\nfrag\n' > "$REPO/frags.md"
+OUT9=$( (cd /tmp && printf '{"session_id":"c9","cwd":"%s","tool_name":"Write","tool_input":{"file_path":"%s/frags.md","content":"# Title\\nfrag\\n"}}' "$REPO" "$REPO" \
+  | HOME="$FAKE_HOME" TMPDIR="$T" bash "$HOOK") 2>"$T/err")
+DOCS=$(docs_dir_for "$REPO")
+if [ -n "$(find "$DOCS" -name '*.json' 2>/dev/null)" ] && [ ! -s "$T/err" ]; then
+  ok "a relative candidate path anchors on the payload's cwd, captures even when the hook process's own cwd differs"
+else
+  bad "relative candidate did not capture: out='$OUT9' docs='$(find "$DOCS" -name '*.json' 2>/dev/null)'"
+fi
+
 echo "hooks/fragments-capture: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

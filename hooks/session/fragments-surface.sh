@@ -185,7 +185,15 @@ ARM_BASE="${TMPDIR:-/tmp}/mh-fragments-arm"
 if [ -d "$ARM_BASE" ] && [ ! -L "$ARM_BASE" ]; then
   NOW=$(date +%s)
   WINDOW=1800
-  shopt -s nullglob
+  # dotglob too -- deep-audit finding, live-reproduced: a bare "*" glob does
+  # not match dotfiles, so an orphaned ".ptr.XXXXXX" (fragments-arm.sh's own
+  # pointer-publish temp file, left behind if a process is killed between
+  # its creation and rename) was invisible to this sweep forever, despite
+  # this hook's own description claiming to sweep all stale TMPDIR arm
+  # state. Scoped to this block only (shopt -u dotglob below), so it can't
+  # affect any earlier glob in this script (the documents/*.json read above
+  # already ran before this point).
+  shopt -s nullglob dotglob
 
   entry_age() {
     local mtime
@@ -215,6 +223,14 @@ if [ -d "$ARM_BASE" ] && [ ! -L "$ARM_BASE" ]; then
     [ -f "$entry" ] || continue
     base=$(basename -- "$entry")
     case "$base" in
+      .ptr.*)
+        # An orphaned pointer-publish temp file (fragments-arm.sh's own
+        # scratch mktemp, never anyone else's target) -- always safe to
+        # remove once stale, no lock needed since nothing ever reads it by
+        # name.
+        age=$(entry_age "$entry")
+        [ "$age" -gt "$WINDOW" ] && rm -f "$entry" 2>/dev/null
+        ;;
       *.candidate)
         age=$(entry_age "$entry")
         [ "$age" -gt "$WINDOW" ] && rm -f "$entry" 2>/dev/null
@@ -234,7 +250,7 @@ if [ -d "$ARM_BASE" ] && [ ! -L "$ARM_BASE" ]; then
         ;;
     esac
   done
-  shopt -u nullglob
+  shopt -u nullglob dotglob
 fi
 
 exit 0

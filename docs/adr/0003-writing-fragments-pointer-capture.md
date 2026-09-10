@@ -103,6 +103,17 @@ approval. Each found a real, often live-reproduced bug in the TMPDIR arm-marker 
    `.lock` directory (age-only, unconditional — nothing legitimately holds a lock for anywhere
    near the arm window) in a first pass, strictly before it ever tries to acquire one in a second
    pass.
+7. **The sweep's own glob missed dotfiles** (deep-audit finding, live-reproduced post-ship): the
+   TMPDIR arm-state sweep used a bare `*` glob, which bash never matches against dot-prefixed
+   names — an orphaned `.ptr.XXXXXX` (fragments-arm.sh's own pointer-publish scratch file, left
+   behind if a process is killed between its creation and rename) was invisible to the sweep
+   forever, contradicting the hook's own "sweeps stale TMPDIR arm state" description. Fixed:
+   `dotglob` added, scoped to just the sweep block. **Left as an accepted, out-of-scope residual**
+   (same finding, lower severity): the durable `documents/` tree's own atomic-rewrite scratch
+   files (`.rec.XXXXXX` in `fragments-surface.sh`, `.doc.XXXXXX` in `fragments-capture.sh`) have
+   no sweep mechanism of any kind — an orphan there is inert clutter (nothing ever globs it back
+   in), not a correctness hazard, and building a second sweep for a durable, low-volume,
+   per-project tree is disproportionate machinery for what it would prevent.
 
 A process killed between claim and publish is an accepted, bounded, self-healing loss — not
 engineered around with crash-recovery machinery — matching `handoff-nudge.sh`'s own posture: the

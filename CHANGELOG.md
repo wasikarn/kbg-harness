@@ -3,6 +3,28 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.66] — 2026-09-10
+
+### Fixed
+
+- **`mh:deep-audit` against v1.1.65's fragments feature** (Codex checker rate-limited; fell back to
+  a fresh-context Claude checker per the skill's own fallback rule — "independence reduced for
+  this pass"), 4 findings, all reproduced live before fixing: (1) `fragments-capture.sh` resolved
+  a relative typed candidate path (e.g. `./frags.md`) against the hook process's own ambient cwd
+  instead of the payload's `cwd` field — a real write to the exact intended file could silently
+  fail to capture; fixed by anchoring on `$CWD` explicitly, matching how project-root resolution
+  already does. (2) `fragments-surface.sh`'s stale-state sweep used a bare `*` glob, which bash
+  never matches against dotfiles — an orphaned `.ptr.XXXXXX` (a pointer-publish scratch file) was
+  invisible to the sweep forever; fixed with `dotglob`, scoped to just the sweep block. (3) The
+  commit message and this file's own v1.1.65 entry overclaimed "fixed in all 3 test files" for the
+  `trash`-empty-arg bug — it was 2 pre-existing files; the 3rd was written safe from birth.
+  Corrected here (can't amend an already-pushed commit message). (4) A dead, vacuously-true
+  sub-condition in `tests/hooks/test-fragments-arm.sh`'s hostile-title test (a `grep -q | grep -qF`
+  chain where the first `-q` suppresses its own stdout) — harmless in practice, cleaned up. 2 new
+  regression tests added and confirmed to fail against the pre-fix code. `docs/adr/0003-
+  writing-fragments-pointer-capture.md` gets a 7th round entry; the durable `documents/` tree's own
+  orphaned scratch-file gap is named as an accepted, lower-severity residual, not fixed further.
+
 ## [1.1.65] — 2026-09-10
 
 ### Added
@@ -27,10 +49,12 @@ All notable changes to `mh` are documented here. Format loosely follows
   `EXTRA_TRASH` ever picked up an empty element (a `mktemp -d` failure inside `fresh_tmpdir()`
   under `set -u`, no `set -e`, leaves an empty string, not an abort), `trash` silently moved the
   invoking shell's cwd to Trash, exit 0, no error. Reproduced live while authoring
-  `test-fragments-arm.sh` from the same pattern — the entire repo (with uncommitted work) was
-  trashed and had to be moved back from `~/.Trash/`; nothing was lost, but the failure mode is
-  serious and silent. Fixed in all 3 test files: a `_cleanup_trash` function filters every target
-  to non-empty before ever calling `trash`.
+  `test-fragments-arm.sh` from the same pattern (that new file was itself written with the safe
+  pattern from the start, so it never carried the bug) — the entire repo (with uncommitted work)
+  was trashed and had to be moved back from `~/.Trash/`; nothing was lost, but the failure mode is
+  serious and silent. Fixed in both pre-existing files with a `_cleanup_trash` function that
+  filters every target to non-empty before ever calling `trash`; the 3 fragments test files carry
+  the same safe pattern.
 
 ## [1.1.64] — 2026-09-10
 

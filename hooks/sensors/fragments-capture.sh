@@ -132,6 +132,16 @@ if [ -s "$CANDIDATE_FILE" ] && [ ! -L "$CANDIDATE_FILE" ]; then
     '~/'*) CAND_RESOLVED="$HOME/${CAND_TEXT#~/}" ;;
     '~') CAND_RESOLVED="$HOME" ;;
   esac
+  # A relative candidate (e.g. "./frags.md", typed with no leading /) must
+  # anchor on the payload's own $CWD, not this process's ambient cwd -- the
+  # two are not guaranteed to be the same thing, and ROOT resolution above
+  # already uses $CWD as its source of truth for exactly this reason.
+  # Deep-audit finding, live-reproduced: without this, a relative candidate
+  # silently failed to match a real write to the exact intended file.
+  case "$CAND_RESOLVED" in
+    /*) : ;;
+    *) [ -n "$CWD" ] && CAND_RESOLVED="$CWD/$CAND_RESOLVED" ;;
+  esac
   if [ -e "$CAND_RESOLVED" ]; then
     CAND_CANONICAL=$(cd -P -- "$(dirname -- "$CAND_RESOLVED")" 2>/dev/null && printf '%s/%s\n' "$(pwd)" "$(basename -- "$CAND_RESOLVED")")
   else
