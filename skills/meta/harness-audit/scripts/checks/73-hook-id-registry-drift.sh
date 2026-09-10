@@ -6,6 +6,11 @@
 # (gate:bash:irrecoverable, session:doctrine-bootstrap, ...) now lives in
 # hooks/hook-registry.json instead, keyed by event + array position, with a "command"
 # fingerprint per entry so a reorder or same-count replacement can't silently mismatch.
+# Fingerprint covers "args" too (code.claude.com/docs/en/hooks documents it as a real
+# command-hook field, exec form) -- a stale registry could otherwise miss an args-only
+# change; and a handler missing "command" entirely now WARNs instead of silently skipping
+# the comparison (deep-audit 2026-09-10, Codex-primary fresh-context checker, both
+# independently reproduced before this fix).
 # WARN throughout -- convention/doc drift, not the tamper-sensitive class checks 11/33 own.
 _hj="$CLAUDE_DIR/hooks/hooks.json"
 _reg="$CLAUDE_DIR/hooks/hook-registry.json"
@@ -71,6 +76,14 @@ for ev in events:
             print(f"hooks.json {ev}[{i}] has {len(handlers)} handlers -- hook-registry.json's command fingerprint only covers the first one; extend the registry schema before relying on it here")
         first = handlers[0] if isinstance(handlers[0], dict) else {}
         hj_cmd = first.get("command")
+        hj_args = first.get("args")
+        if not isinstance(hj_cmd, str) or not hj_cmd.strip():
+            print(f"hooks.json {ev}[{i}]'s first handler has no 'command' field -- can't verify the registry fingerprint against it")
+            hj_fp = None
+        elif isinstance(hj_args, list):
+            hj_fp = hj_cmd + "\x1f" + "\x1e".join(str(a) for a in hj_args)
+        else:
+            hj_fp = hj_cmd
 
         _id = reg_item.get("id")
         _desc = reg_item.get("description")
@@ -87,8 +100,8 @@ for ev in events:
             print(f"hook-registry.json {ev}[{i}] (id={_id!r}) missing or empty 'description'")
         if not isinstance(_cmd, str) or not _cmd.strip():
             print(f"hook-registry.json {ev}[{i}] (id={_id!r}) missing or empty 'command' fingerprint")
-        elif hj_cmd is not None and _cmd != hj_cmd:
-            print(f"hook-registry.json {ev}[{i}] (id={_id!r}) command fingerprint doesn't match hooks.json's actual command at that position -- registry is stale")
+        elif hj_fp is not None and _cmd != hj_fp:
+            print(f"hook-registry.json {ev}[{i}] (id={_id!r}) command fingerprint doesn't match hooks.json's actual command/args at that position -- registry is stale")
         elif isinstance(_cmd, str) and _cmd.strip():
             if _cmd in cmds_this_event:
                 print(f"hooks.json event {ev!r} has the same command at positions {cmds_this_event[_cmd]} and {i} -- a swap between them wouldn't be caught by the command fingerprint alone")

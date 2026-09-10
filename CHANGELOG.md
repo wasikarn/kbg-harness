@@ -3,6 +3,30 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.76] — 2026-09-10
+
+### Fixed
+
+- **`mh:deep-audit` run over v1.1.74/v1.1.75's own work found 4 confirmed defects**, via a
+  Codex-primary fresh-context checker (`codex exec --sandbox read-only -c
+  model_reasoning_effort=high`) whose findings were each independently reproduced before fixing:
+  - Check 73's command fingerprint silently skipped comparison when a `hooks.json` handler had
+    no `command` field at all (`hj_cmd is None` short-circuited the mismatch branch) — reproduced
+    directly (empty warning output on a handler missing `command`). No other check catches this
+    either. Now WARNs explicitly.
+  - Check 73's fingerprint only ever compared the `command` string, but Claude Code's hooks
+    schema also supports an `args` field (exec form, verified against code.claude.com/docs/en/hooks)
+    — a script/argument change there would go undetected while `command` (e.g. `"node"`) stays
+    the same. Not reachable by this repo's current `hooks.json` (all entries use shell-form single
+    strings) but a real latent gap. Fingerprint now folds `args` in when present.
+  - **`README.md`'s gate table was still missing `gate:agent:subagent-spawn-guard` (6 rows, not
+    7)** despite v1.1.75's CHANGELOG entry claiming "README's table itself already listed all 7
+    rows correctly" — that claim was wrong; verified directly by re-reading the table. Added.
+  - `README.md` still said "29 structural checks" (stale since check 73 shipped in v1.1.74,
+    bringing the count to 30). Fixed.
+  - Two new fixtures (`check-73-bad-missing-command-field`, `check-73-bad-args-fingerprint-mismatch`)
+    proved red under the old script, green after.
+
 ## [1.1.75] — 2026-09-10
 
 ### Fixed

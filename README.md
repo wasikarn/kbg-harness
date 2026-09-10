@@ -46,6 +46,7 @@ The plugin ships `defaultEnabled: false`; add `"mh@wasikarn": true` to `settings
 |---|---|
 | `gate:bash:irrecoverable` | denies `rm -rf`, `find -delete`, `--no-verify`, `push --force`, `reset --hard`, `clean -f`, discarding `restore`/`checkout`, `branch -D`, `stash drop/clear`, `commit --amend`, `dd`, SQL `DROP`, `git add -A` outside a merge, nested `claude` spawns from a subagent |
 | `gate:bash:subagent-git-guard` | denies `git stash`/`reset`/`clean` from a dispatched subagent |
+| `gate:agent:subagent-spawn-guard` | denies a subagent calling the Agent tool to spawn its own reviewer/validator |
 | `gate:task:complete-separation` | denies a subagent marking its own task complete |
 | `gate:write:test-integrity` | asks before a write that weakens a test |
 | `gate:write:config-guard` | asks before a write to Claude Code settings `hooks`/`enabledPlugins` |
@@ -64,7 +65,7 @@ score not feel. `git-hooks/pre-commit` refuses a `docs/METHODOLOGY.md` over 4096
 
 ## What it ships
 
-- **Skills:** `mh:harness-audit` (29 structural checks), `mh:memory-lint`, `mh:cost-report`,
+- **Skills:** `mh:harness-audit` (30 structural checks), `mh:memory-lint`, `mh:cost-report`,
   `mh:deep-audit`, `mh:handoff`, `mh:ideate`, `mh:post-mortem`, `mh:tech-humanize`.
 - **Agents (10):** backend-architect, blind-spot-hunter, code-architect, ideate-critic,
   performance-optimizer, plan-reviewer, requirement-analyst, silent-failure-hunter,

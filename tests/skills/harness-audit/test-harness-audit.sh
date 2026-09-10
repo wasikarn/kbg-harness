@@ -6,6 +6,10 @@
 # FIRE on bad and stay SILENT on good. Per-check fixtures cover 04, 05, 20, 22, 28, 29, 54,
 # 70, 71, 72, 73; the fleet-bad / fleet-good pair covers the other nineteen with at least one
 # defect per check (43 is driven by the env ceiling, not a planted defect).
+# check-73-bad-missing-command-field and check-73-bad-args-fingerprint-mismatch (below) are
+# deep-audit fixes, 2026-09-10: a Codex-primary fresh-context checker found the original check
+# 73 silently passed a handler missing its "command" field, and never compared the "args" field
+# (a real, documented command-hook field, exec form) -- both independently reproduced before fix.
 set -uo pipefail
 
 HERE="$(cd -P "$(dirname "$0")" && pwd)"
@@ -178,6 +182,8 @@ expect_warn   73 check-73-bad-stray-metadata-key
 expect_warn   73 check-73-bad-command-mismatch
 expect_warn   73 check-73-bad-malformed-structure
 expect_warn   73 check-73-bad-duplicate-id
+expect_warn   73 check-73-bad-missing-command-field
+expect_warn   73 check-73-bad-args-fingerprint-mismatch
 
 # Fleet pair: every check without a per-check fixture. fleet-bad plants one defect per
 # check; fleet-good is a complete clean fleet and doubles as the fake plugin cache for
