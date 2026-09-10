@@ -3,6 +3,33 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.79] — 2026-09-11
+
+### Added
+
+- **New skill `mh:idea-audit`** (`skills/workflow/idea-audit/`): formalizes a pattern that had
+  run ad hoc across ~13 prior `docs/research/` audits — evaluate an external article, repo, or
+  practice for adoption via two isolated analysts plus one adversarial attacker (Codex primary,
+  different model family, with a `general-purpose` fallback), then ship a Rule-14-scored
+  adopt/defer/reject decision. Directly motivated by a same-model-family blind spot caught in this
+  session's own `mh:deep-audit` pass (a false claim shipped in v1.1.77, corrected in v1.1.78): the
+  new skill's attacker mandate — "a single checked instance is not verification" — is the fix
+  baked in. Composer-not-creator checked across all 4 `CLAUDE.md` tiers (`mattpocock-skills`,
+  `codex@openai-codex`, `~/Codes/Personals/ECC`/`superpowers`, sibling harnesses); nothing fit.
+  Evals-first baseline run before writing: an unassisted agent given a realistic adoption question
+  already does reasonable single-pass primary-source checking, but produces no isolated fan-out,
+  no independent adversarial re-check, and no scored output — the three gaps this skill closes.
+  Went through 5 rounds of adversarial plan review (`mh:plan-reviewer`, standing in for Codex CLI,
+  rate-limited until 2026-09-15) before implementation; caught and fixed, among other things, a
+  lossy-`WebFetch`-graded-as-verbatim bug and a home-path leak risk via `docs/research/`'s
+  hardcoded-path-hook blind spot — see the skill's own SKILL.md for the mechanisms.
+  `docs/reference/codex-integration-map.md` updated (new row, "two"→"three" bare `codex exec`
+  dispatches, generalized the Silent-refusal carve-out); `README.md`'s skill list updated (the
+  three pre-existing gaps — `ste-lint`, `learn`, `compliance-audit` — are a known residual, not
+  closed here). Symlinked `~/.claude/skills/idea-audit` to clear check 02 pending the plugin
+  cache catching up to this version — remove that symlink once
+  `~/.claude/plugins/cache/wasikarn/mh/<newest>/skills/workflow/idea-audit/SKILL.md` exists.
+
 ## [1.1.78] — 2026-09-10
 
 ### Fixed
