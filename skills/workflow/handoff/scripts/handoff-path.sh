@@ -39,8 +39,8 @@ umask 077  # belt-and-suspenders: every dir/file below is also chmod'd
 fail() { echo "handoff-path: $1" >&2; exit 1; }
 
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$HERE/../../../../scripts/_lib/slug-hash.sh"
-. "$HERE/../../../../scripts/_lib/hook-common.sh"
+. "$HERE/../../../../scripts/_lib/slug-hash.sh" || fail "could not load slug-hash.sh"
+. "$HERE/../../../../scripts/_lib/hook-common.sh" || fail "could not load hook-common.sh"
 
 # Project root: git repo root, falling back to physical cwd outside a repo.
 ROOT="$(hook_repo_root)" || fail "could not determine a project root"

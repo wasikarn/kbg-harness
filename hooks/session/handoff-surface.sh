@@ -58,7 +58,16 @@ PEND="$DIR/pending"
 [ -d "$PEND" ] || exit 0
 
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$HERE/../../scripts/_lib/hook-common.sh"
+# Silent-failure-hunter finding, live-reproduced: an unguarded source here
+# (missing file, corrupted plugin cache mid-update) left hook_snapshot
+# undefined under set -uo pipefail (no -e) -- both call sites below then
+# silently evaluate to the empty string instead of erroring, so the
+# snapshot-mismatch guard's own "" == "" comparison always matched,
+# archiving every selected file regardless of whether it actually changed
+# between read and move. Exactly the shared-empty-fallback class this
+# file's own comment above already closed one layer down (distinct
+# per-call-site literals) -- an undefined function reopens it one layer up.
+. "$HERE/../../scripts/_lib/hook-common.sh" 2>/dev/null || exit 0
 
 MAX_LINES=300
 MAX_BYTES=15360

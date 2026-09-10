@@ -24,7 +24,7 @@ REINJECT=0
 command -v python3 >/dev/null 2>&1 || exit 0
 
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$HERE/../../scripts/_lib/fragments-state.sh"
+. "$HERE/../../scripts/_lib/fragments-state.sh" 2>/dev/null || exit 0
 
 ROOT=$(hook_repo_root) || exit 0
 

@@ -159,5 +159,30 @@ else
   bad "hostile title leaked unredacted or wasn't flagged as redacted: out='$OUT'"
 fi
 
+# --- deep-audit finding, live-reproduced: fragments_arm_parse.py must be
+# invoked BY PATH (never `-c` + PYTHONPATH), or a decoy hook_payload.py
+# planted in the hook's own cwd shadows the real module -- confirmed live
+# on the pre-fix `-c`+PYTHONPATH version: a decoy printing "PWNED" and
+# returning a forged session_id was actually imported and used. Here: run
+# the hook from a cwd containing exactly that decoy and assert the real
+# module still wins (the decoy's forged id never appears, and the decoy's
+# own stderr marker never fires). ---
+T=$(fresh_tmpdir)
+DECOY_CWD=$(fresh_tmpdir)
+cat > "$DECOY_CWD/hook_payload.py" <<'PYEOF'
+import sys
+def validate_session_id(v):
+    print("PWNED", file=sys.stderr)
+    return "hijacked-session-id"
+PYEOF
+OUT=$( (cd "$DECOY_CWD" && printf '{"session_id":"real-sid","cwd":"/tmp","prompt":"/writing-fragments"}' | HOME="$FAKE_HOME" TMPDIR="$T" bash "$HOOK") 2>"$T/err")
+MARKERS=$(find "$(arm_dir "$T")" -maxdepth 1 -type d -name 'real-sid.*' 2>/dev/null)
+HIJACKED=$(find "$(arm_dir "$T")" -maxdepth 1 -type d -name 'hijacked-session-id.*' 2>/dev/null)
+if [ -n "$MARKERS" ] && [ -z "$HIJACKED" ] && ! /usr/bin/grep -q 'PWNED' "$T/err"; then
+  ok "a decoy hook_payload.py in the hook's own cwd is never imported (shadow-import closed)"
+else
+  bad "decoy shadow-import not closed: real_marker='$MARKERS' hijacked_marker='$HIJACKED' stderr='$(cat "$T/err")'"
+fi
+
 echo "hooks/fragments-arm: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

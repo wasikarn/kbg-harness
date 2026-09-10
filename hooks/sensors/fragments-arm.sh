@@ -36,9 +36,15 @@ case "$PAYLOAD" in
 esac
 
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$HERE/../../scripts/_lib/fragments-state.sh"
+. "$HERE/../../scripts/_lib/fragments-state.sh" 2>/dev/null || exit 0
 
-# Single python3 call: validates session_id via the shared predicate
+# Single python3 call, invoked BY PATH -- never `-c` + PYTHONPATH, which
+# puts the hook's own cwd (the user's project) ahead of PYTHONPATH on
+# sys.path and lets a same-named hook_payload.py planted there shadow the
+# real module, executing arbitrary code and forging a validated session_id
+# (deep-audit finding, live-reproduced; docs/adr/0003-...). Running by path
+# puts scripts/_lib/ itself first on sys.path instead.
+# fragments_arm_parse.py: validates session_id via the shared predicate
 # (scripts/_lib/hook_payload.py -- character-class + ./.. rejection,
 # against the untruncated string, since bash command substitution silently
 # mangles a trailing newline or an embedded NUL before a bash-side check
@@ -47,38 +53,7 @@ HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # same prompt. Output: session_id, match flag, cwd -- each on its own
 # line -- then the (possibly multi-line, possibly empty) candidate text as
 # everything remaining.
-RESULT=$(printf '%s' "$PAYLOAD" | PYTHONPATH="$HERE/../../scripts/_lib" python3 -B -c '
-import json, re, sys
-from hook_payload import validate_session_id
-try:
-    data = json.load(sys.stdin)
-except Exception:
-    data = None
-
-sid = validate_session_id(data.get("session_id") if isinstance(data, dict) else None)
-
-cwd = data.get("cwd") if isinstance(data, dict) else None
-if not isinstance(cwd, str):
-    cwd = ""
-
-prompt = data.get("prompt") if isinstance(data, dict) else None
-if not isinstance(prompt, str):
-    prompt = ""
-
-m = re.match(r"\s*[/@$](mattpocock-skills:)?writing-fragments(\s|$)", prompt)
-matched = bool(m and sid)
-
-candidate = ""
-if matched:
-    rest = prompt[m.end():].strip()
-    if rest and "\x00" not in rest:
-        candidate = rest
-
-print(sid)
-print("1" if matched else "0")
-print(cwd)
-print(candidate)
-' 2>/dev/null)
+RESULT=$(printf '%s' "$PAYLOAD" | python3 -B "$HERE/../../scripts/_lib/fragments_arm_parse.py" 2>/dev/null)
 [ -n "$RESULT" ] || exit 0
 
 SESSION_ID=$(printf '%s\n' "$RESULT" | sed -n '1p')

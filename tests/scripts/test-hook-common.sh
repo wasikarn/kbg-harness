@@ -99,19 +99,40 @@ fi
 
 # --- hook_snapshot vs fragments-surface.sh's own Python snapshot(): must
 # produce byte-identical output on the same fixture. The Python one stays
-# Python (it never shells into bash); this is the anti-drift mechanism. ---
+# Python (it never shells into bash); this is the anti-drift mechanism.
+# test-gap-analyzer finding: a pasted copy of the Python function here could
+# silently drift from the real one in fragments-surface.sh with nobody
+# noticing. Extract the real snapshot() function's source out of the hook
+# file via ast (not a text/regex match, which would break on reformatting)
+# and exec THAT, so this test fails the moment the two actually diverge. ---
 PY_SNAP=$(python3 -c '
-import subprocess, sys
-path = sys.argv[1]
-for args in (["stat", "-f", "%z %m", path], ["stat", "-c", "%s %Y", path]):
-    try:
-        r = subprocess.run(args, capture_output=True, text=True)
-    except Exception:
-        continue
-    if r.returncode == 0:
-        print(r.stdout.strip())
+import ast, re, subprocess, sys
+hook_path, target = sys.argv[1], sys.argv[2]
+with open(hook_path) as fh:
+    hook_src = fh.read()
+# The Python block lives inside a bash single-quoted `python3 -c "..."`
+# heredoc, not as standalone Python source -- pull just that embedded
+# script out before handing it to ast.parse.
+q = chr(39)
+pat = "python3 -c " + q + "\n(.*?)\n" + q
+m = re.search(pat, hook_src, re.S)
+if not m:
+    sys.exit("no embedded python3 -c block found in " + hook_path)
+py_src = m.group(1)
+tree = ast.parse(py_src)
+fn_src = None
+for node in ast.walk(tree):
+    if isinstance(node, ast.FunctionDef) and node.name == "snapshot":
+        fn_src = ast.get_source_segment(py_src, node)
         break
-' "$F")
+if fn_src is None:
+    sys.exit("snapshot() not found in " + hook_path)
+ns = {"subprocess": subprocess}
+exec(fn_src, ns)
+result = ns["snapshot"](target)
+if result is not None:
+    print(result)
+' "$ROOT/hooks/session/fragments-surface.sh" "$F")
 BASH_SNAP=$(bash -c ". '$LIB'; hook_snapshot '$F' x")
 if [ "$PY_SNAP" = "$BASH_SNAP" ]; then
   ok "hook_snapshot and fragments-surface.sh's Python snapshot() agree byte-for-byte"
@@ -213,6 +234,69 @@ if [ "$RC" -ne 0 ] && [ -z "$ROOT_BAD" ]; then
   ok "hook_repo_root prints nothing and returns non-zero for a nonexistent anchor"
 else
   bad "hook_repo_root bad anchor: rc=$RC output='$ROOT_BAD'"
+fi
+
+# hook_repo_root "" (an explicit empty-string anchor) must behave IDENTICALLY
+# to omitting the argument -- ambient resolution -- documenting the exact
+# distinction real callers (fragments-arm.sh, fragments-capture.sh) guard
+# against by checking `[ -n "$CWD" ]` BEFORE ever calling this function with
+# a payload-sourced value that could legitimately be empty.
+ROOT_EMPTY=$(cd "$REPO/sub" && bash -c ". '$LIB'; hook_repo_root ''")
+if [ "$ROOT_EMPTY" = "$ROOT_AMBIENT" ]; then
+  ok "hook_repo_root '' (explicit empty string) matches no-arg ambient resolution exactly"
+else
+  bad "hook_repo_root '' expected to match ambient '$ROOT_AMBIENT', got '$ROOT_EMPTY'"
+fi
+
+# --- GNU (`stat -c`) fallback branch: never exercised by any other test in
+# this repo, on any platform (CI never runs the hook test suite on Linux;
+# every local/macOS test that reaches a real `stat` exercises the BSD
+# `-f` branch succeeding first). A shim rejecting `-f` and answering only
+# `-c` proves the fallback chain -- and its format-string arguments --
+# actually work, not just that a bare `|| stat -c ...` clause parses. ---
+GNUSHIM=$(mktemp -d)
+EXTRA_TRASH+=("$GNUSHIM")
+cat > "$GNUSHIM/stat" <<'EOF'
+#!/usr/bin/env bash
+# Simulates GNU coreutils stat: rejects BSD's -f flag, answers -c.
+case "$1" in
+  -f) exit 1 ;;
+  -c)
+    fmt="$2"; path="$3"
+    [ -e "$path" ] || exit 1
+    case "$fmt" in
+      # Real GNU stat would report the path's actual owner uid; this shim
+      # is only asked about paths this test process itself just created,
+      # so hardcoding the running process's own uid is the correct answer,
+      # not a shortcut around it.
+      '%u') id -u ;;
+      '%s %Y') printf '%s %s\n' "$(wc -c < "$path" | tr -d ' ')" "1700000000" ;;
+      '%Y') printf '%s\n' "1700000000" ;;
+      *) exit 1 ;;
+    esac
+    ;;
+  *) exit 1 ;;
+esac
+EOF
+chmod +x "$GNUSHIM/stat"
+
+if PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_owner_ok '$T'"; then
+  ok "hook_owner_ok's GNU (stat -c) fallback branch correctly resolves ownership"
+else
+  bad "hook_owner_ok's GNU fallback branch failed (uid check under GNU-only stat shim)"
+fi
+
+SNAP_GNU=$(PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_snapshot '$F' x")
+case "$SNAP_GNU" in
+  '5 1700000000') ok "hook_snapshot's GNU (stat -c) fallback branch produces the correct 'size mtime' format" ;;
+  *) bad "hook_snapshot's GNU fallback branch: expected '5 1700000000', got '$SNAP_GNU'" ;;
+esac
+
+AGE_GNU=$(PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_entry_age '$F' 1700003600")
+if [ "$AGE_GNU" = "3600" ]; then
+  ok "hook_entry_age's GNU (stat -c) fallback branch computes the correct age"
+else
+  bad "hook_entry_age's GNU fallback branch: expected 3600, got '$AGE_GNU'"
 fi
 
 echo "hook-common: $pass passed, $fail failed"

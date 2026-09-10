@@ -32,12 +32,14 @@ hook_safe_dir() {
 }
 
 # hook_snapshot <path> <label>: size+mtime, portable (BSD vs GNU stat). Each
-# caller passes a DISTINCT <label> -- two independent stat failures at
+# caller MUST pass a DISTINCT <label> -- two independent stat failures at
 # different call sites must never compare equal (handoff-surface.sh's own
 # deep-audit finding: a shared "" fallback let a missing `stat` binary fail
-# the guard open).
+# the guard open). <label> has no default: an omitted label is a caller
+# bug, not something to paper over with a shared fallback value that would
+# silently reintroduce the exact hazard this function exists to close.
 hook_snapshot() {
-  local path="$1" label="${2:-x}"
+  local path="$1" label="${2:?hook_snapshot requires a distinct label}"
   stat -f '%z %m' "$path" 2>/dev/null || stat -c '%s %Y' "$path" 2>/dev/null || printf 'stat-unavailable-%s\n' "$label"
 }
 

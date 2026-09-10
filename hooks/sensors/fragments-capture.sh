@@ -23,49 +23,21 @@ shopt -u nullglob
 command -v python3 >/dev/null 2>&1 || exit 0
 
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$HERE/../../scripts/_lib/fragments-state.sh"
+. "$HERE/../../scripts/_lib/fragments-state.sh" 2>/dev/null || exit 0
 
 PAYLOAD=$(cat)
 
-# Parse once: validated session_id (shared predicate,
+# Parse once, invoked BY PATH -- never `-c` + PYTHONPATH: this hook's
+# readdir gate is TMPDIR-global, not project-scoped, so it runs the parse
+# for every Write/Edit in every project once ANY session anywhere is armed
+# -- a same-named hook_payload.py planted in any one of those cwds could
+# shadow the real module under `-c`'s cwd-first sys.path (deep-audit
+# finding, live-reproduced; docs/adr/0003-...). Running by path closes it.
+# fragments_capture_parse.py: validated session_id (shared predicate,
 # scripts/_lib/hook_payload.py -- same discipline as fragments-arm.sh),
 # tool_name, tool_input.file_path, whether content starts with an H1 (Write
 # only -- Edit payloads carry old_string/new_string, not content), cwd.
-RESULT=$(printf '%s' "$PAYLOAD" | PYTHONPATH="$HERE/../../scripts/_lib" python3 -B -c '
-import json, re, sys
-from hook_payload import validate_session_id
-try:
-    data = json.load(sys.stdin)
-except Exception:
-    data = None
-
-sid = validate_session_id(data.get("session_id") if isinstance(data, dict) else None)
-
-tool_name = data.get("tool_name") if isinstance(data, dict) else None
-if not isinstance(tool_name, str):
-    tool_name = ""
-
-cwd = data.get("cwd") if isinstance(data, dict) else None
-if not isinstance(cwd, str):
-    cwd = ""
-
-tool_input = data.get("tool_input") if isinstance(data, dict) else None
-file_path = tool_input.get("file_path") if isinstance(tool_input, dict) else None
-if not isinstance(file_path, str):
-    file_path = ""
-
-h1 = "0"
-if tool_name == "Write" and isinstance(tool_input, dict):
-    content = tool_input.get("content")
-    if isinstance(content, str) and re.match(r"#[ \t]", content):
-        h1 = "1"
-
-print(sid)
-print(tool_name)
-print(cwd)
-print(h1)
-print(file_path)
-' 2>/dev/null)
+RESULT=$(printf '%s' "$PAYLOAD" | python3 -B "$HERE/../../scripts/_lib/fragments_capture_parse.py" 2>/dev/null)
 [ -n "$RESULT" ] || exit 0
 
 SESSION_ID=$(printf '%s\n' "$RESULT" | sed -n '1p')

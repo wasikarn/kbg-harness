@@ -115,16 +115,17 @@ approval. Each found a real, often live-reproduced bug in the TMPDIR arm-marker 
    in), not a correctness hazard, and building a second sweep for a durable, low-volume,
    per-project tree is disproportionate machinery for what it would prevent.
 8. **The window-expiry sweep's stat-failure direction disagreed with itself** (caught while
-   extracting the shared `scripts/_lib/hook-common.sh` lib): `fragments-capture.sh`'s own
-   age-check used `|| echo 0` — a stat failure produced age `0`, i.e. "just created" — while
-   `fragments-surface.sh`'s `entry_age()` used `|| echo "$NOW"`, i.e. also "just created," but
-   the two shared no code, so a future edit to either could silently diverge without anyone
-   noticing (and briefly did — an earlier draft of `fragments-capture.sh` used `|| echo 0`,
-   which computes an *ancient* age against a small `$NOW`, sweeping a live marker on a transient
-   `stat` failure). `hook_entry_age <path> <now>` fixes the shared direction by refusing to
-   guess at all: it prints nothing and returns 1 on a stat failure, and both callers treat that
-   as "skip this pass, don't sweep, don't capture" — never destructive, never a guessed age in
-   either direction. Honesty-verified: a stat-shim regression test in
+   extracting the shared `scripts/_lib/hook-common.sh` lib): `fragments-capture.sh`'s shipped
+   v1.1.66 age-check used `|| echo 0` — `mtime=0` (the Unix epoch) against a real `$NOW`
+   computes an *ancient* age, sweeping a live, in-window marker on a transient `stat` failure —
+   while `fragments-surface.sh`'s `entry_age()` used `|| echo "$NOW"`, computing an age of `0`,
+   i.e. "just created," so it never swept an orphan at all on the same failure. The two agreed
+   on nothing: one treated a stat glitch as "definitely gone," the other as "definitely still
+   there," and shared no code, so nobody could have noticed the two hooks disagreeing without
+   reading both side by side. `hook_entry_age <path> <now>` fixes the shared direction by
+   refusing to guess at all: it prints nothing and returns 1 on a stat failure, and both callers
+   treat that as "skip this pass, don't sweep, don't capture" — never destructive, never a
+   guessed age in either direction. Honesty-verified: a stat-shim regression test in
    `tests/hooks/test-fragments-capture.sh` is red against the pre-fix `|| echo 0` fallback (it
    sweeps the live marker) and green after.
 

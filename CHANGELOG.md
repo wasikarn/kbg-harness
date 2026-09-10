@@ -3,6 +3,67 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.69] — 2026-09-10
+
+### Fixed
+
+- **HIGH — closed a `PYTHONPATH`-cwd-shadow import hijack** in `fragments-arm.sh` and
+  `fragments-capture.sh`, introduced by v1.1.67's own refactor. `python3 -c '...'` sets
+  `sys.path[0]` to the process's own cwd, searched *before* `PYTHONPATH` — so a same-named
+  `hook_payload.py` planted in the hook's cwd would shadow the trusted lib copy and run
+  attacker-controlled code inside the hook. Fixed by extracting the two inline scripts into real
+  files (`scripts/_lib/fragments_arm_parse.py`, `scripts/_lib/fragments_capture_parse.py`),
+  invoked by absolute path instead of `-c`+`PYTHONPATH`, which resolves `sys.path[0]` to the
+  lib's own directory instead. Live-verified: a decoy `hook_payload.py` planted in a fresh cwd no
+  longer gets imported (new regression tests in `test-fragments-arm.sh`, `test-fragments-capture.sh`).
+- **HIGH — `handoff-surface.sh`'s unguarded lib source could silently defeat its own
+  never-falsely-archive guarantee.** Under `set -uo pipefail` (no `-e`), a failed `.
+  hook-common.sh` source left `hook_snapshot` undefined; both of the hook's snapshot reads then
+  silently became empty strings under command substitution, making the "did the file change
+  between read and move" check (`"" = ""`) always match — falsely archiving every selected
+  pending document on any lib-load failure. Fixed with `. ".../hook-common.sh" 2>/dev/null ||
+  exit 0`, matching every other hook's own lib-source guard. New regression test uses an
+  isolated fixture copy (same relative depth, sibling lib deliberately absent) so the missing-lib
+  failure mode is proven without touching the shared repo tree.
+- Applied the same source-guard fix to `fragments-arm.sh`, `fragments-capture.sh`,
+  `fragments-surface.sh`, and `handoff-nudge.sh` (`|| exit 0`), and to
+  `handoff-path.sh` (`|| fail "..."`, matching its own loud-failure convention) — a missing or
+  unreadable shared lib now fails the same defined way everywhere instead of running with core
+  functions undefined.
+- `hook_snapshot`'s `<label>` parameter is now required (`${2:?hook_snapshot requires a distinct
+  label}`) instead of silently defaulting — an omitted label could let two independent stat
+  failures at different call sites compare equal, the exact hazard the label exists to prevent.
+- ADR-0003's finding #8 corrected: the `|| echo 0` stat-failure bug computes an *ancient* age (not
+  "just created" as previously misstated) and was shipped v1.1.66 code (not an earlier draft).
+
+### Added
+
+- `tests/scripts/test-harness.sh`: direct, isolated coverage of `tests/_lib/harness.sh`'s
+  `track_trash`/`_cleanup_trash` empty-string filter — the exact bug class that moved this repo's
+  working tree to Trash mid-session, previously exercised only indirectly (every real call site
+  passes a non-empty path).
+- `tests/scripts/test-hook-common.sh`: GNU (`stat -c`) fallback-branch coverage for
+  `hook_owner_ok`, `hook_snapshot`, and `hook_entry_age` (previously exercised only on the BSD
+  branch on macOS; CI runs `ubuntu-latest` but never runs the hook test suite there), an
+  `hook_repo_root ''` edge case, and its Python/bash snapshot anti-drift check now extracts and
+  execs the *real* `snapshot()` function out of `fragments-surface.sh` via `ast` instead of
+  comparing against a pasted copy that could silently drift unnoticed.
+- `tests/hooks/test-fragments-surface.sh`: a stat-shim regression test covering all 5 of the
+  sweep's `hook_entry_age` call sites at once. Honesty-verifying this test surfaced a second,
+  separate bug in the test itself: a blanket `stat` failure shim also broke `hook_owner_ok`
+  (called via `hook_safe_dir` for `DOCS_DIR`, unrelated to the sweep), making the hook exit at
+  line 31 before ever reaching the sweep code — the test "passed" for the wrong reason. Fixed by
+  scoping the shim to fail only `stat` calls naming a path under the arm base.
+
+### Process
+
+- This round closed a real gap from earlier in the session: a Codex `codex-review:plan` rate
+  limit was worked around by skipping review entirely, rather than falling back to the documented
+  Claude-side alternative (`docs/reference/codex-integration-map.md`). Three parallel Claude
+  subagents (`mh:blind-spot-hunter`, `mh:silent-failure-hunter`, `mh:test-gap-analyzer`)
+  retroactively reviewed the two unreviewed v1.1.67/v1.1.68 commits; every confirmed finding
+  (2 HIGH, several LOW) is fixed in this release.
+
 ## [1.1.68] — 2026-09-10
 
 ### Changed

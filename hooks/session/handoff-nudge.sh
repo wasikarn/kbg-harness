@@ -30,7 +30,7 @@ umask 077
 command -v python3 >/dev/null 2>&1 || exit 0
 
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$HERE/../../scripts/_lib/hook-common.sh"
+. "$HERE/../../scripts/_lib/hook-common.sh" 2>/dev/null || exit 0
 
 # session_id must be a real, non-empty JSON string -- not just present.
 # json.load on malformed/empty stdin raises, caught below; a wrong-typed

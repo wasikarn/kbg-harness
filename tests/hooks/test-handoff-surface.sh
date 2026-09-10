@@ -16,7 +16,6 @@ fail=0
 ok()  { pass=$((pass + 1)); echo "PASS: $1"; }
 bad() { fail=$((fail + 1)); echo "FAIL: $1" >&2; }
 
-FAKE_HOME=$(mktemp -d)
 trap _cleanup_trash EXIT
 
 # Every invocation below runs with CLAUDE_PLUGIN_ROOT pointed at this repo
@@ -507,6 +506,32 @@ if [ "$SHOWN" -eq 10 ] && [ "$STILL_PENDING" -eq 2 ] && [ ! -s "$H/err" ]; then
   ok "MAX_COUNT caps selection at the 10 oldest documents, leaving the 2 newest pending"
 else
   bad "MAX_COUNT cap not enforced correctly: shown=$SHOWN still_pending=$STILL_PENDING"
+fi
+
+# --- silent-failure-hunter finding, live-reproduced: sourcing hook-common.sh
+# used to have no `2>/dev/null || exit 0` guard. If that source ever fails
+# (missing/corrupted lib file), hook_snapshot becomes undefined but the
+# script keeps running under set -uo pipefail (no -e) -- both snapshot
+# reads then silently evaluate to "", so the "did the file change between
+# read and move" guard's own "" == "" comparison always matched, archiving
+# every selected file regardless of whether it actually changed. Proven
+# here via an isolated fixture copy of the hook at the same relative depth
+# but with NO sibling scripts/_lib/hook-common.sh to find -- never touches
+# the real repo tree. Must now be silent, exit 0, and (this is the actual
+# guarantee at stake) leave the file pending rather than falsely archive
+# it. ---
+NOLIB_FIXTURE=$(fresh_home)
+mkdir -p "$NOLIB_FIXTURE/hooks/session"
+cp "$HOOK" "$NOLIB_FIXTURE/hooks/session/handoff-surface.sh"
+NOLIB_HOOK="$NOLIB_FIXTURE/hooks/session/handoff-surface.sh"
+H=$(fresh_home)
+P=$(alloc "$H"); printf 'Task: nolib\nDone: proves the guard\n' > "$P"
+PUB=$(publish "$H" "$P")
+OUT=$(HOME="$H" CLAUDE_PLUGIN_ROOT="$ROOT" bash "$NOLIB_HOOK" 2>"$H/err")
+if [ -z "$OUT" ] && [ ! -s "$H/err" ] && [ -f "$PUB" ] && [ ! -f "$(consumed_path "$PUB")" ]; then
+  ok "a missing hook-common.sh is silent, exit 0, and never falsely archives the pending file"
+else
+  bad "missing-lib guard failed: out='$OUT' stderr='$(cat "$H/err")' still_pending=$([ -f "$PUB" ] && echo yes || echo no) archived=$([ -f "$(consumed_path "$PUB")" ] && echo yes || echo no)"
 fi
 
 echo "hooks/handoff-surface: $pass passed, $fail failed"

@@ -241,5 +241,34 @@ else
   bad "preserved marker did not capture on retry: err='$(cat "$T/err2" 2>/dev/null)'"
 fi
 
+# --- deep-audit finding, live-reproduced: fragments_capture_parse.py must
+# be invoked BY PATH (never `-c` + PYTHONPATH). This hook's own readdir
+# gate is TMPDIR-global, so it runs the parse for every Write/Edit in every
+# project once anything anywhere is armed -- a decoy hook_payload.py
+# planted in ANY such project's cwd could shadow the real module under the
+# old `-c`+PYTHONPATH invocation. Confirmed live on that pre-fix version:
+# the decoy's forged session_id was actually used. Run the hook from a cwd
+# containing exactly that decoy and assert the real armed session (c11)
+# still captures correctly, with no hijacked record and no decoy stderr. ---
+T=$(fresh_tmpdir)
+REPO=$(fresh_repo)
+arm "c11" "$T" "$REPO" "$REPO/frags.md"
+printf '# Title\nfrag\n' > "$REPO/frags.md"
+DECOY_CWD=$(fresh_tmpdir)
+cat > "$DECOY_CWD/hook_payload.py" <<'PYEOF'
+import sys
+def validate_session_id(v):
+    print("PWNED", file=sys.stderr)
+    return "hijacked-session-id"
+PYEOF
+OUT=$( (cd "$DECOY_CWD" && printf '{"session_id":"c11","cwd":"%s","tool_name":"Write","tool_input":{"file_path":"%s/frags.md","content":"# Title\\nfrag\\n"}}' "$REPO" "$REPO" \
+  | HOME="$FAKE_HOME" TMPDIR="$T" bash "$HOOK") 2>"$T/err" )
+DOCS=$(docs_dir_for "$REPO")
+if [ -n "$(find "$DOCS" -name '*.json' 2>/dev/null)" ] && ! /usr/bin/grep -q 'PWNED' "$T/err"; then
+  ok "a decoy hook_payload.py in the hook's own cwd is never imported (shadow-import closed)"
+else
+  bad "decoy shadow-import not closed: docs='$(find "$DOCS" -name '*.json' 2>/dev/null)' stderr='$(cat "$T/err")'"
+fi
+
 echo "hooks/fragments-capture: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
