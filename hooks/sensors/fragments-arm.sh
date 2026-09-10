@@ -50,16 +50,17 @@ HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # mangles a trailing newline or an embedded NUL before a bash-side check
 # would ever see it), matches the skill-invocation regex against `prompt`,
 # and extracts an optional candidate path from whatever follows it in the
-# same prompt. Output: session_id, match flag, cwd -- each on its own
-# line -- then the (possibly multi-line, possibly empty) candidate text as
-# everything remaining.
-RESULT=$(printf '%s' "$PAYLOAD" | python3 -B "$HERE/../../scripts/_lib/fragments_arm_parse.py" 2>/dev/null)
-[ -n "$RESULT" ] || exit 0
-
-SESSION_ID=$(printf '%s\n' "$RESULT" | sed -n '1p')
-MATCHED=$(printf '%s\n' "$RESULT" | sed -n '2p')
-CWD=$(printf '%s\n' "$RESULT" | sed -n '3p')
-CANDIDATE=$(printf '%s\n' "$RESULT" | tail -n +4)
+# same prompt. Output: session_id, match flag, cwd, candidate -- 4 NUL-
+# separated fields (deep-audit finding, live-reproduced: line-numbered
+# fields let an embedded newline in `cwd` desync every field after it;
+# `read -r -d ''` reads to the next NUL, immune to embedded newlines).
+SESSION_ID="" MATCHED="" CWD="" CANDIDATE=""
+{
+  IFS= read -r -d '' SESSION_ID
+  IFS= read -r -d '' MATCHED
+  IFS= read -r -d '' CWD
+  IFS= read -r -d '' CANDIDATE
+} < <(printf '%s' "$PAYLOAD" | python3 -B "$HERE/../../scripts/_lib/fragments_arm_parse.py" 2>/dev/null)
 
 [ "$MATCHED" = "1" ] && [ -n "$SESSION_ID" ] || exit 0
 
@@ -126,8 +127,12 @@ DOCS_DIR=$(fragments_docs_dir "$ROOT" 2>/dev/null) || exit 0
 [ -d "$DOCS_DIR" ] || exit 0
 
 # Most-recently-captured record on file for this project, if any -- read
-# via python3 so a malformed record can never crash this script.
-KNOWN=$(python3 -c '
+# via python3 so a malformed record can never crash this script. -I (deep-
+# audit finding, live-reproduced with a planted glob.py): this is stdlib-
+# only, and `-c` alone puts the hook's own cwd first on sys.path, letting a
+# same-named glob.py/json.py/os.py planted there shadow the real module and
+# run arbitrary code -- -I drops cwd (and site-packages) from sys.path.
+KNOWN=$(python3 -I -c '
 import glob, json, os, sys
 docs_dir = sys.argv[1]
 best = None

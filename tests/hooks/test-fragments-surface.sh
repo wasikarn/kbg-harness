@@ -189,12 +189,19 @@ fi
 # fragments-capture.sh's window-expiry check, but only capture.sh got a
 # live stat-shim regression test for the direction fix -- this sweep's own
 # behavior on a stat failure was only hand-reasoned, never proven live.
-# Pre-plant one of each of the 5 entry SHAPES this sweep recognizes (a
+# Pre-plant one of each of the 6 entry SHAPES this sweep recognizes (a
 # marker dir, a .claimed dir, a .lock dir, a .candidate file, a .current
-# pointer file), all stale (past the window). Under a failing-stat PATH
-# shim, hook_entry_age prints nothing on every call -- every entry must
-# survive (skip this pass, never guess an age in either direction). Rerun
-# with a real stat, all five must now be swept. ---
+# pointer file, a .ptr.* orphaned scratch file), all stale (past the
+# window). Under a failing-stat PATH shim, hook_entry_age prints nothing on
+# every call -- every entry must survive (skip this pass, never guess an
+# age in either direction). Rerun with a real stat, all six must now be
+# swept. Coverage boundary (deep-audit finding): the sweep's OWN in-lock
+# re-check for .current (hooks/session/fragments-surface.sh's second
+# hook_entry_age call inside fragments_lock_acquire) is NOT reachable
+# through this shim -- the outer .current check already `continue`s on the
+# same stat failure, so the lock is never even attempted. Proving that
+# specific re-check would need a shim that succeeds once then fails, not
+# covered here. ---
 # A blanket stat failure also breaks hook_owner_ok (called by hook_safe_dir
 # for DOCS_DIR at the top of the script, well before the sweep), which made
 # the script exit at line 31 before ever reaching the sweep code -- the
@@ -221,33 +228,35 @@ mkdir -p "$ARM_BASE8/sidB.marker2.claimed"
 mkdir -p "$ARM_BASE8/sidC.lock"
 : > "$ARM_BASE8/sidD.marker4.candidate"
 printf 'suffixE1' > "$ARM_BASE8/sidE.current"
+: > "$ARM_BASE8/.ptr.orphan1"
 OLD_TS8=$(( $(date +%s) - 3600 ))
 OLD_STAMP8=$(date -r "$OLD_TS8" +%Y%m%d%H%M.%S 2>/dev/null || date -d "@$OLD_TS8" +%Y%m%d%H%M.%S)
 touch -t "$OLD_STAMP8" "$ARM_BASE8/sidA.marker1" "$ARM_BASE8/sidB.marker2.claimed" \
-  "$ARM_BASE8/sidC.lock" "$ARM_BASE8/sidD.marker4.candidate" "$ARM_BASE8/sidE.current" 2>/dev/null
+  "$ARM_BASE8/sidC.lock" "$ARM_BASE8/sidD.marker4.candidate" "$ARM_BASE8/sidE.current" \
+  "$ARM_BASE8/.ptr.orphan1" 2>/dev/null
 
 (cd "$REPO8" && HOME="$FAKE_HOME" TMPDIR="$T" PATH="$STATSHIM_SURF:$PATH" bash "$HOOK") >/dev/null 2>"$T/statfail-err"
 SURVIVED=1
 for p in "$ARM_BASE8/sidA.marker1" "$ARM_BASE8/sidB.marker2.claimed" "$ARM_BASE8/sidC.lock" \
-         "$ARM_BASE8/sidD.marker4.candidate" "$ARM_BASE8/sidE.current"; do
+         "$ARM_BASE8/sidD.marker4.candidate" "$ARM_BASE8/sidE.current" "$ARM_BASE8/.ptr.orphan1"; do
   [ -e "$p" ] || SURVIVED=0
 done
 if [ "$SURVIVED" -eq 1 ]; then
-  ok "a stat failure during the sweep leaves all 5 entry shapes untouched, never guesses stale or fresh"
+  ok "a stat failure during the sweep leaves all 6 entry shapes untouched, never guesses stale or fresh"
 else
-  bad "stat failure during sweep should preserve every entry: $(for p in "$ARM_BASE8/sidA.marker1" "$ARM_BASE8/sidB.marker2.claimed" "$ARM_BASE8/sidC.lock" "$ARM_BASE8/sidD.marker4.candidate" "$ARM_BASE8/sidE.current"; do [ -e "$p" ] || printf '%s ' "MISSING:$p"; done)"
+  bad "stat failure during sweep should preserve every entry: $(for p in "$ARM_BASE8/sidA.marker1" "$ARM_BASE8/sidB.marker2.claimed" "$ARM_BASE8/sidC.lock" "$ARM_BASE8/sidD.marker4.candidate" "$ARM_BASE8/sidE.current" "$ARM_BASE8/.ptr.orphan1"; do [ -e "$p" ] || printf '%s ' "MISSING:$p"; done)"
 fi
 
 run_surface "$REPO8" "$T" >/dev/null 2>/dev/null
 GONE=1
 for p in "$ARM_BASE8/sidA.marker1" "$ARM_BASE8/sidB.marker2.claimed" "$ARM_BASE8/sidC.lock" \
-         "$ARM_BASE8/sidD.marker4.candidate" "$ARM_BASE8/sidE.current"; do
+         "$ARM_BASE8/sidD.marker4.candidate" "$ARM_BASE8/sidE.current" "$ARM_BASE8/.ptr.orphan1"; do
   [ -e "$p" ] && GONE=0
 done
 if [ "$GONE" -eq 1 ]; then
-  ok "once stat works again, the same 5 stale entries are all swept in one pass"
+  ok "once stat works again, the same 6 stale entries are all swept in one pass"
 else
-  bad "stale entries survived a normal (non-stat-failing) sweep: $(for p in "$ARM_BASE8/sidA.marker1" "$ARM_BASE8/sidB.marker2.claimed" "$ARM_BASE8/sidC.lock" "$ARM_BASE8/sidD.marker4.candidate" "$ARM_BASE8/sidE.current"; do [ -e "$p" ] && printf '%s ' "STILL-HERE:$p"; done)"
+  bad "stale entries survived a normal (non-stat-failing) sweep: $(for p in "$ARM_BASE8/sidA.marker1" "$ARM_BASE8/sidB.marker2.claimed" "$ARM_BASE8/sidC.lock" "$ARM_BASE8/sidD.marker4.candidate" "$ARM_BASE8/sidE.current" "$ARM_BASE8/.ptr.orphan1"; do [ -e "$p" ] && printf '%s ' "STILL-HERE:$p"; done)"
 fi
 
 echo "hooks/fragments-surface: $pass passed, $fail failed"

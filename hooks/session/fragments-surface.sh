@@ -47,7 +47,14 @@ if [ "${#RECORDS[@]}" -gt 0 ]; then
   # scanning only the newest-by-mtime records before the diff filter
   # could permanently starve an older one; this scans every record
   # unconditionally, only the PRINT count stays capped.
-  SELECTED=$(python3 -c '
+  # -I: stdlib-only, closes the same cwd-shadow-import class the by-path
+  # parsers fixed. Its own snapshot() below tries `stat -f` before `-c`
+  # (unlike hook-common.sh's now GNU-first order) but isn't the same bug:
+  # it runs `stat` via subprocess.run(args-list) and only trusts stdout
+  # when returncode == 0, so a GNU multi-operand partial-success case (one
+  # operand fails, one prints, exit nonzero) is correctly discarded before
+  # it ever falls through to `-c` -- no `A || B` stdout-capture involved.
+  SELECTED=$(python3 -I -c '
 import json, os, subprocess, sys
 
 reinject = sys.argv[1] == "1"
@@ -134,7 +141,8 @@ if [ -n "$SELECTED" ]; then
     if [ "$REINJECT" -eq 0 ]; then
       TMP_REC=$(mktemp "$DOCS_DIR/.rec.XXXXXX" 2>/dev/null)
       if [ -n "$TMP_REC" ]; then
-        python3 -c '
+        # -I: stdlib-only, closes the same cwd-shadow-import class as above.
+        python3 -I -c '
 import json, sys
 rf, snap, out = sys.argv[1], sys.argv[2], sys.argv[3]
 try:

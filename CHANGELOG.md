@@ -3,6 +3,96 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.70] — 2026-09-10
+
+### Corrected
+
+- **v1.1.69 overclaimed its own fix.** That entry said it "closed a `PYTHONPATH`-cwd-shadow
+  import hijack in `fragments-arm.sh` and `fragments-capture.sh`" — true for those two files, but
+  4 more inline `python3 -c` blocks across `fragments-arm.sh`, `fragments-capture.sh` (×2), and
+  `fragments-state.sh` still ran with `sys.path[0]` set to the hook's own cwd, unstated and
+  unfixed. Found by a `mh:deep-audit` fresh-context Codex checker, live-reproduced with a planted
+  `glob.py`. Now closed on all 6 sites via `python3 -I` (isolated mode strips `sys.path[0]`'s
+  cwd entry while leaving `sys.argv` untouched; verified empirically) — the 2 by-path parser
+  scripts are unaffected (`-I` isn't applicable there; they correctly rely on `sys.path[0]` =
+  their own directory to import the local `hook_payload` module).
+
+### Fixed
+
+This release is a `mh:deep-audit` pass over v1.1.67–v1.1.69's own extraction work (rubric detail
+below). All 7 findings the audit confirmed in scope were fixed here, plus 3 more a required
+second fresh-context validator round found already inside this round's own fixes:
+
+- **HIGH — new test infra reintroduced the unguarded `trash` empty-arg bug** the v1.1.68
+  extraction existed to close. `tests/scripts/test-hook-common.sh` and `test-harness.sh` had
+  direct `trash "$X" "$Y"` calls with no non-empty filter. Fixed by building a `targets=()`/
+  `CLEANUP1`/`CLEANUP2` array per call site, appending only non-empty values, and guarding the
+  `trash` call itself on a non-zero array length.
+- **HIGH — `hook_owner_ok`/`hook_snapshot`/`hook_entry_age`'s `stat -f … || stat -c …` order
+  corrupts or crashes on real GNU `stat`.** GNU's `-f` is a boolean flag (print filesystem type),
+  not BSD's format string — passed BSD's format string as its operand, GNU `stat` misparses or
+  errors depending on shell quoting, and the docstring's "portable (BSD vs GNU stat)" claim was
+  false. Live-reproduced with `gstat`. Fixed by trying `stat -c` (GNU's real format flag) first:
+  BSD's `-c` is an illegal-option failure with zero stdout (verified), so the order costs nothing
+  on BSD and never reaches GNU's `-f` at all. Test fixed to shim `stat` with a real `gstat` exec
+  wrapper (`command -v gstat` gated) instead of a fake case-statement that didn't replicate the
+  real failure mode.
+- **HIGH — the `PYTHONPATH`-shadow-import fix only covered 2 of 6 sites** — see Corrected, above.
+- **MEDIUM — `fragments-state.sh`'s own two `source` lines had no `|| return 1`**, so a failed
+  inner lib load was invisible to every outer `|| exit 0` guard. Fixed.
+- **MEDIUM — `fresh_tmpdir()` never actually registered its cleanup** when called as
+  `T=$(fresh_tmpdir)` (the idiom used everywhere) — the registration ran inside the
+  command-substitution subshell and vanished with it, leaking a tmpdir on every call across all 5
+  migrated test files. Fixed by creating one `_HARNESS_ROOT` tmpdir at source time (a top-level
+  assignment, not inside a function), making every `fresh_tmpdir()` call a plain
+  `mktemp -d "$_HARNESS_ROOT/t.XXXXXX"` with no per-call registration needed, and trashing
+  `_HARNESS_ROOT` once in `_cleanup_trash`.
+- **MEDIUM — newline in `cwd` desynced the fragments-arm/capture parsers' newline-delimited
+  output fields**, letting an embedded newline shift every field after it (live-reproduced
+  exactly as predicted). Fixed by switching `fragments_arm_parse.py` and
+  `fragments_capture_parse.py` to NUL-delimited output (`sys.stdout.write("\0".join(...))`) read
+  back with `{ IFS= read -r -d '' VAR; ... } < <(...)` brace groups (not a subshell, so the
+  variables persist to the caller) instead of `sed -n 'Np'`/`tail -n +N`.
+- **LOW — the stat-shim sweep test claimed "5 call sites" but only exercised 3.** No `.ptr.*`
+  fixture existed, and the in-lock recheck was structurally unreachable under that shim. Added
+  the missing `.ptr.orphan1` fixture (now 6 shapes); mutation-tested by temporarily breaking the
+  live sweep's age guard, confirming the fixture catches it, and restoring.
+- **MEDIUM — the NUL-delimited fix above (Fixed, item 5) was itself vulnerable to field
+  injection**: a raw NUL byte inside a field's own *value* forges a fake field boundary, since NUL
+  is the delimiter. Found by a required second fresh-context validator round dispatched against
+  the full fix-round diff (`mh:deep-audit` Rule 13: any fix touching 2+ files gets re-validated).
+  Fixed by stripping embedded NUL bytes from `cwd` (arm) and every field (capture) before the
+  join; NUL bytes remain fundamentally unrepresentable in bash strings regardless of framing, but
+  stripping closes the forgery primitive specifically.
+- **LOW — `test-harness.sh` leaked a tmpdir per isolated sub-invocation** as a side effect of the
+  `_HARNESS_ROOT`-at-source-time fix above — 4 leaks per run. Fixed by collecting each
+  sub-invocation's own `_HARNESS_ROOT` into a `LEAKED_ROOTS` array and trashing it at the end.
+- **LOW — `test-hook-common.sh`'s GNU-shim header comment went stale** after the real-`gstat`
+  fix above, still describing the old fake case-statement shim. Corrected.
+
+### Incident
+
+While adding a NUL-injection regression test, an Edit-tool call meant to write the 4 literal
+characters `\x00` (for Python's own lexer to interpret at runtime) instead wrote **actual raw NUL
+bytes** into the tracked `.sh` file's bytes on disk — detected via a byte-level Python check
+(`b'\x00' in open(path, 'rb').read()`; a first attempt with `awk` false-positived on every line).
+Fixed with a Bash-invoked Python script doing `open(path, 'rb').read()` → `.replace()` →
+`open(path, 'wb').write()`, and rewritten using `chr(0)`-based construction so the escape sequence
+never has to pass through the Edit tool again. Caught before anything was committed; no corruption
+reached a committed state.
+
+### Process
+
+- Baseline rubric (`mh:deep-audit`, weights Correctness 3 / Completeness 2 / Claim accuracy 2 /
+  Regression safety 2 / Simplicity 1): **4.15/10 — FAIL** (Correctness 3.5, Completeness 4, Claim
+  accuracy 2.5, Regression safety 5, Simplicity 8). Two Codex fresh-context validator rounds
+  (`codex-cli 0.153.4`, effort `high`) found the findings above; all fixed and honesty-verified
+  (red-before/green-after, one mutation test). Final rubric score and delta: see the audit report
+  delivered alongside this release.
+- One finding stayed out of scope on the operator's own instruction: a pre-existing path-traversal
+  via unvalidated `session_id` in `failure-diagnose-nudge.py`, unrelated to this session's diff —
+  not fixed in this pass.
+
 ## [1.1.69] — 2026-09-10
 
 ### Fixed

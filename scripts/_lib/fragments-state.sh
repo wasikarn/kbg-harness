@@ -18,8 +18,13 @@
 # lives in scripts/_lib/hook-common.sh, shared with the handoff hooks.
 
 _FRAGMENTS_LIB_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$_FRAGMENTS_LIB_DIR/slug-hash.sh"
-. "$_FRAGMENTS_LIB_DIR/hook-common.sh"
+# Guarded (deep-audit finding, live-reproduced): an unguarded `.` reports
+# only its own LAST statement's exit status, so a failed inner source here
+# was invisible to every caller's own `. fragments-state.sh 2>/dev/null ||
+# exit 0` guard -- sourcing would "succeed" while hook_repo_root et al were
+# never actually defined, and the caller would crash instead of exiting.
+. "$_FRAGMENTS_LIB_DIR/slug-hash.sh" || return 1
+. "$_FRAGMENTS_LIB_DIR/hook-common.sh" || return 1
 
 # fragments_state_dir <root>: this project's mh-fragments dir
 # ($HOME/.claude/state/mh-fragments/<slug>-<hash>), ensuring every level of
@@ -57,7 +62,11 @@ fragments_docs_dir() {
 # lighter one. A clean value is still truncated to maxlen (0 = no limit).
 fragments_sanitize() {
   local value="$1" label="$2" maxlen="${3:-0}"
-  python3 -c '
+  # -I: stdlib-only, closes the same cwd-shadow-import class as the
+  # by-path parsers (deep-audit finding, live-reproduced elsewhere in this
+  # sweep with a planted glob.py) -- this function runs in every hook's
+  # own cwd, called at every point a path or title is printed.
+  python3 -I -c '
 import re, sys
 value, label, maxlen = sys.argv[1], sys.argv[2], int(sys.argv[3])
 if re.search(r"[\x00-\x1f\x7f<>]", value):

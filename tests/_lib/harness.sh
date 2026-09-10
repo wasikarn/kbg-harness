@@ -19,20 +19,34 @@
 
 EXTRA_TRASH=()
 
+# _HARNESS_ROOT: one real tmpdir created here, at source time, in the
+# caller's own shell -- not inside a function invoked via $(...) (deep-audit
+# finding, live-reproduced: every caller uses `T=$(fresh_tmpdir)`, and a
+# function's ENTIRE body runs in a forked subshell when called that way, so
+# an EXTRA_TRASH+=(...) done from inside fresh_tmpdir never reached the
+# parent's array -- `${#EXTRA_TRASH[@]}` stayed 0 after every such call,
+# meaning fresh_tmpdir's output was never actually cleaned up). fresh_tmpdir
+# below now mktemps a subdir of this already-live root instead of
+# registering itself into an array, so no subshell-scoped mutation is
+# needed for the common case at all.
+_HARNESS_ROOT=$(mktemp -d)
+
 # track_trash <path>: register <path> for cleanup at _cleanup_trash time.
-# Filters empty unconditionally -- the same guard fresh_tmpdir applies,
-# available separately for a caller's own mktemp/mkdir calls that don't go
-# through fresh_tmpdir (a single mktemp file, a manually-named dir).
+# Filters empty unconditionally. For a caller's own mktemp/mkdir calls that
+# don't go through fresh_tmpdir (a single mktemp file, a manually-named
+# dir) -- call this directly at the test file's own top level, never from
+# inside a function invoked via $(...), or it inherits the same bug.
 track_trash() {
   [ -n "${1:-}" ] && EXTRA_TRASH+=("$1")
   return 0
 }
 
-# fresh_tmpdir: mktemp -d, tracked for cleanup. Prints the path.
+# fresh_tmpdir: a fresh subdir of _HARNESS_ROOT. Prints the path. No
+# per-call registration needed -- _cleanup_trash removes _HARNESS_ROOT
+# itself, once, which recursively takes every fresh_tmpdir with it.
 fresh_tmpdir() {
   local d
-  d=$(mktemp -d)
-  track_trash "$d"
+  d=$(mktemp -d "$_HARNESS_ROOT/t.XXXXXX")
   printf '%s' "$d"
 }
 
@@ -44,14 +58,15 @@ fresh_repo() {
   printf '%s' "$d"
 }
 
-# _cleanup_trash: the EXIT trap body. Every target -- $FAKE_HOME (if the
-# caller set it) plus every tracked EXTRA_TRASH entry -- is filtered to
-# non-empty before trash ever sees it: `trash ""` deletes the process's
-# current working directory, confirmed live (this repo's working tree was
-# moved to Trash mid-session by exactly this bug, in a copy of this
-# function that lacked the filter).
+# _cleanup_trash: the EXIT trap body. Every target -- _HARNESS_ROOT (every
+# fresh_tmpdir at once), $FAKE_HOME (if the caller set it), plus every
+# tracked EXTRA_TRASH entry -- is filtered to non-empty before trash ever
+# sees it: `trash ""` deletes the process's current working directory,
+# confirmed live (this repo's working tree was moved to Trash mid-session
+# by exactly this bug, in a copy of this function that lacked the filter).
 _cleanup_trash() {
   local t targets=()
+  [ -n "${_HARNESS_ROOT:-}" ] && targets+=("$_HARNESS_ROOT")
   [ -n "${FAKE_HOME:-}" ] && targets+=("$FAKE_HOME")
   for t in "${EXTRA_TRASH[@]:-}"; do
     [ -n "$t" ] && targets+=("$t")

@@ -11,10 +11,17 @@ still used PYTHONPATH; docs/adr/0003-writing-fragments-pointer-capture.md).
 Running by path puts this file's own directory (scripts/_lib/, containing
 the real hook_payload.py) first on sys.path instead, closing the shadow.
 
-Reads a UserPromptSubmit hook payload from stdin. Prints 4 lines: the
-validated session_id (or empty), a "1"/"0" match flag, cwd (or empty),
-then the (possibly multi-line, possibly empty) candidate text as
-everything remaining.
+Reads a UserPromptSubmit hook payload from stdin. Prints 4 NUL-separated
+fields (deep-audit finding, live-reproduced on the sibling capture parser:
+newline-separated fields let an embedded newline in `cwd` desync every
+field after it): the validated session_id (or empty), a "1"/"0" match
+flag, cwd (or empty), then the (possibly multi-line, possibly empty)
+candidate text. `cwd` has embedded NUL bytes stripped before the join
+(deep-audit finding, live-reproduced on the sibling capture parser: an
+unstripped NUL forges a fake field boundary, spoofing the match flag and
+candidate) -- `candidate` is already excluded outright on any embedded
+NUL above, and `sid` is already NUL-free by construction
+(validate_session_id's character class), so only `cwd` needs it.
 """
 import json
 import re
@@ -46,7 +53,4 @@ if matched:
     if rest and "\x00" not in rest:
         candidate = rest
 
-print(sid)
-print("1" if matched else "0")
-print(cwd)
-print(candidate)
+sys.stdout.write("\0".join([sid, "1" if matched else "0", cwd.replace("\0", ""), candidate]))

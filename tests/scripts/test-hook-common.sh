@@ -25,12 +25,14 @@ bad() { fail=$((fail + 1)); echo "  FAIL: $1" >&2; }
 T=$(mktemp -d)
 EXTRA_TRASH=()
 cleanup() {
-  local targets=("$T")
+  local targets=()
   local t
+  [ -n "$T" ] && targets+=("$T")
   for t in "${EXTRA_TRASH[@]:-}"; do
     [ -n "$t" ] && targets+=("$t")
   done
-  trash "${targets[@]}" 2>/dev/null || true
+  [ "${#targets[@]}" -gt 0 ] && trash "${targets[@]}" 2>/dev/null
+  return 0
 }
 trap cleanup EXIT
 
@@ -114,7 +116,7 @@ with open(hook_path) as fh:
 # heredoc, not as standalone Python source -- pull just that embedded
 # script out before handing it to ast.parse.
 q = chr(39)
-pat = "python3 -c " + q + "\n(.*?)\n" + q
+pat = "python3 [^\\n]*-c " + q + "\n(.*?)\n" + q
 m = re.search(pat, hook_src, re.S)
 if not m:
     sys.exit("no embedded python3 -c block found in " + hook_path)
@@ -248,55 +250,43 @@ else
   bad "hook_repo_root '' expected to match ambient '$ROOT_AMBIENT', got '$ROOT_EMPTY'"
 fi
 
-# --- GNU (`stat -c`) fallback branch: never exercised by any other test in
-# this repo, on any platform (CI never runs the hook test suite on Linux;
-# every local/macOS test that reaches a real `stat` exercises the BSD
-# `-f` branch succeeding first). A shim rejecting `-f` and answering only
-# `-c` proves the fallback chain -- and its format-string arguments --
-# actually work, not just that a bare `|| stat -c ...` clause parses. ---
-GNUSHIM=$(mktemp -d)
-EXTRA_TRASH+=("$GNUSHIM")
-cat > "$GNUSHIM/stat" <<'EOF'
-#!/usr/bin/env bash
-# Simulates GNU coreutils stat: rejects BSD's -f flag, answers -c.
-case "$1" in
-  -f) exit 1 ;;
-  -c)
-    fmt="$2"; path="$3"
-    [ -e "$path" ] || exit 1
-    case "$fmt" in
-      # Real GNU stat would report the path's actual owner uid; this shim
-      # is only asked about paths this test process itself just created,
-      # so hardcoding the running process's own uid is the correct answer,
-      # not a shortcut around it.
-      '%u') id -u ;;
-      '%s %Y') printf '%s %s\n' "$(wc -c < "$path" | tr -d ' ')" "1700000000" ;;
-      '%Y') printf '%s\n' "1700000000" ;;
-      *) exit 1 ;;
-    esac
-    ;;
-  *) exit 1 ;;
-esac
-EOF
-chmod +x "$GNUSHIM/stat"
+# --- real GNU stat: never exercised by any other test in this repo, on any
+# platform (CI runs `ubuntu-latest` but never runs the hook test suite
+# there; every local/macOS test that reaches a real `stat` exercises the
+# now-second-tried BSD `-f` branch, since hook-common.sh tries GNU's `-c`
+# first). A shim that `exec gstat "$@"` -- a real GNU coreutils binary via
+# homebrew, not a fake case-statement standing in for one -- proves the
+# GNU-first branch, its format-string arguments, and the actual GNU
+# multi-operand collision this ordering exists to avoid, all against real
+# GNU stat behavior instead of a guess at what it does. ---
+if command -v gstat >/dev/null 2>&1; then
+  GNUSHIM=$(mktemp -d)
+  EXTRA_TRASH+=("$GNUSHIM")
+  printf '#!/usr/bin/env bash\nexec gstat "$@"\n' > "$GNUSHIM/stat"
+  chmod +x "$GNUSHIM/stat"
 
-if PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_owner_ok '$T'"; then
-  ok "hook_owner_ok's GNU (stat -c) fallback branch correctly resolves ownership"
+  if PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_owner_ok '$T'"; then
+    ok "hook_owner_ok resolves ownership correctly under a real GNU stat"
+  else
+    bad "hook_owner_ok failed under a real GNU stat (uid check)"
+  fi
+
+  SNAP_GNU=$(PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_snapshot '$F' x")
+  EXPECT_SNAP=$(gstat -c '%s %Y' "$F")
+  if [ "$SNAP_GNU" = "$EXPECT_SNAP" ]; then
+    ok "hook_snapshot produces the correct 'size mtime' format under a real GNU stat"
+  else
+    bad "hook_snapshot under real GNU stat: expected '$EXPECT_SNAP', got '$SNAP_GNU'"
+  fi
+
+  AGE_GNU=$(PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_entry_age '$F' \$(( \$(gstat -c '%Y' '$F') + 3600 ))")
+  if [ "$AGE_GNU" = "3600" ]; then
+    ok "hook_entry_age computes the correct age under a real GNU stat"
+  else
+    bad "hook_entry_age under real GNU stat: expected 3600, got '$AGE_GNU'"
+  fi
 else
-  bad "hook_owner_ok's GNU fallback branch failed (uid check under GNU-only stat shim)"
-fi
-
-SNAP_GNU=$(PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_snapshot '$F' x")
-case "$SNAP_GNU" in
-  '5 1700000000') ok "hook_snapshot's GNU (stat -c) fallback branch produces the correct 'size mtime' format" ;;
-  *) bad "hook_snapshot's GNU fallback branch: expected '5 1700000000', got '$SNAP_GNU'" ;;
-esac
-
-AGE_GNU=$(PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_entry_age '$F' 1700003600")
-if [ "$AGE_GNU" = "3600" ]; then
-  ok "hook_entry_age's GNU (stat -c) fallback branch computes the correct age"
-else
-  bad "hook_entry_age's GNU fallback branch: expected 3600, got '$AGE_GNU'"
+  echo "  (skipped: real-GNU-stat regression checks need gstat -- brew install coreutils)"
 fi
 
 echo "hook-common: $pass passed, $fail failed"

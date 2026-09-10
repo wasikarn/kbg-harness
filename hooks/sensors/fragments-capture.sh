@@ -35,16 +35,19 @@ PAYLOAD=$(cat)
 # finding, live-reproduced; docs/adr/0003-...). Running by path closes it.
 # fragments_capture_parse.py: validated session_id (shared predicate,
 # scripts/_lib/hook_payload.py -- same discipline as fragments-arm.sh),
-# tool_name, tool_input.file_path, whether content starts with an H1 (Write
-# only -- Edit payloads carry old_string/new_string, not content), cwd.
-RESULT=$(printf '%s' "$PAYLOAD" | python3 -B "$HERE/../../scripts/_lib/fragments_capture_parse.py" 2>/dev/null)
-[ -n "$RESULT" ] || exit 0
-
-SESSION_ID=$(printf '%s\n' "$RESULT" | sed -n '1p')
-TOOL_NAME=$(printf '%s\n' "$RESULT" | sed -n '2p')
-CWD=$(printf '%s\n' "$RESULT" | sed -n '3p')
-HAS_H1=$(printf '%s\n' "$RESULT" | sed -n '4p')
-FILE_PATH=$(printf '%s\n' "$RESULT" | tail -n +5)
+# tool_name, cwd, whether content starts with an H1 (Write only -- Edit
+# payloads carry old_string/new_string, not content), file_path -- 5 NUL-
+# separated fields (deep-audit finding, live-reproduced: line-numbered
+# fields let an embedded newline in `cwd` desync every field after it;
+# `read -r -d ''` reads to the next NUL, immune to embedded newlines).
+SESSION_ID="" TOOL_NAME="" CWD="" HAS_H1="" FILE_PATH=""
+{
+  IFS= read -r -d '' SESSION_ID
+  IFS= read -r -d '' TOOL_NAME
+  IFS= read -r -d '' CWD
+  IFS= read -r -d '' HAS_H1
+  IFS= read -r -d '' FILE_PATH
+} < <(printf '%s' "$PAYLOAD" | python3 -B "$HERE/../../scripts/_lib/fragments_capture_parse.py" 2>/dev/null)
 
 [ -n "$SESSION_ID" ] || exit 0
 case "$TOOL_NAME" in
@@ -189,7 +192,9 @@ if [ -z "$DOCS_DIR" ]; then
   exit 0
 fi
 
-DOC_ID=$(python3 -c '
+# -I: stdlib-only, closes the same cwd-shadow-import class fixed for the
+# by-path parser (see its own header comment) for this inline call too.
+DOC_ID=$(python3 -I -c '
 import hashlib, sys
 print(hashlib.sha256(sys.argv[1].encode()).hexdigest()[:16])
 ' "$CANONICAL_TARGET" 2>/dev/null)
@@ -211,7 +216,8 @@ if [ -z "$TMP_DOC" ]; then
 fi
 
 CAPTURED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-python3 -c '
+# -I: stdlib-only, same cwd-shadow-import closure as above.
+python3 -I -c '
 import json, sys
 path, sid, ts, out = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 doc = {"version": 1, "path": path, "captured_at": ts, "captured_session": sid, "surfaced_snapshot": None}

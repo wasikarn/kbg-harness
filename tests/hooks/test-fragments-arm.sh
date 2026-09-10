@@ -184,5 +184,75 @@ else
   bad "decoy shadow-import not closed: real_marker='$MARKERS' hijacked_marker='$HIJACKED' stderr='$(cat "$T/err")'"
 fi
 
+# --- deep-audit finding, live-reproduced: the known-path lookup's inline
+# `python3 -c` (imports glob, json, os, sys -- all stdlib) was still
+# vulnerable to the same cwd-shadow-import class the hook_payload decoy
+# above closes for the parser, since fixing the parser only addressed one
+# of 6 remaining inline python3 -c call sites repo-wide. Its own stderr is
+# suppressed by the hook (2>/dev/null on the invocation), so the decoy
+# marks itself with a sentinel FILE instead of a stderr print. Run the hook
+# from a cwd containing a decoy glob.py that writes the sentinel and assert
+# it never appears, while arming still succeeds normally. ---
+T=$(fresh_tmpdir)
+REPO=$(fresh_repo)
+DECOY_CWD=$(fresh_tmpdir)
+SENTINEL="$T/PWNED_MARKER"
+cat > "$DECOY_CWD/glob.py" <<PYEOF
+import os
+def glob(*a, **k):
+    open("$SENTINEL", "w").close()
+    return []
+PYEOF
+OUT=$( (cd "$DECOY_CWD" && printf '{"session_id":"s-glob","cwd":"%s","prompt":"/writing-fragments"}' "$REPO" \
+  | HOME="$FAKE_HOME" TMPDIR="$T" bash "$HOOK") 2>"$T/err" )
+MARKERS=$(find "$(arm_dir "$T")" -maxdepth 1 -type d -name 's-glob.*' 2>/dev/null)
+if [ ! -e "$SENTINEL" ] && [ -n "$MARKERS" ]; then
+  ok "a decoy glob.py in the hook's own cwd is never imported by the known-path lookup, arming still succeeds"
+else
+  bad "decoy glob.py shadow-import not closed: sentinel_exists=$([ -e "$SENTINEL" ] && echo yes || echo no) markers='$MARKERS'"
+fi
+
+# --- deep-audit finding, live-reproduced on the sibling capture parser:
+# an embedded newline in `cwd` used to desync line-numbered field
+# extraction. Now NUL-delimited (fragments_arm_parse.py + read -r -d ''). ---
+PAYLOAD_NL=$(python3 -c '
+import json
+print(json.dumps({"session_id":"nl-sid","cwd":"/tmp/a\nb","prompt":"/writing-fragments cand.md"}))
+')
+{
+  IFS= read -r -d '' SID_NL
+  IFS= read -r -d '' MATCHED_NL
+  IFS= read -r -d '' CWD_NL
+  IFS= read -r -d '' CAND_NL
+} < <(printf '%s' "$PAYLOAD_NL" | python3 -B "$ROOT/scripts/_lib/fragments_arm_parse.py" 2>/dev/null)
+if [ "$SID_NL" = "nl-sid" ] && [ "$CWD_NL" = "$(printf '/tmp/a\nb')" ] && [ "$MATCHED_NL" = "1" ] && [ "$CAND_NL" = "cand.md" ]; then
+  ok "an embedded newline in cwd no longer desyncs the match flag/candidate (NUL-delimited fields)"
+else
+  bad "newline-in-cwd field desync: sid='$SID_NL' cwd='$CWD_NL' matched='$MATCHED_NL' candidate='$CAND_NL'"
+fi
+
+# --- deep-audit finding, live-reproduced against the NUL-delimited fix
+# itself (fresh-context validator round, not the original checker): an
+# unstripped NUL byte inside `cwd` forges a fake field boundary in the
+# NUL-delimited protocol, spoofing the match flag/candidate. Now cwd has
+# embedded NULs stripped before the join. ---
+PAYLOAD_INJ=$(python3 -c '
+import json
+z = chr(0)
+cwd_with_nul = "/tmp" + z + "0" + z + "forged-candidate.md"
+print(json.dumps({"session_id":"inj-sid","cwd":cwd_with_nul,"prompt":"/writing-fragments cand.md"}))
+')
+{
+  IFS= read -r -d '' SID_INJ
+  IFS= read -r -d '' MATCHED_INJ
+  IFS= read -r -d '' CWD_INJ
+  IFS= read -r -d '' CAND_INJ
+} < <(printf '%s' "$PAYLOAD_INJ" | python3 -B "$ROOT/scripts/_lib/fragments_arm_parse.py" 2>/dev/null)
+if [ "$SID_INJ" = "inj-sid" ] && [ "$MATCHED_INJ" = "1" ] && [ "$CAND_INJ" = "cand.md" ]; then
+  ok "an embedded NUL in cwd can no longer forge the match flag/candidate (NUL stripped before the join)"
+else
+  bad "NUL field-injection not closed: sid='$SID_INJ' matched='$MATCHED_INJ' cwd='$CWD_INJ' candidate='$CAND_INJ'"
+fi
+
 echo "hooks/fragments-arm: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

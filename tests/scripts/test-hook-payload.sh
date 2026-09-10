@@ -96,5 +96,24 @@ else
   trash "$LIB_DIR/__pycache__" 2>/dev/null || true
 fi
 
+# --- deep-audit finding, live-reproduced with a planted glob.py: every
+# remaining inline `python3 -c` block across the fragments hooks/lib
+# imports stdlib-only names (glob, hashlib, json, os, re, subprocess, sys)
+# that are equally shadow-able by a same-named file in the hook's own cwd
+# -- the first round only closed this for the two by-path parsers, which
+# import the local hook_payload module and correctly do NOT use -I (they
+# need scripts/_lib/ on sys.path). Every remaining site must use `python3
+# -I -c`, which drops cwd from sys.path without needing a by-path rewrite. ---
+BARE=$(/usr/bin/grep -rn "python3 -c '" \
+  "$ROOT/hooks/sensors/fragments-arm.sh" \
+  "$ROOT/hooks/sensors/fragments-capture.sh" \
+  "$ROOT/hooks/session/fragments-surface.sh" \
+  "$ROOT/scripts/_lib/fragments-state.sh" 2>/dev/null)
+if [ -z "$BARE" ]; then
+  ok "no bare 'python3 -c' (missing -I) remains in any fragments hook or lib"
+else
+  bad "found a stdlib-importing python3 -c without -I: $BARE"
+fi
+
 echo "hook_payload: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

@@ -270,5 +270,57 @@ else
   bad "decoy shadow-import not closed: docs='$(find "$DOCS" -name '*.json' 2>/dev/null)' stderr='$(cat "$T/err")'"
 fi
 
+# --- deep-audit finding, live-reproduced: an embedded newline in `cwd`
+# used to desync fragments-capture.sh's line-numbered field extraction --
+# HAS_H1 and FILE_PATH shifted, corrupting the write target. Now
+# NUL-delimited (fragments_capture_parse.py + read -r -d '' in the hook).
+# Exercises the parser + the hook's own read idiom directly, not the full
+# hook flow, since a real dir with a literal newline in its path is not
+# something fresh_repo can construct. ---
+PAYLOAD_NL=$(python3 -c '
+import json
+print(json.dumps({"session_id":"nl-sid","tool_name":"Write","cwd":"/tmp/a\nb",
+                   "tool_input":{"file_path":"/tmp/a\nb/frags.md","content":"# Title\n"}}))
+')
+{
+  IFS= read -r -d '' SID_NL
+  IFS= read -r -d '' TOOL_NL
+  IFS= read -r -d '' CWD_NL
+  IFS= read -r -d '' H1_NL
+  IFS= read -r -d '' FP_NL
+} < <(printf '%s' "$PAYLOAD_NL" | python3 -B "$ROOT/scripts/_lib/fragments_capture_parse.py" 2>/dev/null)
+if [ "$SID_NL" = "nl-sid" ] && [ "$TOOL_NL" = "Write" ] && [ "$CWD_NL" = "$(printf '/tmp/a\nb')" ] \
+   && [ "$H1_NL" = "1" ] && [ "$FP_NL" = "$(printf '/tmp/a\nb/frags.md')" ]; then
+  ok "an embedded newline in cwd no longer desyncs HAS_H1/FILE_PATH (NUL-delimited fields)"
+else
+  bad "newline-in-cwd field desync: sid='$SID_NL' tool='$TOOL_NL' cwd='$CWD_NL' h1='$H1_NL' file_path='$FP_NL'"
+fi
+
+# --- deep-audit finding, live-reproduced against the NUL-delimited fix
+# itself (fresh-context validator round, not the original checker): an
+# unstripped NUL byte inside `cwd` forges a fake field boundary in the
+# NUL-delimited protocol, letting a crafted payload spoof HAS_H1/FILE_PATH
+# to values the parser never actually computed. Now every field has
+# embedded NULs stripped before the join. ---
+PAYLOAD_INJ=$(python3 -c '
+import json
+z = chr(0)
+cwd_with_nul = "/tmp" + z + "1" + z + "/tmp/forged.md"
+print(json.dumps({"session_id":"inj-sid","tool_name":"Write","cwd":cwd_with_nul,
+                   "tool_input":{"file_path":"/tmp/actual.txt","content":"no heading"}}))
+')
+{
+  IFS= read -r -d '' SID_INJ
+  IFS= read -r -d '' TOOL_INJ
+  IFS= read -r -d '' CWD_INJ
+  IFS= read -r -d '' H1_INJ
+  IFS= read -r -d '' FP_INJ
+} < <(printf '%s' "$PAYLOAD_INJ" | python3 -B "$ROOT/scripts/_lib/fragments_capture_parse.py" 2>/dev/null)
+if [ "$SID_INJ" = "inj-sid" ] && [ "$TOOL_INJ" = "Write" ] && [ "$H1_INJ" = "0" ] && [ "$FP_INJ" = "/tmp/actual.txt" ]; then
+  ok "an embedded NUL in cwd can no longer forge HAS_H1/FILE_PATH (NUL stripped before the join)"
+else
+  bad "NUL field-injection not closed: sid='$SID_INJ' tool='$TOOL_INJ' cwd='$CWD_INJ' h1='$H1_INJ' file_path='$FP_INJ'"
+fi
+
 echo "hooks/fragments-capture: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

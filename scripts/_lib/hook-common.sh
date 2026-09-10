@@ -10,9 +10,18 @@
 
 # hook_owner_ok <path>: true iff <path>'s owner uid matches ours. Fails
 # closed on any stat/id failure.
+# GNU tried first, BSD as fallback -- not the reverse -- on every stat call
+# in this file (deep-audit finding, live-reproduced with a real GNU stat):
+# GNU's `-f` is a boolean flag ("show filesystem status"), not an
+# option-with-argument, so `stat -f '%u' "$path"` on GNU is parsed as two
+# file operands; the first ('%u') fails but the second ($path) succeeds and
+# prints a multi-line filesystem-info block to stdout before the command
+# exits nonzero -- `A || B` still captures A's stdout, corrupting every
+# caller here. BSD's `-c` is a clean illegal-option failure (exit 1, no
+# stdout), so trying it first costs nothing on BSD and closes the GNU bug.
 hook_owner_ok() {
   local path="$1" uid
-  uid=$(stat -f '%u' "$path" 2>/dev/null || stat -c '%u' "$path" 2>/dev/null) || return 1
+  uid=$(stat -c '%u' "$path" 2>/dev/null || stat -f '%u' "$path" 2>/dev/null) || return 1
   [ "$uid" = "$(id -u 2>/dev/null)" ]
 }
 
@@ -31,8 +40,8 @@ hook_safe_dir() {
   return 0
 }
 
-# hook_snapshot <path> <label>: size+mtime, portable (BSD vs GNU stat). Each
-# caller MUST pass a DISTINCT <label> -- two independent stat failures at
+# hook_snapshot <path> <label>: size+mtime, GNU tried first (see
+# hook_owner_ok's comment for why). Each caller MUST pass a DISTINCT <label> -- two independent stat failures at
 # different call sites must never compare equal (handoff-surface.sh's own
 # deep-audit finding: a shared "" fallback let a missing `stat` binary fail
 # the guard open). <label> has no default: an omitted label is a caller
@@ -40,16 +49,16 @@ hook_safe_dir() {
 # silently reintroduce the exact hazard this function exists to close.
 hook_snapshot() {
   local path="$1" label="${2:?hook_snapshot requires a distinct label}"
-  stat -f '%z %m' "$path" 2>/dev/null || stat -c '%s %Y' "$path" 2>/dev/null || printf 'stat-unavailable-%s\n' "$label"
+  stat -c '%s %Y' "$path" 2>/dev/null || stat -f '%z %m' "$path" 2>/dev/null || printf 'stat-unavailable-%s\n' "$label"
 }
 
-# hook_entry_age <path> <now>: age in seconds via mtime, portable (BSD vs
-# GNU stat). Prints nothing and returns 1 on stat failure -- it never
+# hook_entry_age <path> <now>: age in seconds via mtime, GNU tried first
+# (see hook_owner_ok's comment for why). Prints nothing and returns 1 on stat failure -- it never
 # guesses an age, so a caller must have a defined, non-destructive behavior
 # for "unknown" (skip this pass, don't assume stale and don't assume fresh).
 hook_entry_age() {
   local path="$1" now="$2" mtime
-  mtime=$(stat -f '%m' "$path" 2>/dev/null || stat -c '%Y' "$path" 2>/dev/null) || return 1
+  mtime=$(stat -c '%Y' "$path" 2>/dev/null || stat -f '%m' "$path" 2>/dev/null) || return 1
   printf '%s\n' "$((now - mtime))"
 }
 
