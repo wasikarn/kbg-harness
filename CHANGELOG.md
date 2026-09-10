@@ -3,6 +3,16 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.73] — 2026-09-10
+
+### Fixed
+
+- **Check 70's stray-top-level-entry allowlist was missing `.code-review-graph`**, the local,
+  gitignored cache directory the installed `code-review-graph` MCP server writes to
+  (`graph.db`), so `harness-audit` WARN'd on it every run even though it's a legitimate,
+  actively-used tool cache, not orphaned clutter. Added to the allowlist alongside `.claude` and
+  `.claude-plugin`.
+
 ## [1.1.72] — 2026-09-10
 
 ### Fixed
