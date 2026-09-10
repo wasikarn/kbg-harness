@@ -3,6 +3,35 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.65] — 2026-09-10
+
+### Added
+
+- **Pointer capture for `mattpocock-skills:writing-fragments`** — 3 new hooks
+  (`sensor:prompt:fragments-arm`, `sensor:write:fragments-capture`, `session:fragments-surface`/
+  `session:fragments-reinject`) plus `scripts/_lib/fragments-state.sh`. On a matching prompt, arms
+  a per-invocation TMPDIR marker; a plausible follow-up write records a durable path pointer at
+  `$HOME/.claude/state/mh-fragments/`; the next `SessionStart` (or `compact`, unconditionally)
+  surfaces a one-line reminder with title/count/size/age. Content is never touched, copied, or
+  inlined — only a path pointer and a change-detection snapshot. Design and the 6 rounds of
+  Codex plan review that shaped it (a `UserPromptSubmit` mechanism confirmed replacing a dead
+  `PreToolUse:Skill` design, a `mktemp`-unique marker + current-generation pointer + `mkdir`-lock
+  to close 3 separate collision/race bugs in the ephemeral arm state): `docs/adr/0003-
+  writing-fragments-pointer-capture.md`.
+
+### Fixed
+
+- **`trash` with an empty-string array element deletes the current working directory.**
+  `tests/hooks/test-handoff-nudge.sh` and `tests/hooks/test-handoff-surface.sh` (shipped since
+  v1.1.60/v1.1.30) both used `trap 'trash "$FAKE_HOME" "${EXTRA_TRASH[@]:-}" ...' EXIT` — if
+  `EXTRA_TRASH` ever picked up an empty element (a `mktemp -d` failure inside `fresh_tmpdir()`
+  under `set -u`, no `set -e`, leaves an empty string, not an abort), `trash` silently moved the
+  invoking shell's cwd to Trash, exit 0, no error. Reproduced live while authoring
+  `test-fragments-arm.sh` from the same pattern — the entire repo (with uncommitted work) was
+  trashed and had to be moved back from `~/.Trash/`; nothing was lost, but the failure mode is
+  serious and silent. Fixed in all 3 test files: a `_cleanup_trash` function filters every target
+  to non-empty before ever calling `trash`.
+
 ## [1.1.64] — 2026-09-10
 
 ### Fixed

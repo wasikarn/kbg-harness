@@ -57,6 +57,43 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "id": "session:fragments-surface",
+        "matcher": "startup|resume|clear",
+        "description": "Surface a one-line pointer per writing-fragments document with an unseen on-disk change since it was last shown; silent when none. Records the new snapshot for what it shows and sweeps stale TMPDIR arm state.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/fragments-surface.sh\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "id": "session:fragments-reinject",
+        "matcher": "compact",
+        "description": "Reprint every on-record writing-fragments document unconditionally after a compact, ignoring the snapshot-diff filter; never records. Opposite inclusion from session:handoff-nudge's compact-only scope -- a fragments file's one stated path is exactly what compaction loses.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/fragments-surface.sh\" --reinject",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "id": "sensor:prompt:fragments-arm",
+        "description": "Arm a per-invocation marker when the prompt invokes mattpocock-skills:writing-fragments, so a qualifying write shortly after can be captured as a pointer; silent otherwise. May also inject a known-path nudge if this project already has a document on record.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sensors/fragments-arm.sh\"",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -140,6 +177,20 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/codex-setup-guard.sh\"",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "id": "sensor:write:fragments-capture",
+        "matcher": "Write|Edit",
+        "description": "If this session is armed (sensor:prompt:fragments-arm) and this write plausibly targets a writing-fragments document, record a durable path pointer to it; never touches or inlines content, never prints anything.",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sensors/fragments-capture.sh\"",
             "timeout": 8
           }
         ]

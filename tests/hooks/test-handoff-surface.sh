@@ -16,8 +16,23 @@ ok()  { pass=$((pass + 1)); echo "PASS: $1"; }
 bad() { fail=$((fail + 1)); echo "FAIL: $1" >&2; }
 
 FAKE_HOME=$(mktemp -d)
-trap 'trash "$FAKE_HOME" "${EXTRA_TRASH[@]:-}" 2>/dev/null || true' EXIT
 EXTRA_TRASH=()
+# `trash` with an empty-string argument deletes the CURRENT WORKING
+# DIRECTORY (confirmed live: cwd vanished, exit 0, no error). A bare
+# "${EXTRA_TRASH[@]:-}" expansion can pass one if mktemp -d ever fails
+# silently inside fresh_tmpdir() (set -u, no set -e here -- a failed
+# assignment leaves an empty string, not an abort) -- filter out every
+# empty element before ever calling trash.
+_cleanup_trash() {
+  local t targets=()
+  [ -n "${FAKE_HOME:-}" ] && targets+=("$FAKE_HOME")
+  for t in "${EXTRA_TRASH[@]:-}"; do
+    [ -n "$t" ] && targets+=("$t")
+  done
+  [ "${#targets[@]}" -eq 0 ] || trash "${targets[@]}" 2>/dev/null
+  return 0
+}
+trap _cleanup_trash EXIT
 
 # Every invocation below runs with CLAUDE_PLUGIN_ROOT pointed at this repo
 # checkout (the real hooks/skills tree, not a fixture copy) so the hook
