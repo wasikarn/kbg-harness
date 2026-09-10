@@ -1,6 +1,6 @@
 ---
 name: idea-audit
-description: "Two isolated analysts plus a different-model attacker evaluate an external article or practice against primary evidence, then ship a scored adoption decision. Use when deciding whether to adopt a third-party idea."
+description: "Two isolated analysts plus a different-model attacker check an external source against evidence, then ship a scored adoption decision. Use when deciding to adopt it."
 model: inherit
 effort: xhigh
 argument-hint: "[source]"

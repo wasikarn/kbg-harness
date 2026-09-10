@@ -3,6 +3,16 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.80] — 2026-09-11
+
+### Fixed
+
+- **`mh:idea-audit`'s description exceeded the 25-word skill-authoring cap** (31 words), caught by
+  `/mh:compliance-audit` run against the v1.1.79 plan — no harness-audit check enforces word count
+  directly (checks 20/43 are char-based, check 05 only checks for a "Use when" clause), so it
+  shipped clean past `Critical: 0`. Trimmed `skills/workflow/idea-audit/SKILL.md`'s `description`
+  to 25 words / 165 chars, keeping the required "Use when" clause.
+
 ## [1.1.79] — 2026-09-11
 
 ### Added
