@@ -4,8 +4,8 @@
 # audit.sh's fragment integrity guard catches LOST checks, not SILENT ones. Each
 # known-bad fixture below is paired with a clean one; the matching check must
 # FIRE on bad and stay SILENT on good. Per-check fixtures cover 04, 05, 20, 22, 28, 29, 54,
-# 70, 71, 72; the fleet-bad / fleet-good pair covers the other twenty with at least one defect per
-# check (43 is driven by the env ceiling, not a planted defect).
+# 70, 71, 72, 73; the fleet-bad / fleet-good pair covers the other nineteen with at least one
+# defect per check (43 is driven by the env ceiling, not a planted defect).
 set -uo pipefail
 
 HERE="$(cd -P "$(dirname "$0")" && pwd)"
@@ -168,6 +168,16 @@ printf 'const VALID_REASONING_EFFORTS = new Set(["low", "medium", "high"]);\n' >
 cp "$CODEX_TMP/cache/scripts/codex-companion.mjs" "$_c72_home/.claude/plugins/cache/openai-codex/codex/1.0.10/scripts/codex-companion.mjs"
 HOME="$_c72_home" expect_silent_match 72 check-72-good-effort-set 'codex/1\.0\.10/'
 HOME="$_c72_home" expect_warn 72 check-72-bad-effort-drift
+
+# 73: hooks.json <-> hook-registry.json id/description drift. Five distinct bad fixtures,
+# not one, because count-mismatch and stray-key alone leave the command-fingerprint and
+# defensive-parsing branches untested (round-2 Codex review on the plan that added this check).
+expect_silent 73 check-73-good-registry-synced
+expect_warn   73 check-73-bad-length-mismatch
+expect_warn   73 check-73-bad-stray-metadata-key
+expect_warn   73 check-73-bad-command-mismatch
+expect_warn   73 check-73-bad-malformed-structure
+expect_warn   73 check-73-bad-duplicate-id
 
 # Fleet pair: every check without a per-check fixture. fleet-bad plants one defect per
 # check; fleet-good is a complete clean fleet and doubles as the fake plugin cache for

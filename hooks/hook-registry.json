@@ -1,0 +1,113 @@
+{
+  "_about": "id/description for each hooks.json hook-group entry, keyed by event + array position, with a command fingerprint so a reorder or same-count replacement can't silently mismatch. hooks.json's own schema (code.claude.com/docs/en/hooks) only recognizes matcher/hooks at that level -- CC warns and drops id/description if left inline (2026-09-10). This is the canonical source for the id vocabulary docs/ cites by name. Hand-maintained, no generator, same stance as docs/reference/codex-integration-map.md:69.",
+  "version": 1,
+  "hooks": {
+    "SessionStart": [
+      {
+        "id": "session:command-root-anchor",
+        "description": "Export ${CLAUDE_PLUGIN_ROOT} into the session as ${MH_PLUGIN_ROOT} so skill markdown can reference bundled scripts portably.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/command-root-anchor.sh\""
+      },
+      {
+        "id": "session:doctrine-bootstrap",
+        "description": "Inject docs/METHODOLOGY.md whole into session context, plus python3/jq/node preflight notes.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/doctrine-bootstrap.sh\""
+      },
+      {
+        "id": "session:memory-health-nudge",
+        "description": "Surface memory-lint findings (dangling links, orphans, index drift) at session start; silent when clean.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/memory-health-nudge.sh\""
+      },
+      {
+        "id": "session:handoff-surface",
+        "description": "Inline any unread mh:handoff documents for this project, newest-first, then archive them; silent when none pending. Matcher excludes compact so the session that just wrote a handoff doesn't immediately re-consume it.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/handoff-surface.sh\""
+      },
+      {
+        "id": "session:handoff-nudge",
+        "description": "Nudge the model to suggest /mh:handoff to the user after a compact, once per session; silent otherwise. Matcher fires only on compact -- the opposite of session:handoff-surface's exclusion.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/handoff-nudge.sh\""
+      },
+      {
+        "id": "session:fragments-surface",
+        "description": "Surface a one-line pointer per writing-fragments document with an unseen on-disk change since it was last shown; silent when none. Records the new snapshot for what it shows and sweeps stale TMPDIR arm state.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/fragments-surface.sh\""
+      },
+      {
+        "id": "session:fragments-reinject",
+        "description": "Reprint every on-record writing-fragments document unconditionally after a compact, ignoring the snapshot-diff filter; never records. Opposite inclusion from session:handoff-nudge's compact-only scope -- a fragments file's one stated path is exactly what compaction loses.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session/fragments-surface.sh\" --reinject"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "id": "sensor:prompt:fragments-arm",
+        "description": "Arm a per-invocation marker when the prompt invokes mattpocock-skills:writing-fragments, so a qualifying write shortly after can be captured as a pointer; silent otherwise. May also inject a known-path nudge if this project already has a document on record.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sensors/fragments-arm.sh\""
+      }
+    ],
+    "PreToolUse": [
+      {
+        "id": "gate:bash:irrecoverable",
+        "description": "Deny irrecoverable Bash patterns (rm -rf, find -delete, --no-verify, hooksPath, push --force, reset --hard, clean -f, checkout/restore discards, switch --force, branch -D, stash drop/clear, commit --amend, git add -A/. outside a merge, dd to a device, SQL DROP/TRUNCATE) and a subagent spawning a nested claude -p/--print/--agent/--bg/--worktree session.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/irrecoverable.sh\""
+      },
+      {
+        "id": "gate:bash:subagent-git-guard",
+        "description": "Deny (subagent only): git stash (except list/show), reset, clean -- no repo-wide git inside a concurrent wave.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/subagent-git-guard.sh\""
+      },
+      {
+        "id": "gate:agent:subagent-spawn-guard",
+        "description": "Deny (subagent only): a subagent may not call the Agent tool to spawn its own reviewer/validator/subagent -- dispatch is the main session's job.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/subagent-spawn-guard.sh\""
+      },
+      {
+        "id": "gate:task:complete-separation",
+        "description": "Deny (subagent only): a subagent may not mark its own task completed; only the main session completes tasks.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/task-complete-separation.sh\""
+      },
+      {
+        "id": "gate:write:test-integrity",
+        "description": "Ask when an edit to an existing test-shaped path removes an assertion line or adds a skip/disable marker.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/test-integrity.sh\""
+      },
+      {
+        "id": "gate:write:config-guard",
+        "description": "Ask before creating a Claude Code settings file, or editing an existing one's hooks / enabledPlugins keys.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/config-write-guard.sh\""
+      },
+      {
+        "id": "gate:skill:codex-setup-guard",
+        "description": "Ask before a model-invoked Skill(codex:setup) call carrying --enable-review-gate; the paired Codex plugin's review gate stays off by design.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/codex-setup-guard.sh\""
+      }
+    ],
+    "PostToolUse": [
+      {
+        "id": "sensor:write:fragments-capture",
+        "description": "If this session is armed (sensor:prompt:fragments-arm) and this write plausibly targets a writing-fragments document, record a durable path pointer to it; never touches or inlines content, never prints anything.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sensors/fragments-capture.sh\""
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "id": "sensor:bash:failure-diagnose-nudge",
+        "description": "Advisory only, never blocks: on a non-zero exit, nudge diagnose-before-retry via additionalContext. Capped at 1 per distinct failing command per session. Registered on PostToolUseFailure (not PostToolUse): that is where a nonzero Bash exit dispatches, and its output schema declares additionalContext; provenance in the sensor's docstring.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sensors/failure-diagnose-nudge.sh\""
+      }
+    ],
+    "Stop": [
+      {
+        "id": "stop:cost-tracker",
+        "description": "Track cumulative token and cost metrics per session; appends to ~/.local/share/kbg/metrics/costs.jsonl.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/stop/cost-tracker.sh\""
+      },
+      {
+        "id": "stop:memory-audit-commit",
+        "description": "If the project's memory store is already a git repo (opt-in), commit any dirty changes for an audit trail. No-op otherwise.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/stop/memory-audit-commit.sh\""
+      }
+    ]
+  }
+}

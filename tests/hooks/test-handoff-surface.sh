@@ -296,7 +296,8 @@ import json
 with open('$ROOT/hooks/hooks.json') as f:
     data = json.load(f)
 for entry in data['hooks'].get('SessionStart', []):
-    if entry.get('id') == 'session:handoff-surface':
+    cmd = entry.get('hooks', [{}])[0].get('command', '')
+    if cmd.endswith('handoff-surface.sh\"'):
         print(entry.get('matcher', ''))
         break
 ")

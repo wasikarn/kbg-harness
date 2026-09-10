@@ -3,6 +3,41 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.74] — 2026-09-10
+
+### Fixed
+
+- **`hooks.json` carried `id`/`description` on every hook-group entry, a documentation
+  convention this repo grew across many commits — but only `matcher`/`hooks` are valid at that
+  level per Claude Code's actual schema (code.claude.com/docs/en/hooks). Every session start
+  printed `mh: hooks.json: unknown keys "id" ... "description" ... and 33 more ignored`.**
+  Verified live, not just against docs. The 19 `id` strings (`gate:bash:irrecoverable`,
+  `session:doctrine-bootstrap`, ...) are cited by name across 19 files
+  (`docs/adr/`, `docs/reference/`, `docs/plans/`, `CLAUDE.md`, `CONTEXT.md`), so deleting them
+  outright would have stranded those citations — this repo already lost exactly this kind of
+  metadata once before (`hooks/sensors.json`, a pre-rebuild sidecar that drifted from
+  `hooks.json` unchecked). Fixed by moving `id`/`description` into a new
+  `hooks/hook-registry.json` sidecar, keyed by event + array position, each entry also carrying
+  a `command` fingerprint so a reorder or same-count replacement can't silently point the wrong
+  id at the wrong hook. `hooks.json` now carries only `matcher`/`hooks` — schema-clean, warning
+  gone — generated mechanically from the prior file (never hand-retyped) with a one-time
+  migration-correctness proof confirming every `matcher`/`command`/`timeout`/`async` value
+  survived untouched.
+- New harness-audit check 73 (`hooks/hook-registry.json` ↔ `hooks.json` id-registry drift, WARN
+  level) backs the sidecar with the computational check `sensors.json` never had: event
+  presence, array-length parity, per-position command-fingerprint match, duplicate-id detection
+  across events, a WARN if `hooks.json` ever carries a stray non-`matcher`/`hooks` key again
+  (the direct regression guard for this exact bug), and defensive `isinstance` parsing so a
+  structurally malformed `hooks.json` WARNs instead of the check going silently truncated. Six
+  fixtures (one good, five bad) prove each branch fires independently.
+- Two existing tests (`tests/hooks/test-handoff-surface.sh`, `test-handoff-nudge.sh`) looked up
+  their target hook-group by `hooks.json`'s `id` field — switched to matching by command-string
+  suffix instead, since `handoff-surface.sh`/`handoff-nudge.sh` are each registered exactly once.
+- Reviewed by Codex across 3 rounds (`codex-review:plan`) before implementation: round 1 caught
+  the two id-dependent tests and the length-only check's blind spot to a reorder/replacement;
+  round 2 caught missing fixture coverage for the command-fingerprint and defensive-parsing
+  branches, plus an unscoped multi-handler/duplicate-command edge case; round 3 approved.
+
 ## [1.1.73] — 2026-09-10
 
 ### Fixed

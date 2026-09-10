@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "id": "gate:bash:ok",
+        "description": "Fixture gate for the harness-audit fleet-good fixture.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/ok.sh\""
+      }
+    ]
+  }
+}

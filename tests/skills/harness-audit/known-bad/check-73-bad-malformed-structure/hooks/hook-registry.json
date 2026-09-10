@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "id": "gate:bash:ok",
+        "description": "fixture gate.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/ok.sh\""
+      }
+    ]
+  }
+}

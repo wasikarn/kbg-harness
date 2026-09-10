@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "id": "gate:bash:ok",
+        "description": "fixture gate one.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/ok.sh\""
+      }
+    ],
+    "PostToolUse": [
+      {
+        "id": "gate:bash:ok",
+        "description": "fixture gate two, same id.",
+        "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/ok2.sh\""
+      }
+    ]
+  }
+}

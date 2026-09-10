@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "id": "gate:bash:ok",
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/gates/ok.sh\"",
+            "timeout": 8
+          }
+        ]
+      }
+    ]
+  }
+}
