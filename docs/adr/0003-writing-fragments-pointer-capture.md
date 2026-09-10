@@ -128,6 +128,21 @@ approval. Each found a real, often live-reproduced bug in the TMPDIR arm-marker 
    guessed age in either direction. Honesty-verified: a stat-shim regression test in
    `tests/hooks/test-fragments-capture.sh` is red against the pre-fix `|| echo 0` fallback (it
    sweeps the live marker) and green after.
+9. **`PAYLOAD=$(cat)` silently dropped a raw NUL byte before `hook_payload.py`'s own docstring
+   claim ("validated against the untruncated value, before it ever crosses into bash") actually
+   held** (compliance-audit finding, live-reproduced against the real hooks, 2026-09-10): bash
+   command substitution doesn't just corrupt an embedded NUL, it deletes it and splices the
+   surrounding bytes together — `foo\0bar` on stdin became the bash variable `foobar`, a
+   different, charset-valid session_id, before `validate_session_id` ever ran. In
+   `fragments-capture.sh` this let a write whose real payload named an invalid session_id get
+   silently captured under an unrelated, genuinely-armed session sharing that spliced name
+   instead of being rejected outright. `handoff-nudge.sh` was never affected (it pipes stdin
+   straight into `hook_payload.py`, no bash variable in between). Fixed in both `fragments-arm.sh`
+   and `fragments-capture.sh` by capturing stdin to a temp file instead of a bash variable, and
+   feeding that file directly to the parser — every byte, NUL included, survives intact.
+   Honesty-verified: end-to-end regression tests in `tests/hooks/test-fragments-arm.sh` and
+   `test-fragments-capture.sh` are red against the pre-fix `PAYLOAD=$(cat)` capture and green
+   after.
 
 A process killed between claim and publish is an accepted, bounded, self-healing loss — not
 engineered around with crash-recovery machinery — matching `handoff-nudge.sh`'s own posture: the

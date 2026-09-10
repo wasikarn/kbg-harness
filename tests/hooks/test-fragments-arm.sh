@@ -254,5 +254,32 @@ else
   bad "NUL field-injection not closed: sid='$SID_INJ' matched='$MATCHED_INJ' cwd='$CWD_INJ' candidate='$CAND_INJ'"
 fi
 
+# --- compliance-audit finding, live-reproduced end-to-end against the real
+# hook: a RAW NUL byte on stdin (not a JSON \u0000 escape -- that already
+# worked, see the test above) used to get silently dropped by
+# `PAYLOAD=$(cat)`'s command substitution before python ever saw it,
+# splicing "foo\0bar" into the different, valid-looking string "foobar" and
+# arming a marker under a session_id that was never actually submitted. The
+# true (NUL-containing) session_id must be rejected outright instead. Write
+# the raw bytes to a file directly (a bash variable can't hold a NUL
+# either) and pipe that file into the hook, never through a variable. ---
+T=$(fresh_tmpdir)
+RAW_PAYLOAD="$T/raw-nul-payload.json"
+python3 -c '
+import sys
+z = chr(0)
+sys.stdout.buffer.write(
+    ("{\"session_id\":\"foo" + z + "bar\",\"cwd\":\"/tmp\",\"prompt\":\"/writing-fragments\"}").encode()
+)
+' > "$RAW_PAYLOAD"
+HOME="$FAKE_HOME" TMPDIR="$T" bash "$HOOK" < "$RAW_PAYLOAD" >/dev/null 2>"$T/err"
+FORGED=$(find "$(arm_dir "$T")" -maxdepth 1 -type d -name 'foobar.*' 2>/dev/null)
+ANY_MARKER=$(find "$(arm_dir "$T")" -maxdepth 1 -type d ! -name "$(basename "$(arm_dir "$T")")" 2>/dev/null)
+if [ -z "$FORGED" ] && [ -z "$ANY_MARKER" ]; then
+  ok "a raw NUL byte in session_id is rejected, not spliced into a forged 'foobar' id (PAYLOAD_FILE ingress)"
+else
+  bad "raw-NUL session_id splice not closed: forged='$FORGED' any_marker='$ANY_MARKER'"
+fi
+
 echo "hooks/fragments-arm: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

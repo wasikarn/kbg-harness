@@ -3,6 +3,39 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.71] — 2026-09-10
+
+### Fixed
+
+- **HIGH — `PAYLOAD=$(cat)` silently dropped a raw NUL byte before `hook_payload.py`'s own
+  claimed guarantee ("validated against the untruncated value, before it ever crosses into
+  bash") actually held.** Bash command substitution doesn't just corrupt an embedded NUL, it
+  deletes it and splices the surrounding bytes together — `foo\0bar` on a hook's stdin became
+  the bash variable `foobar`, a different, charset-valid session_id, before
+  `validate_session_id` ever ran. In `fragments-capture.sh` this let a write whose real payload
+  named an invalid session_id get silently captured under an unrelated, genuinely-armed session
+  sharing that spliced name, instead of being rejected outright. `handoff-nudge.sh` was never
+  affected (it pipes stdin straight into `hook_payload.py`, no bash variable in between). Found
+  by a `mh:compliance-audit` pass over the v1.1.67-v1.1.70 extraction work (the plan's own
+  requirement that session-id validation run on the untruncated payload) — Codex hit its usage
+  limit mid-run, so the check fell back to a fresh-context Claude verifier per this repo's
+  documented policy; 24 of 25 requirements conformed, this one didn't. Fixed in both
+  `fragments-arm.sh` and `fragments-capture.sh` by capturing stdin to a temp file instead of a
+  bash variable, and feeding that file directly to the parser — every byte, NUL included,
+  survives intact. Honesty-verified: end-to-end regression tests reproducing the real hook's
+  ingress path are red against the pre-fix `PAYLOAD=$(cat)` capture and green after. A second,
+  independent fresh-context pass (Codex still rate-limited, Claude fallback again) confirmed the
+  fix closes the gap in both directions, temp-file cleanup is complete on every exit path, and
+  the new tests are real (mutation-sensitive) — it flagged one stale comment (fixed) and one
+  accepted, bounded residual: no `trap` cleanup on an external kill between `mktemp` and the
+  final `rm -f`, capped at one leaked temp file per killed invocation, not worth a trap for that
+  ceiling.
+
+### Process
+
+- `mh:compliance-audit` verdict on the v1.1.67-v1.1.70 plan: 24/25 requirements CONFORMS, 1
+  DEVIATED (the finding above), gauntlet green at the pinned commit. This release closes it.
+
 ## [1.1.70] — 2026-09-10
 
 ### Corrected

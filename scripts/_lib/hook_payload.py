@@ -1,17 +1,24 @@
 """hook_payload.py -- shared session_id validation for hook payloads.
 
-Imported (PYTHONPATH) by hooks/sensors/fragments-arm.sh and
-hooks/sensors/fragments-capture.sh; run as a script by
-hooks/session/handoff-nudge.sh, which needs only the session id and nothing
-else from the payload. One definition so the character-class regex and the
-"." / ".." rejection can't drift apart between the three call sites
-(docs/adr/0003-writing-fragments-pointer-capture.md).
+Imported BY PATH (sys.path[0] = this file's own directory) by
+scripts/_lib/fragments_arm_parse.py and fragments_capture_parse.py; run as
+a script by hooks/session/handoff-nudge.sh, which needs only the session id
+and nothing else from the payload. One definition so the character-class
+regex and the "." / ".." rejection can't drift apart between the three call
+sites (docs/adr/0003-writing-fragments-pointer-capture.md).
 
 validate_session_id must run on the untruncated JSON value, before it ever
 crosses into bash: bash command substitution unconditionally strips
 trailing newlines and silently drops embedded NUL bytes, so a value like
 "foo\\n" or "foo\\x00bar" would otherwise pass a bash-side regex as a
-mangled "foo"/"foobar".
+mangled "foo"/"foobar". This only holds if the raw payload bytes reach this
+module without first passing through a bash variable -- compliance-audit
+finding, live-reproduced (2026-09-10): fragments-arm.sh and
+fragments-capture.sh used to capture stdin into a bash variable
+(`PAYLOAD=$(cat)`) before piping it here, which already dropped an embedded
+NUL at that step, before this module ever saw it. Both hooks now capture
+stdin to a temp FILE instead and feed that file to this module directly,
+so the guarantee this docstring describes actually holds end to end.
 """
 import re
 

@@ -11,10 +11,15 @@
 # (never produces a Skill tool_use event at all, regardless of
 # disable-model-invocation). See the ADR for the full evidence chain.
 #
-# Reads stdin once (PAYLOAD=$(cat)) -- unlike every SessionStart hook in
+# Reads stdin once, to a temp file -- unlike every SessionStart hook in
 # this repo, UserPromptSubmit hooks are expected to read it; there is no
 # backgrounded-test-runner stdin-inheritance hang risk here the way there is
-# for SessionStart under scripts/run-gauntlet.sh.
+# for SessionStart under scripts/run-gauntlet.sh. A temp file, not a bash
+# variable: `PAYLOAD=$(cat)` command substitution silently drops embedded
+# NUL bytes (compliance-audit finding, live-reproduced 2026-09-10), which
+# let a NUL-containing session_id get spliced into a different, valid-
+# looking string before scripts/_lib/hook_payload.py's validation ever saw
+# it. A file preserves every byte, NUL included.
 #
 # A non-zero exit (or exit 2) here BLOCKS the user's own prompt -- every
 # failure path below is therefore a silent `exit 0`, never anything else.
@@ -23,20 +28,26 @@ umask 077
 
 command -v python3 >/dev/null 2>&1 || exit 0
 
-PAYLOAD=$(cat)
+PAYLOAD_FILE=$(mktemp "${TMPDIR:-/tmp}/fragments-arm-payload.XXXXXX" 2>/dev/null) || exit 0
+cat > "$PAYLOAD_FILE" 2>/dev/null
 
-# Cost gate: a pure-bash substring check before any subprocess. Costs
-# nothing on the overwhelming majority of ordinary prompts. A false
-# positive here is rechecked properly by the real regex below; a false
-# negative is impossible since the literal string must appear in the JSON
-# prompt text for a real match to exist at all.
-case "$PAYLOAD" in
-  *writing-fragments*) ;;
-  *) exit 0 ;;
-esac
+# Cost gate: one cheap `grep -F` before the real python3 parse below --
+# no longer a pure-bash check (it was, before the switch to a payload
+# file above), but still far cheaper than a python3 spawn on the
+# overwhelming majority of ordinary prompts. grep -F treats NUL bytes as
+# opaque data (no crash), and this is a heuristic fast-path only, never a
+# security boundary -- the real, validated parse happens in python3
+# below, fed from this same untouched file. A false positive here is
+# rechecked properly by the real regex below; a false negative is
+# impossible since the literal string must appear in the JSON prompt text
+# for a real match to exist at all.
+if ! grep -qF 'writing-fragments' "$PAYLOAD_FILE" 2>/dev/null; then
+  rm -f "$PAYLOAD_FILE" 2>/dev/null
+  exit 0
+fi
 
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-. "$HERE/../../scripts/_lib/fragments-state.sh" 2>/dev/null || exit 0
+. "$HERE/../../scripts/_lib/fragments-state.sh" 2>/dev/null || { rm -f "$PAYLOAD_FILE" 2>/dev/null; exit 0; }
 
 # Single python3 call, invoked BY PATH -- never `-c` + PYTHONPATH, which
 # puts the hook's own cwd (the user's project) ahead of PYTHONPATH on
@@ -46,21 +57,22 @@ HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # puts scripts/_lib/ itself first on sys.path instead.
 # fragments_arm_parse.py: validates session_id via the shared predicate
 # (scripts/_lib/hook_payload.py -- character-class + ./.. rejection,
-# against the untruncated string, since bash command substitution silently
-# mangles a trailing newline or an embedded NUL before a bash-side check
-# would ever see it), matches the skill-invocation regex against `prompt`,
-# and extracts an optional candidate path from whatever follows it in the
-# same prompt. Output: session_id, match flag, cwd, candidate -- 4 NUL-
-# separated fields (deep-audit finding, live-reproduced: line-numbered
-# fields let an embedded newline in `cwd` desync every field after it;
-# `read -r -d ''` reads to the next NUL, immune to embedded newlines).
+# against the untruncated payload, read from $PAYLOAD_FILE so no bash
+# variable capture can drop an embedded NUL first -- compliance-audit
+# finding, live-reproduced 2026-09-10), matches the skill-invocation regex
+# against `prompt`, and extracts an optional candidate path from whatever
+# follows it in the same prompt. Output: session_id, match flag, cwd,
+# candidate -- 4 NUL-separated fields (deep-audit finding, live-reproduced:
+# line-numbered fields let an embedded newline in `cwd` desync every field
+# after it; `read -r -d ''` reads to the next NUL, immune to embedded newlines).
 SESSION_ID="" MATCHED="" CWD="" CANDIDATE=""
 {
   IFS= read -r -d '' SESSION_ID
   IFS= read -r -d '' MATCHED
   IFS= read -r -d '' CWD
   IFS= read -r -d '' CANDIDATE
-} < <(printf '%s' "$PAYLOAD" | python3 -B "$HERE/../../scripts/_lib/fragments_arm_parse.py" 2>/dev/null)
+} < <(python3 -B "$HERE/../../scripts/_lib/fragments_arm_parse.py" < "$PAYLOAD_FILE" 2>/dev/null)
+rm -f "$PAYLOAD_FILE" 2>/dev/null
 
 [ "$MATCHED" = "1" ] && [ -n "$SESSION_ID" ] || exit 0
 

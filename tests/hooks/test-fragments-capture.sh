@@ -322,5 +322,40 @@ else
   bad "NUL field-injection not closed: sid='$SID_INJ' tool='$TOOL_INJ' cwd='$CWD_INJ' h1='$H1_INJ' file_path='$FP_INJ'"
 fi
 
+# --- compliance-audit finding, live-reproduced end-to-end against the real
+# hook: a RAW NUL byte on stdin used to get silently dropped by
+# `PAYLOAD=$(cat)`'s command substitution, splicing "foo\0bar" into the
+# different, valid-looking string "foobar" before validation ever saw it --
+# letting a write whose real payload named an invalid session_id get
+# captured under an unrelated, genuinely-armed "foobar" session instead of
+# being rejected outright. Arm a real "foobar" session, then submit a
+# capture payload whose true session_id contains a raw NUL; it must not be
+# treated as belonging to "foobar". A bash variable can't hold a NUL
+# either, so write the raw bytes to a file and pipe that file in. ---
+T=$(fresh_tmpdir)
+REPO=$(fresh_repo)
+arm "foobar" "$T" "$REPO" "$REPO/frags.md"
+printf '# Title\nfrag one\n' > "$REPO/frags.md"
+RAW_PAYLOAD="$T/raw-nul-payload.json"
+python3 -c '
+import sys
+z = chr(0)
+body = (
+    "{\"session_id\":\"foo" + z + "bar\",\"cwd\":\"" + sys.argv[1] + "\","
+    "\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"" + sys.argv[1] + "/frags.md\","
+    "\"content\":\"# Title\\\\nfrag one\\\\n\"}}"
+)
+sys.stdout.buffer.write(body.encode())
+' "$REPO" > "$RAW_PAYLOAD"
+HOME="$FAKE_HOME" TMPDIR="$T" bash "$HOOK" < "$RAW_PAYLOAD" >/dev/null 2>"$T/err"
+DOCS=$(docs_dir_for "$REPO")
+REC=$(find "$DOCS" -name '*.json' 2>/dev/null | head -n1)
+STILL_ARMED=$(find "$T/mh-fragments-arm" -maxdepth 1 -name 'foobar.*' ! -name 'foobar.current' 2>/dev/null)
+if [ -z "$REC" ] && [ -n "$STILL_ARMED" ]; then
+  ok "a raw NUL byte in session_id is rejected, not spliced into the genuinely-armed 'foobar' session (PAYLOAD_FILE ingress)"
+else
+  bad "raw-NUL session_id splice not closed: rec='$REC' still_armed='$STILL_ARMED'"
+fi
+
 echo "hooks/fragments-capture: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

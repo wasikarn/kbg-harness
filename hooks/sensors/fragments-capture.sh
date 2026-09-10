@@ -25,7 +25,13 @@ command -v python3 >/dev/null 2>&1 || exit 0
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../../scripts/_lib/fragments-state.sh" 2>/dev/null || exit 0
 
-PAYLOAD=$(cat)
+# Read stdin to a temp file, not a bash variable -- `PAYLOAD=$(cat)`
+# command substitution silently drops embedded NUL bytes (compliance-audit
+# finding, live-reproduced 2026-09-10), which let a NUL-containing
+# session_id get spliced into a different, valid-looking string before
+# validation ever saw it. A file preserves every byte, NUL included.
+PAYLOAD_FILE=$(mktemp "${TMPDIR:-/tmp}/fragments-capture-payload.XXXXXX" 2>/dev/null) || exit 0
+cat > "$PAYLOAD_FILE" 2>/dev/null
 
 # Parse once, invoked BY PATH -- never `-c` + PYTHONPATH: this hook's
 # readdir gate is TMPDIR-global, not project-scoped, so it runs the parse
@@ -34,10 +40,11 @@ PAYLOAD=$(cat)
 # shadow the real module under `-c`'s cwd-first sys.path (deep-audit
 # finding, live-reproduced; docs/adr/0003-...). Running by path closes it.
 # fragments_capture_parse.py: validated session_id (shared predicate,
-# scripts/_lib/hook_payload.py -- same discipline as fragments-arm.sh),
-# tool_name, cwd, whether content starts with an H1 (Write only -- Edit
-# payloads carry old_string/new_string, not content), file_path -- 5 NUL-
-# separated fields (deep-audit finding, live-reproduced: line-numbered
+# scripts/_lib/hook_payload.py -- against the untruncated payload, read
+# from $PAYLOAD_FILE so no bash variable capture can drop an embedded NUL
+# first), tool_name, cwd, whether content starts with an H1 (Write only --
+# Edit payloads carry old_string/new_string, not content), file_path -- 5
+# NUL-separated fields (deep-audit finding, live-reproduced: line-numbered
 # fields let an embedded newline in `cwd` desync every field after it;
 # `read -r -d ''` reads to the next NUL, immune to embedded newlines).
 SESSION_ID="" TOOL_NAME="" CWD="" HAS_H1="" FILE_PATH=""
@@ -47,7 +54,8 @@ SESSION_ID="" TOOL_NAME="" CWD="" HAS_H1="" FILE_PATH=""
   IFS= read -r -d '' CWD
   IFS= read -r -d '' HAS_H1
   IFS= read -r -d '' FILE_PATH
-} < <(printf '%s' "$PAYLOAD" | python3 -B "$HERE/../../scripts/_lib/fragments_capture_parse.py" 2>/dev/null)
+} < <(python3 -B "$HERE/../../scripts/_lib/fragments_capture_parse.py" < "$PAYLOAD_FILE" 2>/dev/null)
+rm -f "$PAYLOAD_FILE" 2>/dev/null
 
 [ -n "$SESSION_ID" ] || exit 0
 case "$TOOL_NAME" in
