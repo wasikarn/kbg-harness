@@ -3,6 +3,23 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.78] — 2026-09-10
+
+### Fixed
+
+- **Corrects a false claim shipped in 1.1.77**: `skills/review/compliance-audit/SKILL.md` (3
+  spots) claimed Claude Code writes a uniquely-named plan file on every plan-mode entry and does
+  not overwrite. A `mh:deep-audit` Codex-primary checker plus direct transcript verification
+  found the opposite in four separate sessions (2026-07-07, 08-23, 09-08, 09-10, CC
+  2.1.263-267) — a later plan-mode entry in the same session repeatedly overwrote the existing
+  plan file in place, same filename, prior content gone; this includes the session behind the
+  original 2026-08-23 incident, whose log does exist and directly reproduces it. Both SKILL.md
+  rules ("don't trust the file on disk," "never enter plan mode for this") are unchanged and now
+  correctly grounded in the overwrite risk again, alongside the still-true read-only/worktree
+  reason. `docs/research/unlazy-adoption-audit-2026-09-10.md` gets a dated correction section
+  (not a rewrite — frozen dir); the 1.1.77 entry below is left as originally written, wrong claim
+  and all, per this repo's own no-history-rewrite norm.
+
 ## [1.1.77] — 2026-09-10
 
 ### Changed

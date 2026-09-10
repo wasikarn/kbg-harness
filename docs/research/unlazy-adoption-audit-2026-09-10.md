@@ -1,5 +1,20 @@
 # unlazy adoption audit (2026-09-10)
 
+**Correction (2026-09-10, `mh:deep-audit`):** "The finding that overturned P1" section below
+claimed Claude Code does not overwrite a plan-mode file reused within a session, verified on CC
+2.1.267. That claim is **false** — a `mh:deep-audit` fresh-context Codex checker plus direct
+transcript re-verification found four separate sessions (2026-07-07, 08-23, 09-08, 09-10,
+CC 2.1.263-267) where a later plan-mode entry in the same session overwrote the existing plan
+file in place, including the session behind the original 2026-08-23 incident itself — contrary to
+this doc's claim, that session's log does exist and directly reproduces the overwrite. The
+session cited below as evidence (`ccf0f177`) was also misread: its "second distinct file" was a
+retry after the *first* attempt was rejected (not two approved plans), and that second file was
+itself overwritten 4.5 minutes after approval. Net effect: the plan-seal sensor's premise is
+**not dead** — it's re-opened, not revived (a build decision, out of audit scope). Everything
+else in this doc (item 1, the spawn-brief Done-when change) is unaffected and still stands.
+
+---
+
 Source: a Thai-language article summarizing [`Leonxlnx/unlazy`](https://github.com/Leonxlnx/unlazy),
 an open-source Claude Code/Codex skill, plus one `WebFetch` of the live repo. No local clone, no
 pinned revision — the repo carries no release tag as of this read. Every claim below about

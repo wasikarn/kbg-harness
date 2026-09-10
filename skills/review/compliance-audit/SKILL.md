@@ -48,12 +48,14 @@ verifier budget.
 
 **Actions**:
 1. Check whether the user supplied a plan path, PR number, or commit range. If not, prefer the
-   plan already in this conversation's context. **Don't trust the plan file's mtime as a
-   fallback**: each plan-mode entry writes its own uniquely-named file under `~/.claude/plans/`
-   (verified 2026-09-10 on CC 2.1.267), so mtime alone doesn't tell you which of several plan
-   files in a session is the one that was actually approved — newest isn't necessarily it. If
-   neither conversation context nor the user's own words give a clear source, ask explicitly
-   which plan to audit rather than guessing from a file timestamp.
+   plan already in this conversation's context — it survives even if the file on disk changes
+   later. **Don't trust the plan file on disk as a fallback**: a later plan-mode entry in the
+   same session has repeatedly been observed to overwrite the existing plan file in place, same
+   filename, prior content gone — confirmed across four separate sessions (2026-07-07, 08-23,
+   09-08, 09-10, spanning CC 2.1.263-267); not every entry gets a fresh file, so mtime-newest can
+   still be a stale re-approval of content that no longer matches what's on disk. If neither
+   conversation context nor the user's own words give a clear source, ask explicitly which plan
+   to audit rather than guessing from a file on disk.
 2. Extract every discrete requirement from the plan — numbered findings, phases, explicit "must"
    statements — into a flat checklist. This is the audit's ground truth.
 3. Identify the diff to audit across **every** repo the plan touched (a multi-repo plan lists
@@ -67,9 +69,10 @@ verifier budget.
 5. Present the requirement checklist in prose, plus any deviation you're already aware of. Gate
    with `AskUserQuestion` **only when the plan source is genuinely ambiguous** (multi-repo, no
    conversation context, no user-named path) — otherwise proceed; a wrong scope with one verifier
-   is a cheap re-run, not wasted fan-out budget. **Never enter plan mode for this**: plan mode is
-   read-only and blocks step 4's `git worktree add --detach` and the Phase 2 gauntlet run this
-   audit needs to actually execute.
+   is a cheap re-run, not wasted fan-out budget. **Never enter plan mode for this**: it can
+   overwrite the very plan file this audit exists to verify against (step 1), and separately,
+   plan mode is read-only and blocks step 4's `git worktree add --detach` and the Phase 2
+   gauntlet run this audit needs to actually execute.
 
 ---
 
@@ -165,7 +168,7 @@ fix.
 - Reporting compliance as one blended percentage instead of a per-requirement verdict.
 - Trusting "gauntlet was green during implementation" without re-running it fresh.
 - Declaring done with an open MISSING or unaccepted DEVIATED still on the table.
-- Entering plan mode to gate audit scope — its read-only mode blocks the worktree pin and gauntlet run (Phase 1).
+- Entering plan mode to gate audit scope — risks overwriting the plan being audited, and its read-only mode blocks the worktree pin and gauntlet run (Phase 1).
 - Running the verifier against the shared main tree instead of a pinned detached worktree.
 
 ## Named Model
