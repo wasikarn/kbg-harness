@@ -3,6 +3,40 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.67] — 2026-09-10
+
+### Changed
+
+- **Extracted duplicated inline hook logic into two shared libs**: `scripts/_lib/hook-common.sh`
+  (bash — `hook_owner_ok`, `hook_safe_dir`, `hook_snapshot`, `hook_entry_age`, `hook_md_title`,
+  `hook_repo_root`) and `scripts/_lib/hook_payload.py` (`validate_session_id`). A two-agent repo
+  sweep found the duplication had already drifted: `fragments-arm.sh` sourced
+  `fragments-state.sh` (which defines `_fragments_owner_ok`) and then redefined its own
+  `owner_ok()` locally anyway; `handoff-nudge.sh` had a third independent copy of the same
+  check; and `fragments-capture.sh`'s stat-failure fallback (`|| echo 0`, treating an
+  unreadable marker as ancient and sweeping it) disagreed with `fragments-surface.sh`'s own
+  copy (`|| echo "$NOW"`, treating it as brand new and never sweeping it) on the identical
+  1800s window. `hook_entry_age` fixes the direction by refusing to guess at all — a stat
+  failure prints nothing and returns 1, and every caller treats that as "skip this pass,"
+  never destructive. Honesty-verified: a new stat-shim regression test in
+  `tests/hooks/test-fragments-capture.sh` is red against the pre-fix `|| echo 0` fallback and
+  green after. `fragments-state.sh`'s own `fragments_snapshot` (zero callers anywhere) was
+  deleted rather than migrated; `hook_snapshot` gained real callers by replacing two inline
+  copies inside `handoff-surface.sh` itself. `scripts/_lib/fragments-state.sh`,
+  `hooks/sensors/fragments-{arm,capture}.sh`, `hooks/session/{fragments-surface,
+  handoff-nudge,handoff-surface}.sh`, and `skills/workflow/handoff/scripts/handoff-path.sh`
+  now source the shared lib(s) instead of carrying their own copies. New tests:
+  `tests/scripts/test-hook-common.sh`, `tests/scripts/test-hook-payload.sh` (both against
+  hardcoded expected values, not values the lib computes for itself — this repo's existing use
+  of `slug_hash` as its own test oracle would let a wrong-but-deterministic implementation pass
+  every self-consistency check). ADR-0003 amended with the stat-fallback-direction finding.
+  Deliberately not extracted (named in the plan, not silently skipped): the 7-copy gate
+  `.sh`→`.py` shim recipe (each site's fail-open/fail-closed posture is a deliberate per-gate
+  decision), the pre-commit↔run-gauntlet lint duplication (the safety net itself, separate
+  risk class), the `check()`/`assert()` test dialects (inverted truth conventions, a migration
+  footgun), and the 5-site `mktemp`+`mv` atomic-publish recipe (materially different rollback
+  per site).
+
 ## [1.1.66] — 2026-09-10
 
 ### Fixed

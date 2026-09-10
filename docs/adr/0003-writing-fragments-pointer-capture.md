@@ -114,6 +114,19 @@ approval. Each found a real, often live-reproduced bug in the TMPDIR arm-marker 
    no sweep mechanism of any kind — an orphan there is inert clutter (nothing ever globs it back
    in), not a correctness hazard, and building a second sweep for a durable, low-volume,
    per-project tree is disproportionate machinery for what it would prevent.
+8. **The window-expiry sweep's stat-failure direction disagreed with itself** (caught while
+   extracting the shared `scripts/_lib/hook-common.sh` lib): `fragments-capture.sh`'s own
+   age-check used `|| echo 0` — a stat failure produced age `0`, i.e. "just created" — while
+   `fragments-surface.sh`'s `entry_age()` used `|| echo "$NOW"`, i.e. also "just created," but
+   the two shared no code, so a future edit to either could silently diverge without anyone
+   noticing (and briefly did — an earlier draft of `fragments-capture.sh` used `|| echo 0`,
+   which computes an *ancient* age against a small `$NOW`, sweeping a live marker on a transient
+   `stat` failure). `hook_entry_age <path> <now>` fixes the shared direction by refusing to
+   guess at all: it prints nothing and returns 1 on a stat failure, and both callers treat that
+   as "skip this pass, don't sweep, don't capture" — never destructive, never a guessed age in
+   either direction. Honesty-verified: a stat-shim regression test in
+   `tests/hooks/test-fragments-capture.sh` is red against the pre-fix `|| echo 0` fallback (it
+   sweeps the live marker) and green after.
 
 A process killed between claim and publish is an accepted, bounded, self-healing loss — not
 engineered around with crash-recovery machinery — matching `handoff-nudge.sh`'s own posture: the

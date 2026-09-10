@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# hook-common.sh — sourceable lib shared by hooks/sensors/fragments-arm.sh,
+# hooks/sensors/fragments-capture.sh, hooks/session/fragments-surface.sh,
+# hooks/session/handoff-nudge.sh, hooks/session/handoff-surface.sh, and
+# skills/workflow/handoff/scripts/handoff-path.sh, so the symlink/ownership
+# defense, snapshot derivation, and git-root resolution these all need can't
+# drift apart between copies the way owner_ok() and the stat-fallback
+# direction already had (docs/adr/0003-writing-fragments-pointer-capture.md).
+# Not a CLI -- source it, don't execute it.
+
+# hook_owner_ok <path>: true iff <path>'s owner uid matches ours. Fails
+# closed on any stat/id failure.
+hook_owner_ok() {
+  local path="$1" uid
+  uid=$(stat -f '%u' "$path" 2>/dev/null || stat -c '%u' "$path" 2>/dev/null) || return 1
+  [ "$uid" = "$(id -u 2>/dev/null)" ]
+}
+
+# hook_safe_dir <path>: mkdir -p, then reject if it's a symlink or
+# foreign-owned. <path> must carry no trailing slash -- a trailing slash
+# resolves through a symlink before -L ever runs, silently defeating the
+# check (hooks/session/handoff-nudge.sh's own compliance-audit finding,
+# reproduced live there).
+hook_safe_dir() {
+  local path="$1"
+  mkdir -p "$path" 2>/dev/null
+  [ -d "$path" ] || return 1
+  [ ! -L "$path" ] || return 1
+  hook_owner_ok "$path" || return 1
+  chmod 700 "$path" 2>/dev/null
+  return 0
+}
+
+# hook_snapshot <path> <label>: size+mtime, portable (BSD vs GNU stat). Each
+# caller passes a DISTINCT <label> -- two independent stat failures at
+# different call sites must never compare equal (handoff-surface.sh's own
+# deep-audit finding: a shared "" fallback let a missing `stat` binary fail
+# the guard open).
+hook_snapshot() {
+  local path="$1" label="${2:-x}"
+  stat -f '%z %m' "$path" 2>/dev/null || stat -c '%s %Y' "$path" 2>/dev/null || printf 'stat-unavailable-%s\n' "$label"
+}
+
+# hook_entry_age <path> <now>: age in seconds via mtime, portable (BSD vs
+# GNU stat). Prints nothing and returns 1 on stat failure -- it never
+# guesses an age, so a caller must have a defined, non-destructive behavior
+# for "unknown" (skip this pass, don't assume stale and don't assume fresh).
+hook_entry_age() {
+  local path="$1" now="$2" mtime
+  mtime=$(stat -f '%m' "$path" 2>/dev/null || stat -c '%Y' "$path" 2>/dev/null) || return 1
+  printf '%s\n' "$((now - mtime))"
+}
+
+# hook_md_title <path>: first line of <path>, stripped of a leading "# ",
+# else the literal "untitled". Never fails -- prints "untitled" on any read
+# error.
+hook_md_title() {
+  local path="$1" title
+  title=$(head -c 200 -- "$path" 2>/dev/null | head -n 1)
+  case "$title" in
+    '# '*) printf '%s\n' "${title#\# }" ;;
+    *) printf 'untitled\n' ;;
+  esac
+}
+
+# hook_repo_root [<anchor-dir>]: the git repo root, physical-cwd fallback.
+# With an argument, resolves anchored at that directory (for a hook payload
+# that carries its own cwd, which may differ from this process's ambient
+# cwd). Without one, resolves from this process's own ambient cwd (for a
+# SessionStart hook that never reads stdin, or a CLI). Prints nothing and
+# returns 1 only if the anchor itself doesn't resolve to any directory.
+hook_repo_root() {
+  local anchor="${1:-}" root
+  if [ -n "$anchor" ]; then
+    root=$(cd -- "$anchor" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null) \
+      || root=$(cd -P -- "$anchor" 2>/dev/null && pwd)
+  else
+    root=$(git rev-parse --show-toplevel 2>/dev/null) || root=$(pwd -P)
+  fi
+  [ -n "$root" ] || return 1
+  printf '%s\n' "$root"
+}

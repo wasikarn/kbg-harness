@@ -230,7 +230,7 @@ fi
 # always fails; every other needed binary stays real. ---
 T=$(fresh_tmpdir)
 IDFAIL_DIR=$(mktemp -d); EXTRA_TRASH+=("$IDFAIL_DIR")
-for bin in bash mkdir stat sh python3; do
+for bin in bash mkdir stat sh python3 dirname; do
   real=$(command -v "$bin" 2>/dev/null) || continue
   ln -sf "$real" "$IDFAIL_DIR/$bin"
 done
@@ -259,7 +259,7 @@ T=$(fresh_tmpdir)
 REAL_TARGET="$T-race-target"; mkdir -p "$REAL_TARGET"; EXTRA_TRASH+=("$REAL_TARGET")
 mkdir -p "$(marker_dir "$T")"
 RACE_DIR=$(mktemp -d); EXTRA_TRASH+=("$RACE_DIR")
-for bin in bash mkdir stat sh python3 rmdir; do
+for bin in bash mkdir stat sh python3 rmdir dirname; do
   real=$(command -v "$bin" 2>/dev/null) || continue
   ln -sf "$real" "$RACE_DIR/$bin"
 done

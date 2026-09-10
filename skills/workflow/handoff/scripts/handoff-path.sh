@@ -40,10 +40,10 @@ fail() { echo "handoff-path: $1" >&2; exit 1; }
 
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../../../../scripts/_lib/slug-hash.sh"
+. "$HERE/../../../../scripts/_lib/hook-common.sh"
 
 # Project root: git repo root, falling back to physical cwd outside a repo.
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || ROOT="$(pwd -P)"
-[ -n "$ROOT" ] || fail "could not determine a project root"
+ROOT="$(hook_repo_root)" || fail "could not determine a project root"
 
 SLUGHASH=$(slug_hash "$ROOT") || fail "no sha256 tool available (shasum or sha256sum)"
 

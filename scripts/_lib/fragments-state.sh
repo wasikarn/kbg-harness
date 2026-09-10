@@ -14,33 +14,12 @@
 # The durable state tree gets the same symlink+ownership defense the
 # ephemeral TMPDIR arm marker needs (docs/adr/0003-writing-fragments-
 # pointer-capture.md, round-1 finding) -- every directory in the chain is
-# checked, not just the base.
+# checked, not just the base. That defense (hook_safe_dir/hook_owner_ok)
+# lives in scripts/_lib/hook-common.sh, shared with the handoff hooks.
 
 _FRAGMENTS_LIB_DIR="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$_FRAGMENTS_LIB_DIR/slug-hash.sh"
-
-# _fragments_owner_ok <path>: true iff <path>'s owner uid matches ours.
-# Fails closed on any stat/id failure.
-_fragments_owner_ok() {
-  local path="$1" uid
-  uid=$(stat -f '%u' "$path" 2>/dev/null || stat -c '%u' "$path" 2>/dev/null) || return 1
-  [ "$uid" = "$(id -u 2>/dev/null)" ]
-}
-
-# _fragments_safe_dir <path>: mkdir -p, then reject if it's a symlink or
-# foreign-owned. <path> must carry no trailing slash -- a trailing slash
-# resolves through a symlink before -L ever runs, silently defeating the
-# check (hooks/session/handoff-nudge.sh's own compliance-audit finding,
-# reproduced live there).
-_fragments_safe_dir() {
-  local path="$1"
-  mkdir -p "$path" 2>/dev/null
-  [ -d "$path" ] || return 1
-  [ ! -L "$path" ] || return 1
-  _fragments_owner_ok "$path" || return 1
-  chmod 700 "$path" 2>/dev/null
-  return 0
-}
+. "$_FRAGMENTS_LIB_DIR/hook-common.sh"
 
 # fragments_state_dir <root>: this project's mh-fragments dir
 # ($HOME/.claude/state/mh-fragments/<slug>-<hash>), ensuring every level of
@@ -51,9 +30,9 @@ fragments_state_dir() {
   local root="$1" slughash base proj
   slughash=$(slug_hash "$root") || return 1
   base="$HOME/.claude/state/mh-fragments"
-  _fragments_safe_dir "$base" || return 1
+  hook_safe_dir "$base" || return 1
   proj="$base/$slughash"
-  _fragments_safe_dir "$proj" || return 1
+  hook_safe_dir "$proj" || return 1
   printf '%s\n' "$proj"
 }
 
@@ -63,18 +42,8 @@ fragments_docs_dir() {
   local root="$1" proj docs
   proj=$(fragments_state_dir "$root") || return 1
   docs="$proj/documents"
-  _fragments_safe_dir "$docs" || return 1
+  hook_safe_dir "$docs" || return 1
   printf '%s\n' "$docs"
-}
-
-# fragments_snapshot <path>: size+mtime, portable (BSD vs GNU stat), same
-# derivation as handoff-surface.sh's own snapshot guard. Each failure path
-# is a DISTINCT literal -- two independent stat failures must never compare
-# equal (handoff-surface.sh's own deep-audit finding: a shared "" fallback
-# let a missing `stat` binary fail the guard open).
-fragments_snapshot() {
-  local path="$1" who="${2:-x}"
-  stat -f '%z %m' "$path" 2>/dev/null || stat -c '%s %Y' "$path" 2>/dev/null || printf 'stat-unavailable-%s\n' "$who"
 }
 
 # fragments_sanitize <value> <label> [maxlen]: redacts the ENTIRE value

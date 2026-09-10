@@ -26,8 +26,7 @@ command -v python3 >/dev/null 2>&1 || exit 0
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../../scripts/_lib/fragments-state.sh"
 
-ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || ROOT=$(pwd -P)
-[ -n "$ROOT" ] || exit 0
+ROOT=$(hook_repo_root) || exit 0
 
 DOCS_DIR=$(fragments_docs_dir "$ROOT" 2>/dev/null) || exit 0
 [ -d "$DOCS_DIR" ] || exit 0
@@ -101,11 +100,7 @@ if [ -n "$SELECTED" ]; then
   while IFS=$'\t' read -r REC_FILE DOC_PATH DOC_SNAP; do
     [ "$PRINTED" -lt "$MAX_PRINT" ] || break
 
-    TITLE=$(head -c 200 -- "$DOC_PATH" 2>/dev/null | head -n 1)
-    case "$TITLE" in
-      '# '*) TITLE="${TITLE#\# }" ;;
-      *) TITLE="untitled" ;;
-    esac
+    TITLE=$(hook_md_title "$DOC_PATH")
     SAFE_PATH=$(fragments_sanitize "$DOC_PATH" "path" 0)
     SAFE_TITLE=$(fragments_sanitize "$TITLE" "title" 120)
     [ -n "$SAFE_PATH" ] && [ -n "$SAFE_TITLE" ] || continue
@@ -195,17 +190,18 @@ if [ -d "$ARM_BASE" ] && [ ! -L "$ARM_BASE" ]; then
   # already ran before this point).
   shopt -s nullglob dotglob
 
-  entry_age() {
-    local mtime
-    mtime=$(stat -f '%m' "$1" 2>/dev/null || stat -c '%Y' "$1" 2>/dev/null || echo "$NOW")
-    printf '%s\n' "$((NOW - mtime))"
-  }
+  # Age via the shared hook_entry_age (scripts/_lib/hook-common.sh): on a
+  # stat failure it prints nothing and returns 1, so every call site below
+  # skips that one entry for this pass rather than guessing an age --
+  # matches this sweep's own prior "unknown age" outcome (never swept),
+  # now sharing one definition with fragments-capture.sh's window-expiry
+  # check instead of a second, independently-written stat fallback.
 
   # Pass 1: every directory-shaped entry (markers, .claimed claims, .lock
   # locks) older than the window.
   for entry in "$ARM_BASE"/*; do
     [ -d "$entry" ] || continue
-    age=$(entry_age "$entry")
+    age=$(hook_entry_age "$entry" "$NOW") || continue
     [ "$age" -gt "$WINDOW" ] || continue
     rmdir "$entry" 2>/dev/null
     rm -f "${entry}.candidate" 2>/dev/null
@@ -228,22 +224,19 @@ if [ -d "$ARM_BASE" ] && [ ! -L "$ARM_BASE" ]; then
         # scratch mktemp, never anyone else's target) -- always safe to
         # remove once stale, no lock needed since nothing ever reads it by
         # name.
-        age=$(entry_age "$entry")
-        [ "$age" -gt "$WINDOW" ] && rm -f "$entry" 2>/dev/null
+        age=$(hook_entry_age "$entry" "$NOW") && [ "$age" -gt "$WINDOW" ] && rm -f "$entry" 2>/dev/null
         ;;
       *.candidate)
-        age=$(entry_age "$entry")
-        [ "$age" -gt "$WINDOW" ] && rm -f "$entry" 2>/dev/null
+        age=$(hook_entry_age "$entry" "$NOW") && [ "$age" -gt "$WINDOW" ] && rm -f "$entry" 2>/dev/null
         ;;
       *.current)
-        age=$(entry_age "$entry")
+        age=$(hook_entry_age "$entry" "$NOW") || continue
         [ "$age" -gt "$WINDOW" ] || continue
         sid="${base%.current}"
         lockdir="$ARM_BASE/${sid}.lock"
         if fragments_lock_acquire "$lockdir"; then
           if [ -e "$entry" ]; then
-            age2=$(entry_age "$entry")
-            [ "$age2" -gt "$WINDOW" ] && rm -f "$entry" 2>/dev/null
+            age2=$(hook_entry_age "$entry" "$NOW") && [ "$age2" -gt "$WINDOW" ] && rm -f "$entry" 2>/dev/null
           fi
           fragments_lock_release "$lockdir"
         fi

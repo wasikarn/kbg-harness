@@ -38,24 +38,24 @@ esac
 HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../../scripts/_lib/fragments-state.sh"
 
-# Single python3 call: validates session_id exactly like handoff-nudge.sh
-# (character-class + ./.. rejection, in python, against the untruncated
-# string -- bash command substitution silently mangles a trailing newline
-# or an embedded NUL before a bash-side check would ever see it), matches
-# the skill-invocation regex against `prompt`, and extracts an optional
-# candidate path from whatever follows it in the same prompt. Output:
-# session_id, match flag, cwd -- each on its own line -- then the (possibly
-# multi-line, possibly empty) candidate text as everything remaining.
-RESULT=$(printf '%s' "$PAYLOAD" | python3 -c '
+# Single python3 call: validates session_id via the shared predicate
+# (scripts/_lib/hook_payload.py -- character-class + ./.. rejection,
+# against the untruncated string, since bash command substitution silently
+# mangles a trailing newline or an embedded NUL before a bash-side check
+# would ever see it), matches the skill-invocation regex against `prompt`,
+# and extracts an optional candidate path from whatever follows it in the
+# same prompt. Output: session_id, match flag, cwd -- each on its own
+# line -- then the (possibly multi-line, possibly empty) candidate text as
+# everything remaining.
+RESULT=$(printf '%s' "$PAYLOAD" | PYTHONPATH="$HERE/../../scripts/_lib" python3 -B -c '
 import json, re, sys
+from hook_payload import validate_session_id
 try:
     data = json.load(sys.stdin)
 except Exception:
     data = None
 
-sid = data.get("session_id") if isinstance(data, dict) else None
-if not isinstance(sid, str) or sid in (".", "..") or not re.fullmatch(r"[A-Za-z0-9._-]+", sid):
-    sid = ""
+sid = validate_session_id(data.get("session_id") if isinstance(data, dict) else None)
 
 cwd = data.get("cwd") if isinstance(data, dict) else None
 if not isinstance(cwd, str):
@@ -95,12 +95,7 @@ mkdir -p "$BASE" 2>/dev/null
 [ -d "$BASE" ] || exit 0
 [ ! -L "$BASE" ] || exit 0
 
-owner_ok() {
-  local uid
-  uid=$(stat -f '%u' "$BASE" 2>/dev/null || stat -c '%u' "$BASE" 2>/dev/null) || return 1
-  [ "$uid" = "$(id -u 2>/dev/null)" ]
-}
-owner_ok || exit 0
+hook_owner_ok "$BASE" || exit 0
 
 # Arm marker: every invocation gets its own uniquely-named marker
 # (mktemp -d's random suffix), so no two invocations -- however they
@@ -145,10 +140,12 @@ else
 fi
 
 # Best-effort known-path injection below: never blocks arming above, and
-# any failure here (no git repo, no existing record) is silent.
-ROOT=$(cd -- "$CWD" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null) \
-  || ROOT=$(cd -P -- "$CWD" 2>/dev/null && pwd)
-[ -n "$ROOT" ] || exit 0
+# any failure here (no git repo, no existing record) is silent. An empty
+# $CWD must fail closed here, not fall back to hook_repo_root's own
+# ambient-cwd resolution -- that would scope this to whatever directory the
+# hook process happens to run in, not this payload's project.
+[ -n "$CWD" ] || exit 0
+ROOT=$(hook_repo_root "$CWD") || exit 0
 
 DOCS_DIR=$(fragments_docs_dir "$ROOT" 2>/dev/null) || exit 0
 [ -d "$DOCS_DIR" ] || exit 0
@@ -180,11 +177,7 @@ if best:
 [ -n "$KNOWN" ] || exit 0
 [ -f "$KNOWN" ] && [ ! -L "$KNOWN" ] || exit 0
 
-TITLE=$(head -c 200 -- "$KNOWN" 2>/dev/null | head -n 1)
-case "$TITLE" in
-  '# '*) TITLE="${TITLE#\# }" ;;
-  *) TITLE="untitled" ;;
-esac
+TITLE=$(hook_md_title "$KNOWN")
 
 SAFE_PATH=$(fragments_sanitize "$KNOWN" "path" 0)
 SAFE_TITLE=$(fragments_sanitize "$TITLE" "title" 120)

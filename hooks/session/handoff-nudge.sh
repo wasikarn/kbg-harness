@@ -29,6 +29,9 @@ umask 077
 
 command -v python3 >/dev/null 2>&1 || exit 0
 
+HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$HERE/../../scripts/_lib/hook-common.sh"
+
 # session_id must be a real, non-empty JSON string -- not just present.
 # json.load on malformed/empty stdin raises, caught below; a wrong-typed
 # value (null, true, a number, an array/object) is deliberately NOT
@@ -36,27 +39,17 @@ command -v python3 >/dev/null 2>&1 || exit 0
 # {"session_id":null} into the four-character string "None", which then
 # passes a naive character-class regex as if it were a real id).
 #
-# The character-class check (incl. rejecting "." and "..") runs HERE, in
-# Python, against the untruncated string -- not later in bash. Bash command
-# substitution unconditionally strips trailing newlines and silently drops
-# embedded NUL bytes (with a stderr warning for the latter) before a bash-side
-# regex would ever see them, so a value like "foo\n" or "foo\x00bar" would
-# otherwise pass a bash-side check as a mangled "foo"/"foobar" -- validating
-# in Python first means anything outside the safe set is rejected before it
-# ever crosses into bash, so nothing is left for command substitution to mangle.
-SESSION_ID=$(python3 -c '
-import json, re, sys
-try:
-    data = json.load(sys.stdin)
-except Exception:
-    data = None
-sid = data.get("session_id") if isinstance(data, dict) else None
-if not isinstance(sid, str) or sid in (".", ".."):
-    sid = None
-elif not re.fullmatch(r"[A-Za-z0-9._-]+", sid):
-    sid = None
-print(sid or "")
-' 2>/dev/null)
+# The character-class check (incl. rejecting "." and "..") runs HERE, via
+# scripts/_lib/hook_payload.py (shared with fragments-arm.sh and
+# fragments-capture.sh), against the untruncated string -- not later in
+# bash. Bash command substitution unconditionally strips trailing newlines
+# and silently drops embedded NUL bytes (with a stderr warning for the
+# latter) before a bash-side regex would ever see them, so a value like
+# "foo\n" or "foo\x00bar" would otherwise pass a bash-side check as a
+# mangled "foo"/"foobar" -- validating in Python first means anything
+# outside the safe set is rejected before it ever crosses into bash, so
+# nothing is left for command substitution to mangle.
+SESSION_ID=$(python3 -B "$HERE/../../scripts/_lib/hook_payload.py" 2>/dev/null)
 [ -n "$SESSION_ID" ] || exit 0
 
 # Base directory: no trailing slash. A trailing-slash path resolves through
@@ -72,12 +65,7 @@ mkdir -p "$BASE" 2>/dev/null
 # secrets (unlike the actual handoff documents), so the bar is "don't get
 # confused by something we don't own," not the heavier defenses
 # skills/workflow/handoff/scripts/handoff-path.sh carries for real content.
-owner_ok() {
-  local uid
-  uid=$(stat -f '%u' "$BASE" 2>/dev/null || stat -c '%u' "$BASE" 2>/dev/null) || return 1
-  [ "$uid" = "$(id -u 2>/dev/null)" ]
-}
-owner_ok || exit 0
+hook_owner_ok "$BASE" || exit 0
 
 # The claim: one atomic mkdir, and it IS the print-gate -- no separate
 # exists-check before it, no distinction needed between "already claimed"
@@ -95,7 +83,7 @@ mkdir "$BASE/$SESSION_ID" 2>/dev/null || exit 0
 # after and roll the claim back rather than trust the precondition alone --
 # the same "verify the postcondition" posture this repo already applies to
 # mv -n publish/consume steps (docs/adr/0002-mh-controlled-handoff-path.md).
-if [ -L "$BASE" ] || ! owner_ok; then
+if [ -L "$BASE" ] || ! hook_owner_ok "$BASE"; then
   rmdir "$BASE/$SESSION_ID" 2>/dev/null
   exit 0
 fi

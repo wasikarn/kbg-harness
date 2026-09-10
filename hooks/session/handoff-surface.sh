@@ -57,6 +57,9 @@ DIR=$(bash "$HELPER" --dir 2>/dev/null) || exit 0
 PEND="$DIR/pending"
 [ -d "$PEND" ] || exit 0
 
+HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$HERE/../../scripts/_lib/hook-common.sh"
+
 MAX_LINES=300
 MAX_BYTES=15360
 AGG_BYTES=$((MAX_BYTES * 3))
@@ -109,7 +112,7 @@ for f in "${files[@]}"; do
   # gap this guard exists to close. Each call site's fallback is a distinct
   # literal string instead, so a stat failure at either point always
   # mismatches and fails closed (file stays pending) rather than open.
-  snapshot=$(stat -f '%z %m' "$f" 2>/dev/null || stat -c '%s %Y' "$f" 2>/dev/null) || snapshot="stat-unavailable-at-read"
+  snapshot=$(hook_snapshot "$f" at-read)
 
   byte_truncated=0
   if [ "${#content}" -gt "$MAX_BYTES" ]; then
@@ -202,7 +205,7 @@ for ((i = 0; i < ${#sel_paths[@]}; i++)); do
   # different content than what the caller actually saw -- leave it
   # pending instead (it gets re-read fresh next session) rather than
   # silently archive a mismatch.
-  cur_snapshot=$(stat -f '%z %m' "$f" 2>/dev/null || stat -c '%s %Y' "$f" 2>/dev/null) || cur_snapshot="stat-unavailable-at-move"
+  cur_snapshot=$(hook_snapshot "$f" at-move)
   [ "$cur_snapshot" = "${sel_snapshot[$i]}" ] || continue
 
   mv -n "$f" "$dest" 2>/dev/null

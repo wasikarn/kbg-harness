@@ -219,5 +219,42 @@ else
   bad "relative candidate did not capture: out='$OUT9' docs='$(find "$DOCS" -name '*.json' 2>/dev/null)'"
 fi
 
+# --- hook_entry_age direction regression: a stat failure while checking
+# the marker's age must NEVER be treated as "ancient" (which would sweep
+# away a live, still-in-window marker on a transient stat glitch). It must
+# skip this one write and leave the marker armed for a retry. Honesty-
+# verified: red against the pre-fix `|| echo 0` fallback (which computed a
+# huge age and rmdir'd the live marker here), green after switching to
+# hook_entry_age's fail-nothing-guessed contract. ---
+STATSHIM=$(fresh_tmpdir)
+cat > "$STATSHIM/stat" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+chmod +x "$STATSHIM/stat"
+
+T=$(fresh_tmpdir)
+REPO=$(fresh_repo)
+arm "c10" "$T" "$REPO" "$REPO/frags.md"
+MARKER=$(find "$T/mh-fragments-arm" -maxdepth 1 -type d -name 'c10.*' 2>/dev/null | head -n1)
+printf '# Title\nfrag\n' > "$REPO/frags.md"
+
+printf '{"session_id":"c10","cwd":"%s","tool_name":"Write","tool_input":{"file_path":"%s/frags.md","content":"# Title\\nfrag\\n"}}' "$REPO" "$REPO" \
+  | HOME="$FAKE_HOME" TMPDIR="$T" PATH="$STATSHIM:$PATH" bash "$HOOK" >/dev/null 2>"$T/err"
+DOCS=$(docs_dir_for "$REPO")
+if [ -d "$MARKER" ] && [ -z "$(find "$DOCS" -name '*.json' 2>/dev/null)" ]; then
+  ok "a stat failure during the age check skips this write and leaves the marker armed, never sweeps it"
+else
+  bad "stat failure should skip+preserve, not sweep: marker_exists=$([ -d "$MARKER" ] && echo yes || echo no) docs='$(find "$DOCS" -name '*.json' 2>/dev/null)'"
+fi
+
+# The marker must still be usable normally once stat works again.
+capture "c10" "$T" "$REPO" Write "$REPO/frags.md" '# Title\\nfrag\\n' >/dev/null 2>"$T/err2"
+if [ -n "$(find "$DOCS" -name '*.json' 2>/dev/null)" ]; then
+  ok "the preserved marker still captures normally once the stat glitch is gone"
+else
+  bad "preserved marker did not capture on retry: err='$(cat "$T/err2" 2>/dev/null)'"
+fi
+
 echo "hooks/fragments-capture: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

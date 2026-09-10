@@ -27,19 +27,19 @@ HERE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 PAYLOAD=$(cat)
 
-# Parse once: validated session_id (same discipline as fragments-arm.sh),
+# Parse once: validated session_id (shared predicate,
+# scripts/_lib/hook_payload.py -- same discipline as fragments-arm.sh),
 # tool_name, tool_input.file_path, whether content starts with an H1 (Write
 # only -- Edit payloads carry old_string/new_string, not content), cwd.
-RESULT=$(printf '%s' "$PAYLOAD" | python3 -c '
+RESULT=$(printf '%s' "$PAYLOAD" | PYTHONPATH="$HERE/../../scripts/_lib" python3 -B -c '
 import json, re, sys
+from hook_payload import validate_session_id
 try:
     data = json.load(sys.stdin)
 except Exception:
     data = None
 
-sid = data.get("session_id") if isinstance(data, dict) else None
-if not isinstance(sid, str) or sid in (".", "..") or not re.fullmatch(r"[A-Za-z0-9._-]+", sid):
-    sid = ""
+sid = validate_session_id(data.get("session_id") if isinstance(data, dict) else None)
 
 tool_name = data.get("tool_name") if isinstance(data, dict) else None
 if not isinstance(tool_name, str):
@@ -97,10 +97,14 @@ MARKER="$BASE/${SESSION_ID}.${SUFFIX}"
 [ -d "$MARKER" ] && [ ! -L "$MARKER" ] || exit 0
 
 # Window-expiry sweep, scoped to exactly the one generation the pointer
-# names -- there is never another candidate marker to consider.
+# names -- there is never another candidate marker to consider. On a stat
+# failure, hook_entry_age prints nothing and returns 1 -- this must NEVER
+# guess an age, since guessing "ancient" would sweep away a live marker on
+# a transient stat glitch (the direction fragments-surface.sh's own sweep
+# already took the other way; unified here to "skip this write, don't
+# sweep, don't guess" for both).
 NOW=$(date +%s)
-MTIME=$(stat -f '%m' "$MARKER" 2>/dev/null || stat -c '%Y' "$MARKER" 2>/dev/null || echo 0)
-AGE=$((NOW - MTIME))
+AGE=$(hook_entry_age "$MARKER" "$NOW") || exit 0
 if [ "$AGE" -gt 1800 ]; then
   rmdir "$MARKER" 2>/dev/null
   rm -f "${MARKER}.candidate" 2>/dev/null
@@ -200,9 +204,12 @@ mv "$MARKER" "$CLAIMED" 2>/dev/null || exit 0
 # Project root must be resolved to the git repo root (matching
 # fragments-arm.sh / handoff-path.sh) before scoping -- using the raw cwd
 # directly would scope this record to a subdirectory instead of the
-# project root whenever the write happened from one.
-ROOT=$(cd -- "$CWD" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null) \
-  || ROOT=$(cd -P -- "$CWD" 2>/dev/null && pwd)
+# project root whenever the write happened from one. An empty $CWD must
+# fail closed, not fall back to hook_repo_root's own ambient-cwd
+# resolution -- that would scope this record to whatever directory the
+# hook process happens to run in, not this payload's project.
+ROOT=""
+[ -n "$CWD" ] && ROOT=$(hook_repo_root "$CWD" 2>/dev/null)
 DOCS_DIR=""
 [ -n "$ROOT" ] && DOCS_DIR=$(fragments_docs_dir "$ROOT" 2>/dev/null)
 if [ -z "$DOCS_DIR" ]; then
