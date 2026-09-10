@@ -3,6 +3,26 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.68] — 2026-09-10
+
+### Changed
+
+- **Extracted duplicated test scaffolding into `tests/_lib/harness.sh`** (`fresh_tmpdir`,
+  `fresh_repo`, `track_trash`, `_cleanup_trash`), following up on v1.1.67's production-side
+  extraction. Five test files (`tests/hooks/test-fragments-{arm,capture,surface}.sh`,
+  `tests/hooks/test-handoff-{nudge,surface}.sh`) had their own byte-identical copies of this
+  trio, 3 of which were missing the empty-string guard the other 2 had — the exact `trash ""`
+  pattern that moved this repo's working tree to Trash mid-session earlier this session. One
+  definition now, so the guard can't drift apart across copies again. `tests/_lib/` is
+  deliberately outside `scripts/run-gauntlet.sh`'s five test-discovery globs (verified: never
+  executed as a test) while still covered by its lint layer (verified: `git ls-files '*.sh'`
+  picks it up for `bash -n`/shellcheck). Verification beyond per-file pass-count parity: one
+  assertion was deliberately broken in a migrated file and confirmed to print `FAIL` and exit
+  non-zero before being restored — a harness that swallows failures would pass count-parity
+  silently. `handoff-nudge.sh`'s two curated-PATH tests (`test-handoff-nudge.sh`) needed
+  `dirname` added to their binary allowlist, since v1.1.67 gave that hook a new dependency
+  (sourcing the shared lib) it didn't have before.
+
 ## [1.1.67] — 2026-09-10
 
 ### Changed

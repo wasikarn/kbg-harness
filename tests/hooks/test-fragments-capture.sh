@@ -10,6 +10,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 HOOK="$ROOT/hooks/sensors/fragments-capture.sh"
 ARM_HOOK="$ROOT/hooks/sensors/fragments-arm.sh"
+. "$ROOT/tests/_lib/harness.sh"
 
 pass=0
 fail=0
@@ -17,24 +18,8 @@ ok()  { pass=$((pass + 1)); echo "PASS: $1"; }
 bad() { fail=$((fail + 1)); echo "FAIL: $1" >&2; }
 
 FAKE_HOME=$(mktemp -d)
-EXTRA_TRASH=()
-_cleanup_trash() {
-  local t targets=()
-  [ -n "${FAKE_HOME:-}" ] && targets+=("$FAKE_HOME")
-  for t in "${EXTRA_TRASH[@]:-}"; do
-    [ -n "$t" ] && targets+=("$t")
-  done
-  [ "${#targets[@]}" -eq 0 ] || trash "${targets[@]}" 2>/dev/null
-  return 0
-}
 trap _cleanup_trash EXIT
 
-fresh_tmpdir() { local d; d=$(mktemp -d); [ -n "$d" ] && EXTRA_TRASH+=("$d"); printf '%s' "$d"; }
-fresh_repo() {
-  local d; d=$(fresh_tmpdir)
-  (cd "$d" && git init -q && git config user.email t@t.com && git config user.name t) >/dev/null 2>&1
-  printf '%s' "$d"
-}
 docs_dir_for() {
   local root="$1" sh
   sh=$(bash -c ". '$ROOT/scripts/_lib/slug-hash.sh'; slug_hash '$root'")

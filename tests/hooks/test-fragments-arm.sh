@@ -9,6 +9,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 HOOK="$ROOT/hooks/sensors/fragments-arm.sh"
+. "$ROOT/tests/_lib/harness.sh"
 
 pass=0
 fail=0
@@ -16,25 +17,8 @@ ok()  { pass=$((pass + 1)); echo "PASS: $1"; }
 bad() { fail=$((fail + 1)); echo "FAIL: $1" >&2; }
 
 FAKE_HOME=$(mktemp -d)
-EXTRA_TRASH=()
-# `trash` with an empty-string argument deletes the CURRENT WORKING
-# DIRECTORY (confirmed live: cwd vanished, exit 0, no error). A bare
-# "${EXTRA_TRASH[@]:-}" expansion can pass one if mktemp -d ever fails
-# silently inside fresh_tmpdir() (set -u, no set -e here -- a failed
-# assignment leaves an empty string, not an abort) -- filter out every
-# empty element before ever calling trash.
-_cleanup_trash() {
-  local t targets=()
-  [ -n "${FAKE_HOME:-}" ] && targets+=("$FAKE_HOME")
-  for t in "${EXTRA_TRASH[@]:-}"; do
-    [ -n "$t" ] && targets+=("$t")
-  done
-  [ "${#targets[@]}" -eq 0 ] || trash "${targets[@]}" 2>/dev/null
-  return 0
-}
 trap _cleanup_trash EXIT
 
-fresh_tmpdir() { local d; d=$(mktemp -d); EXTRA_TRASH+=("$d"); printf '%s' "$d"; }
 arm_dir() { printf '%s/mh-fragments-arm' "$1"; }
 run() { local body="$1" tmp="$2"; printf '%s' "$body" | HOME="$FAKE_HOME" TMPDIR="$tmp" bash "$HOOK"; }
 

@@ -9,6 +9,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 HOOK="$ROOT/hooks/session/handoff-surface.sh"
 HELPER="$ROOT/skills/workflow/handoff/scripts/handoff-path.sh"
+. "$ROOT/tests/_lib/harness.sh"
 
 pass=0
 fail=0
@@ -16,22 +17,6 @@ ok()  { pass=$((pass + 1)); echo "PASS: $1"; }
 bad() { fail=$((fail + 1)); echo "FAIL: $1" >&2; }
 
 FAKE_HOME=$(mktemp -d)
-EXTRA_TRASH=()
-# `trash` with an empty-string argument deletes the CURRENT WORKING
-# DIRECTORY (confirmed live: cwd vanished, exit 0, no error). A bare
-# "${EXTRA_TRASH[@]:-}" expansion can pass one if mktemp -d ever fails
-# silently inside fresh_tmpdir() (set -u, no set -e here -- a failed
-# assignment leaves an empty string, not an abort) -- filter out every
-# empty element before ever calling trash.
-_cleanup_trash() {
-  local t targets=()
-  [ -n "${FAKE_HOME:-}" ] && targets+=("$FAKE_HOME")
-  for t in "${EXTRA_TRASH[@]:-}"; do
-    [ -n "$t" ] && targets+=("$t")
-  done
-  [ "${#targets[@]}" -eq 0 ] || trash "${targets[@]}" 2>/dev/null
-  return 0
-}
 trap _cleanup_trash EXIT
 
 # Every invocation below runs with CLAUDE_PLUGIN_ROOT pointed at this repo
@@ -39,7 +24,7 @@ trap _cleanup_trash EXIT
 # finds the real helper -- only $HOME is faked, per project isolation.
 export CLAUDE_PLUGIN_ROOT="$ROOT"
 
-fresh_home() { local d; d=$(mktemp -d); EXTRA_TRASH+=("$d"); printf '%s' "$d"; }
+fresh_home() { fresh_tmpdir; }
 alloc()   { HOME="$1" bash "$HELPER"; }
 publish() { HOME="$1" bash "$HELPER" --publish "$2"; }
 surface() { HOME="$1" bash "$HOOK"; }
@@ -158,7 +143,7 @@ fi
 H=$(fresh_home)
 PEND=$(HOME="$H" bash "$HELPER" --dir)/pending
 mkdir -p "$PEND"
-SECRET=$(mktemp); EXTRA_TRASH+=("$SECRET")
+SECRET=$(mktemp); track_trash "$SECRET"
 printf 'SECRET_DO_NOT_LEAK\n' > "$SECRET"
 LIVE_LINK="$PEND/handoff-19700101T000000.livelink.md"
 ln -s "$SECRET" "$LIVE_LINK"
@@ -285,7 +270,7 @@ fi
 
 # --- missing helper: silent, exit 0 ---
 H=$(fresh_home)
-BOGUS_ROOT=$(mktemp -d); EXTRA_TRASH+=("$BOGUS_ROOT")
+BOGUS_ROOT=$(mktemp -d); track_trash "$BOGUS_ROOT"
 OUT=$(HOME="$H" CLAUDE_PLUGIN_ROOT="$BOGUS_ROOT" bash "$HOOK" 2>"$H/err"); rc=$?
 if [ "$rc" -eq 0 ] && [ -z "$OUT" ] && [ ! -s "$H/err" ]; then
   ok "missing helper (bogus CLAUDE_PLUGIN_ROOT) -- silent, exit 0"
@@ -393,7 +378,7 @@ fi
 # unrelated file that happens to share a name there. Uses a throwaway git
 # repo as cwd (never the real matt-harness tree) so the project dir the
 # hook resolves matches where the fixture was planted. ---
-FIXTURE_REPO=$(mktemp -d); EXTRA_TRASH+=("$FIXTURE_REPO")
+FIXTURE_REPO=$(mktemp -d); track_trash "$FIXTURE_REPO"
 (cd "$FIXTURE_REPO" && git init -q -b main >/dev/null 2>&1)
 H=$(fresh_home)
 PEND=$(cd "$FIXTURE_REPO" && HOME="$H" bash "$HELPER" --dir)/pending
@@ -420,8 +405,8 @@ fi
 H=$(fresh_home)
 P=$(alloc "$H"); printf 'content that must not be archived if it appears to change mid-run\n' > "$P"
 PUB=$(publish "$H" "$P")
-STAT_SHIM_DIR=$(mktemp -d); EXTRA_TRASH+=("$STAT_SHIM_DIR")
-STAT_COUNTER=$(mktemp); EXTRA_TRASH+=("$STAT_COUNTER")
+STAT_SHIM_DIR=$(mktemp -d); track_trash "$STAT_SHIM_DIR"
+STAT_COUNTER=$(mktemp); track_trash "$STAT_COUNTER"
 printf '0' > "$STAT_COUNTER"
 cat > "$STAT_SHIM_DIR/stat" <<EOF
 #!/usr/bin/env bash
@@ -446,7 +431,7 @@ fi
 H=$(fresh_home)
 P=$(alloc "$H"); printf 'must stay pending when stat is unavailable\n' > "$P"
 PUB=$(publish "$H" "$P")
-STATFAIL_DIR=$(mktemp -d); EXTRA_TRASH+=("$STATFAIL_DIR")
+STATFAIL_DIR=$(mktemp -d); track_trash "$STATFAIL_DIR"
 cat > "$STATFAIL_DIR/stat" <<'SHIMEOF'
 #!/usr/bin/env bash
 exit 1
@@ -473,7 +458,7 @@ fi
 H=$(fresh_home)
 P=$(alloc "$H"); printf 'consume race content\n' > "$P"
 PUB=$(publish "$H" "$P")
-MVSHIM_DIR=$(mktemp -d); EXTRA_TRASH+=("$MVSHIM_DIR")
+MVSHIM_DIR=$(mktemp -d); track_trash "$MVSHIM_DIR"
 cat > "$MVSHIM_DIR/mv" <<'SHIMEOF'
 #!/usr/bin/env bash
 # handoff-surface.sh's consume step always calls: mv -n "$SRC" "$DEST"
