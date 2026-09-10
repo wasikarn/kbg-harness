@@ -3,11 +3,33 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.64] — 2026-09-10
+
+### Fixed
+
+- `session:handoff-nudge`: 4 defects found by `/mh:compliance-audit` against the shipped v1.1.63
+  plan (Codex-primary verifier, findings reproduced independently before fixing). (1) The
+  `session_id` character-class check ran in bash *after* `$(...)` command substitution had already
+  stripped a trailing newline or dropped an embedded NUL byte from python3's output — a value like
+  `"foo\n"` or `"foo\x00bar"` could still produce a claimed, mangled marker (`foo`/`foobar`) instead
+  of being rejected; the NUL case also leaked a bash warning to stderr. Fixed by moving the
+  character-class and `.`/`..` checks into python3, against the untruncated string, so nothing
+  unsafe ever crosses into bash for command substitution to mangle. (2) An `id -u` failure leaked
+  its own error text to stderr, unredirected — now explicitly silenced. (3) A TOCTOU gap between
+  the ownership/symlink check and the claim `mkdir`: something could swap the base directory for a
+  symlink in that window. Fixed with a post-claim recheck that rolls the claim back (`rmdir`) and
+  exits silently on a mismatch, rather than trusting the precondition alone. (4) One test (the
+  `$TMPDIR`-vs-`$HOME/.claude/state/` marker-location check) discarded stderr instead of asserting
+  it empty, matching every other scenario in the suite. 4 new regression tests confirmed to fail
+  against the pre-fix code and pass after. Also fixed a doc off-by-one: the ADR and this
+  CHANGELOG's own v1.1.63 entry called this "a 4th SessionStart hook" / "the first three only ever
+  read" — it's actually the 5th, with 4 pre-existing.
+
 ## [1.1.63] — 2026-09-10
 
 ### Added
 
-- `session:handoff-nudge`: a 4th `SessionStart` hook, `matcher: "compact"`, that nudges the model
+- `session:handoff-nudge`: a 5th `SessionStart` hook, `matcher: "compact"`, that nudges the model
   (once per session, via injected context) to suggest `/mh:handoff` to the user right after a
   compact — the write-side counterpart to `session:handoff-surface`'s read side. Design went
   through 3 rounds of Codex plan review: `session_id` (the once-per-session key) is validated as

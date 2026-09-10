@@ -161,11 +161,11 @@ fi
 # $HOME/.claude/state/ (that prefix is reserved for per-project state
 # elsewhere in this repo) ---
 T=$(fresh_tmpdir)
-run '{"session_id":"session-one"}' "$T" >/dev/null 2>&1
-if [ -d "$(marker_dir "$T")/session-one" ] && [ ! -e "$FAKE_HOME/.claude/state/mh-handoff-nudge" ]; then
+run '{"session_id":"session-one"}' "$T" >/dev/null 2>"$T/err"
+if [ -d "$(marker_dir "$T")/session-one" ] && [ ! -e "$FAKE_HOME/.claude/state/mh-handoff-nudge" ] && [ ! -s "$T/err" ]; then
   ok "the marker lands under \$TMPDIR, never under \$HOME/.claude/state/"
 else
-  bad "expected the marker only under \$TMPDIR"
+  bad "expected the marker only under \$TMPDIR, stderr empty: stderr='$(cat "$T/err")'"
 fi
 
 # --- a mkdir failure on the claim itself (base directory read-only) is
@@ -182,6 +182,84 @@ if [ "$RESULT_OK" -eq 1 ]; then
   ok "a claim-mkdir failure (read-only base) is silent, no nudge printed"
 else
   bad "expected silence when the claim mkdir fails: out='$OUT'"
+fi
+
+# --- compliance-audit finding: a session_id ending in a newline must be
+# rejected outright, not silently truncated into a shorter "valid-looking"
+# marker. The character-class check now runs in python3 against the
+# untruncated string, before bash's $(...) strips the trailing newline --
+# reverting that fix reproduces a marker named "foo" for input "foo\n". ---
+T=$(fresh_tmpdir)
+OUT=$(printf '{"session_id":"foo\\n"}' | HOME="$FAKE_HOME" TMPDIR="$T" bash "$HOOK" 2>"$T/err")
+if [ -z "$OUT" ] && [ ! -s "$T/err" ] && [ -z "$(ls -A "$(marker_dir "$T")" 2>/dev/null)" ]; then
+  ok "a session_id with a trailing newline is rejected, not truncated into a mangled marker"
+else
+  bad "trailing-newline session_id was not rejected: out='$OUT' marker_dir='$(ls -A "$(marker_dir "$T")" 2>/dev/null)'"
+fi
+
+# --- compliance-audit finding: a session_id containing an embedded NUL byte
+# must be rejected, and rejected silently -- bash's own command substitution
+# drops NUL bytes and prints "warning: command substitution: ignored null
+# byte in input" to stderr, which the same python3-side fix above prevents by
+# never letting a NUL-containing value leave python3 in the first place. ---
+T=$(fresh_tmpdir)
+OUT=$(printf '{"session_id":"foo\\u0000bar"}' | HOME="$FAKE_HOME" TMPDIR="$T" bash "$HOOK" 2>"$T/err")
+if [ -z "$OUT" ] && [ ! -s "$T/err" ] && [ -z "$(ls -A "$(marker_dir "$T")" 2>/dev/null)" ]; then
+  ok "a session_id with an embedded NUL byte is rejected, stderr stays empty"
+else
+  bad "NUL-byte session_id was not cleanly rejected: out='$OUT' stderr='$(cat "$T/err")'"
+fi
+
+# --- compliance-audit finding: an id -u failure must not leak to stderr --
+# the ownership check redirects it explicitly now. A PATH-shimmed id command
+# always fails; every other needed binary stays real. ---
+T=$(fresh_tmpdir)
+IDFAIL_DIR=$(mktemp -d); EXTRA_TRASH+=("$IDFAIL_DIR")
+for bin in bash mkdir stat sh python3; do
+  real=$(command -v "$bin" 2>/dev/null) || continue
+  ln -sf "$real" "$IDFAIL_DIR/$bin"
+done
+cat > "$IDFAIL_DIR/id" <<'SHIMEOF'
+#!/bin/sh
+echo "id: shim failure" >&2
+exit 1
+SHIMEOF
+chmod +x "$IDFAIL_DIR/id"
+OUT=$(printf '{"session_id":"session-one"}' | HOME="$FAKE_HOME" TMPDIR="$T" PATH="$IDFAIL_DIR" bash "$HOOK" 2>"$T/err")
+if [ -z "$OUT" ] && [ ! -s "$T/err" ]; then
+  ok "an id -u failure is silent, no nudge, no stderr leak"
+else
+  bad "id -u failure leaked: out='$OUT' stderr='$(cat "$T/err")'"
+fi
+
+# --- compliance-audit finding (TOCTOU): the base directory could be swapped
+# for a symlink between the pre-claim ownership check and the claim mkdir.
+# A PATH-shimmed id command -- the last real command the script runs before
+# the claim mkdir -- performs the swap as its own side effect, simulating a
+# racing local process; /bin/rm and /bin/ln are used by absolute path inside
+# the shim so the swap doesn't depend on the shimmed (deliberately narrow)
+# PATH. The post-claim recheck must detect the swap, roll the claim back,
+# and print nothing. ---
+T=$(fresh_tmpdir)
+REAL_TARGET="$T-race-target"; mkdir -p "$REAL_TARGET"; EXTRA_TRASH+=("$REAL_TARGET")
+mkdir -p "$(marker_dir "$T")"
+RACE_DIR=$(mktemp -d); EXTRA_TRASH+=("$RACE_DIR")
+for bin in bash mkdir stat sh python3 rmdir; do
+  real=$(command -v "$bin" 2>/dev/null) || continue
+  ln -sf "$real" "$RACE_DIR/$bin"
+done
+cat > "$RACE_DIR/id" <<SHIMEOF
+#!/bin/sh
+/bin/rm -rf "$(marker_dir "$T")"
+/bin/ln -s "$REAL_TARGET" "$(marker_dir "$T")"
+exec /usr/bin/id "\$@"
+SHIMEOF
+chmod +x "$RACE_DIR/id"
+OUT=$(printf '{"session_id":"race-probe"}' | HOME="$FAKE_HOME" TMPDIR="$T" PATH="$RACE_DIR" bash "$HOOK" 2>"$T/err")
+if [ -z "$OUT" ] && [ ! -s "$T/err" ] && [ ! -e "$REAL_TARGET/race-probe" ]; then
+  ok "a base directory swapped for a symlink between the check and the claim is caught and rolled back"
+else
+  bad "TOCTOU swap was not caught: out='$OUT' target_has_marker=$([ -e "$REAL_TARGET/race-probe" ] && echo yes || echo no)"
 fi
 
 # --- the registered hooks.json entry's matcher is exactly "compact" -- a

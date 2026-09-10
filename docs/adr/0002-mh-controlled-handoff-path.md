@@ -136,7 +136,7 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
   actually changed — the guard failed open in exactly the scenario it exists for. Each fallback is
   now a distinct literal instead of a shared empty one, so a `stat` failure at either point always
   mismatches and fails closed.
-- **A fourth `SessionStart` hook nudges the *write* side, since the first three only ever read
+- **A fifth `SessionStart` hook nudges the *write* side, since the first four only ever read
   what already exists.** `session:handoff-nudge` fires once per session, only on `matcher:
   "compact"`, and suggests to the model (via injected `additionalContext`, not directly to the
   user — `mh:handoff` is `disable-model-invocation: true`, so the model can only relay the
@@ -155,4 +155,17 @@ digest, TOCTOU-guard, and dedup machinery the detection design had accumulated.
   best-effort, not a guarantee, same posture as the read side above. `session_id` is validated as
   a real, non-empty JSON string before use (a `null`/boolean/number value stringifies into
   something that would otherwise pass a bare character-class regex) and rejected outright if it is
-  `.`, `..`, or contains anything outside `[A-Za-z0-9._-]`.
+  `.`, `..`, or contains anything outside `[A-Za-z0-9._-]`. A compliance audit against this plan
+  (Codex-primary, independently reproduced) found the character-class check had moved to the wrong
+  side of a mangling boundary: it originally ran in bash, *after* `$(...)` command substitution had
+  already stripped a trailing newline or silently dropped an embedded NUL byte (the latter also
+  leaking a bash warning to stderr) from whatever `session_id` python3 had printed — so a value
+  containing either could still produce a claimed, truncated marker instead of being rejected. Fixed
+  by moving the character-class and reserved-value check into python3 itself, against the untruncated
+  string, so nothing outside the safe set ever crosses into bash for command substitution to mangle
+  in the first place. The same audit found the ownership/symlink recheck (`stat`, then `id -u`) and
+  the claim `mkdir` were two separate syscalls with a window between them — something could swap the
+  base directory for a symlink in that gap — and that an `id -u` failure leaked to stderr unredirected.
+  Fixed with a post-claim recheck: after the `mkdir` succeeds, the symlink and ownership checks run
+  once more, and a mismatch rolls the claim back (`rmdir`) and exits silently rather than trusting the
+  precondition alone — the same "verify the postcondition" posture already used for `mv -n` above.

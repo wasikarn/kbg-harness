@@ -35,23 +35,29 @@ command -v python3 >/dev/null 2>&1 || exit 0
 # stringified into a fake session_id (Python's own str() would turn
 # {"session_id":null} into the four-character string "None", which then
 # passes a naive character-class regex as if it were a real id).
+#
+# The character-class check (incl. rejecting "." and "..") runs HERE, in
+# Python, against the untruncated string -- not later in bash. Bash command
+# substitution unconditionally strips trailing newlines and silently drops
+# embedded NUL bytes (with a stderr warning for the latter) before a bash-side
+# regex would ever see them, so a value like "foo\n" or "foo\x00bar" would
+# otherwise pass a bash-side check as a mangled "foo"/"foobar" -- validating
+# in Python first means anything outside the safe set is rejected before it
+# ever crosses into bash, so nothing is left for command substitution to mangle.
 SESSION_ID=$(python3 -c '
-import json, sys
+import json, re, sys
 try:
     data = json.load(sys.stdin)
 except Exception:
     data = None
 sid = data.get("session_id") if isinstance(data, dict) else None
-print(sid if isinstance(sid, str) and sid else "")
+if not isinstance(sid, str) or sid in (".", ".."):
+    sid = None
+elif not re.fullmatch(r"[A-Za-z0-9._-]+", sid):
+    sid = None
+print(sid or "")
 ' 2>/dev/null)
 [ -n "$SESSION_ID" ] || exit 0
-
-# Character-class check, then explicitly reject "." and ".." even though
-# both match the class -- neither is a real session id, and both are
-# meaningful path components ("." is a no-op, ".." escapes one directory).
-[[ "$SESSION_ID" =~ ^[A-Za-z0-9._-]+$ ]] || exit 0
-[ "$SESSION_ID" != "." ] || exit 0
-[ "$SESSION_ID" != ".." ] || exit 0
 
 # Base directory: no trailing slash. A trailing-slash path resolves through
 # a symlink before `-L` ever runs, silently defeating the very check below
@@ -66,8 +72,12 @@ mkdir -p "$BASE" 2>/dev/null
 # secrets (unlike the actual handoff documents), so the bar is "don't get
 # confused by something we don't own," not the heavier defenses
 # skills/workflow/handoff/scripts/handoff-path.sh carries for real content.
-OWNER_UID=$(stat -f '%u' "$BASE" 2>/dev/null || stat -c '%u' "$BASE" 2>/dev/null) || exit 0
-[ "$OWNER_UID" = "$(id -u)" ] || exit 0
+owner_ok() {
+  local uid
+  uid=$(stat -f '%u' "$BASE" 2>/dev/null || stat -c '%u' "$BASE" 2>/dev/null) || return 1
+  [ "$uid" = "$(id -u 2>/dev/null)" ]
+}
+owner_ok || exit 0
 
 # The claim: one atomic mkdir, and it IS the print-gate -- no separate
 # exists-check before it, no distinction needed between "already claimed"
@@ -78,6 +88,17 @@ OWNER_UID=$(stat -f '%u' "$BASE" 2>/dev/null || stat -c '%u' "$BASE" 2>/dev/null
 # exactly once per actual session-start event, so mkdir's own atomicity is
 # the whole race guard needed.
 mkdir "$BASE/$SESSION_ID" 2>/dev/null || exit 0
+
+# A window still exists between the checks above and this mkdir: something
+# could swap $BASE for a symlink or a foreign-owned directory in between. The
+# claim itself can't be made atomic with those checks, so recheck immediately
+# after and roll the claim back rather than trust the precondition alone --
+# the same "verify the postcondition" posture this repo already applies to
+# mv -n publish/consume steps (docs/adr/0002-mh-controlled-handoff-path.md).
+if [ -L "$BASE" ] || ! owner_ok; then
+  rmdir "$BASE/$SESSION_ID" 2>/dev/null
+  exit 0
+fi
 
 printf '<mh-handoff-nudge>\n' 2>/dev/null
 printf 'This session was just compacted -- some earlier context is now summarized, not verbatim. If\n' 2>/dev/null
