@@ -21,7 +21,12 @@ three gaps this skill closes. Recorded in the shipping commit.
 
 ## Pre-flight gate
 
-Explicit invocation (`mh:idea-audit <source>`, "audit this for adoption") skips the gate.
+Explicit invocation (`mh:idea-audit <source>`, "audit this for adoption") skips checks 1-2 below
+(the should-we-even-bother questions) — it does **not** skip check 3. Check 3 is a hard
+precondition, not a desirability judgment: Phase 1 physically cannot save a source that doesn't
+exist yet, explicit invocation or not. (This is a fix, not the original design: the original text
+let explicit invocation skip check 3 too, and Phase 1's save-logic below has no bare-title branch
+— an explicit `mh:idea-audit react-query` with no URL attached dead-ended with nothing to save.)
 Otherwise ask and abort on any NO:
 
 1. **An actual external source, and a live decision on the table?** "What do you think of X" with
@@ -29,11 +34,48 @@ Otherwise ask and abort on any NO:
    question convention.
 2. **Costly to get wrong?** Shapes doctrine, kills or builds a safety-relevant feature, becomes a
    citable precedent. A curiosity question is a NO.
-3. **Is the source actually available to read** — URL, local file, or pasted text? A bare title is
-   a NO; ask for the source first.
+3. **Is the source actually available to read** — URL, local file, or pasted text? A bare
+   name/title with nothing attached routes to **Phase 0** below instead of an immediate abort;
+   Phase 0 either resolves it to a real source or aborts with the same message check 3 always gave.
 
 On abort, answer directly; optionally note: *"For a scored adoption audit with an independent
 adversarial check, run `mh:idea-audit <source>`."*
+
+**Not this skill's job:**
+- **A `docs/research/*.md` file already in the repo** (e.g. from `mattpocock-skills:research`) —
+  that's a **local file**, use check 3's Local-file branch in Phase 1 directly; skip Phase 0
+  entirely, nothing to locate. But treat it as a *synthesis*, not the primary source itself: Agent
+  A and the Phase 2 attacker must chase that doc's own citations back to primary evidence rather
+  than trusting its prose claims at face value — tag anything not independently traced
+  `Author-asserted`, the same tag Agent A already uses for unverifiable claims, never `Yes —
+  observed directly` on the strength of the research doc alone.
+- **`mh:ideate` output.** idea-audit converges on an already-formed *external* idea (see the intro
+  above); ideate diverges *new* ideas from an open problem — there is no external primary source to
+  verify a freshly-brainstormed idea against, so Phase 1/2's whole evidence-verification machinery
+  has nothing to check and would degrade to `Not independently checkable` across the board. Don't
+  run Phase 0 to go find "evidence" for one; redirect to `agents/ideate-critic.md`, which scores
+  ideate's own brainstormed ideas, instead.
+
+## Phase 0: Locate source (only when check 3 has nothing to point at)
+
+Triggers only when the invocation names a topic/tool/practice with no URL, local file, or pasted
+text already attached — never for the two cases above, which already resolve without searching.
+
+1. **`qmd` MCP `query`, `collection: "llm-wiki"`, first** — the operator's own second-brain rule
+   (`CLAUDE.md`'s "Second Brain (llm-wiki)" section) requires this ahead of any web search for a
+   research/citation question, and this is exactly that.
+2. **If nothing usable there:** `firecrawl_developer_search` for a repo/library/tool name (or
+   `firecrawl_search`/`WebSearch` for a general article or practice with no natural repo/docs
+   home).
+3. **Present the top 1-3 candidates** (title, URL, one-line snippet) and require an explicit pick
+   from the user — never auto-fetch the top hit and proceed silently. A wrong-source audit burns
+   the full Phase 1-3 pipeline (up to 3 agents) on the wrong artifact; one confirmation question is
+   far cheaper than that.
+4. **Once picked,** the chosen URL/file re-enters check 3's normal URL/Local-file branches in
+   Phase 1 — Phase 0 only locates the source, it changes nothing about how it's subsequently saved,
+   fetched, or banner-checked.
+5. **If Phase 0 finds nothing plausible,** abort with check 3's original message: ask the user for
+   the source directly.
 
 ## Untrusted-source rule
 
@@ -71,7 +113,11 @@ Agent A; the last one only becomes checkable after Phase 1 returns:
   is already sufficient to route to the banner path below, no separate check needed for it. Still
   require a size floor — it guards what `-f` does *not* catch: a **soft** failure that still
   returns HTTP 200 with useless content (a bot-wall interstitial, a login page, a tiny redirect
-  stub). **Curl failing outright, or the file falling under the size floor, routes to the banner
+  stub). **Floor: 2 KiB (2048 bytes)** — `stat -f%z <path> 2>/dev/null || stat -c%s <path>` under
+  this line routes to the banner path. A heuristic, not a guarantee: a genuinely short real source
+  (a brief announcement) can trip it too, but the cost of a false trip is only a banner downgrade
+  to `insufficient evidence`, not data loss — cheaper than the cost of grading a bot-wall page as
+  primary evidence. **Curl failing outright, or the file falling under the size floor, routes to the banner
   path below — never silent acceptance of unvalidated content as primary evidence.** (The
   phrase-match check is a third guard, but it can't run yet — see "Post-hoc corroboration" below,
   after Agent A exists.)
@@ -98,6 +144,15 @@ misquoted/hallucinated a phrase). Don't banner-downgrade a saved file that's act
 flag it as a Phase-1 compliance gap and treat Agent A's un-corroborated claims as
 `Not independently checkable` rather than trusting them, before Phase 2 ever sees the reports.
 
+**Quote cap (closes an injection path):** Agent A's report is pasted whole into Phase 2's attacker
+prompt (see `references/attacker-brief.md`), so any source phrase it quotes rides along into that
+prompt's own instruction context — the exact thing the untrusted-source rule above bans. Instruct
+Agent A to quote **short, distinctive fragments only — at most ~15 words each, at most 3 quotes
+total**, enough to corroborate a claim's existence, never a long verbatim span. This doesn't make
+injected content harmless (Phase 2's `checked[]` requirement below is the real backstop), but it
+shrinks how much of the raw source can travel into the attacker's context as text it might read as
+instructions rather than data.
+
 **Agent B — Fit.** Analyze the live host repo: existing overlap (composer-not-creator shape —
 `docs/reference/composer-not-creator.md` if present), architecture fit, blast radius, what
 adopting this would concretely touch.
@@ -110,8 +165,17 @@ Neither scores yet — anchoring guard, same as `ideate` Phase 2.
 
 ```bash
 codex exec --sandbox read-only -c model_reasoning_effort=high --cd <repo-root> \
-  --output-last-message <file> --output-schema references/attacker-output-schema.json
+  --output-last-message <file> --output-schema <skill-dir>/references/attacker-output-schema.json
 ```
+
+`<skill-dir>` is this skill's own absolute directory (e.g.
+`/path/to/skills/workflow/idea-audit`) — the host substitutes it at dispatch time, the same way it
+already substitutes the scratchpad source's absolute path two paragraphs down. A bare
+`references/attacker-output-schema.json` only resolves if the `codex exec` process's cwd happens
+to already be this skill's own directory, but `--cd <repo-root>` puts it at the repo root instead
+— verified live: `ls <repo-root>/references/` misses, the schema flag as originally written
+cannot resolve. Always pass the schema path as absolute (or as `<skill-dir>` relative to
+`--cd`'s own target), never bare.
 
 Effort pinned to `high` for the same reason as `deep-audit`: Codex's bundled default under-powers
 an independent checker; model left to Codex's default. The brief (`references/attacker-brief.md`)
@@ -132,16 +196,27 @@ hardcoded-path hooks (`git-hooks/pre-commit`, `scripts/run-gauntlet.sh`) deliber
 scan — this skill is its own backstop against that leak, not the repo's hooks (see Phase 4).
 
 **Accept the result only if:** `codex exec` exits 0; the output file parses against the schema
-with `pass` and `findings[]` present, each finding's `summary`/`evidence` present; the result
-shows real findings or an explicit, legitimate zero-findings pass — not a refusal in prose.
+with `pass`, `findings[]`, and **`checked[]`** all present, each finding's `summary`/`evidence`
+present and each `checked[]` item's `claim`/`evidence` present; the result shows real findings or
+an explicit, legitimate zero-findings pass — not a refusal in prose.
 **Schema presence is not the same as a real citation** — `additionalProperties: false` on each
-finding item stops a stray field, not a hand-wavy `evidence` string. After parsing, check each
-`evidence` value against a citation shape (a `path:line`, a backticked command, or a grep-result
-excerpt); an item that fails this post-parse check is treated the same as a missing citation.
+finding/checked item stops a stray field, not a hand-wavy `evidence` string. After parsing, check
+each `evidence` value (in both `findings[]` and `checked[]`) against a citation shape (a
+`path:line`, a backticked command, or a grep-result excerpt); an item that fails this post-parse
+check is treated the same as a missing citation.
 
-**Fallback triggers (all six — not just rate-limit):** non-zero exit, empty/malformed output, a
-schema mismatch, timeout, auth failure, or a semantic refusal (schema-valid JSON that doesn't
-actually check anything). On any of these: fall back to `general-purpose`, carrying
+**`checked[]` closes the vacuous-pass gap:** `{"pass": true, "findings": []}` alone is
+schema-valid and indistinguishable from an attacker that was told (by injected source content, or
+otherwise) to skip verification and just report clean — the empty `findings[]` array gives nothing
+for the citation-shape check above to even run against. `checked[]` requires at least one
+independently-verified claim, with a real citation, **regardless of `pass`/`findings`** — a `pass`
+whose `checked[]` is missing or empty is rejected outright and routed to the fallback triggers
+below, same as a schema mismatch.
+
+**Fallback triggers (all seven — not just rate-limit):** non-zero exit, empty/malformed output, a
+schema mismatch, timeout, auth failure, a missing/empty `checked[]` (the semantic-refusal case is
+now mechanically detectable via this field, not just inferred from prose), or any other semantic
+refusal not caught by the schema. On any of these: fall back to `general-purpose`, carrying
 `references/attacker-brief.md` as its full prompt — **not** `mh:plan-reviewer`, which hard-stops
 when handed a summary rather than a plan artifact (`agents/plan-reviewer.md`). Note "independence
 is lost for that pass," matching `docs/reference/codex-integration-map.md`'s established fallback
@@ -228,10 +303,13 @@ Python `os.remove`).
   rule, the explicit "writes nothing" rule, the Done-when quoted from `spawn-brief.md`, the
   unreachable-evidence-class note, entity-normalized matching guidance. **Load before dispatching
   Phase 2.**
-- `references/attacker-output-schema.json` — `{pass, findings[{summary, evidence}]}`,
-  `additionalProperties: false` at both levels, adapted from `deep-audit`'s own checker schema
-  (not copied verbatim — this skill has no fingerprint/re-fingerprint mechanism to back
-  `scope_ok`/`unexpected_files`). **Load as `--output-schema` for the Codex dispatch.**
+- `references/attacker-output-schema.json` — `{pass, findings[{summary, evidence}],
+  checked[{claim, evidence}]}`, `additionalProperties: false` at all three object levels, adapted
+  from `deep-audit`'s own checker schema (not copied verbatim — this skill has no
+  fingerprint/re-fingerprint mechanism to back `scope_ok`/`unexpected_files`). `checked[]` is
+  required and non-empty even on a clean pass — see Phase 2's vacuous-pass note. **Load as
+  `--output-schema <skill-dir>/references/attacker-output-schema.json` (absolute path) for the
+  Codex dispatch.**
 
 No new agent `.md` files. `general-purpose` ×2 (Phase 1), `codex exec`/`general-purpose` ×1
 (Phase 2) — 3 agents per wave, well under Rule 13's cap of 5.
@@ -277,3 +355,7 @@ than its purpose.
   claim back rather than an independent grep/read/run is not verification.
 - **A blended percentage instead of per-claim verdicts.** Phase 3 reports `MATCH/PARTIAL/GAP/N-A`
   per claim and a scored decision — never one number standing in for both.
+- **Phase 0 auto-fetching the top search hit without confirmation.** Never skip the explicit-pick
+  step — a wrong source burns the whole Phase 1-3 pipeline auditing the wrong artifact.
+- **`pass: true` with an empty `checked[]` accepted as-is.** The exact vacuous-pass gap `checked[]`
+  exists to close — a `pass` with no verification receipts is a fallback trigger, not a result.
