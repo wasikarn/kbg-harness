@@ -3,6 +3,46 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.83] — 2026-09-11
+
+### Fixed
+
+- **`mh:idea-audit` Phase 3 scoring rigor + 3 smaller gaps**, follow-up to 1.1.82 from the same
+  5-agent audit. Phase 3 left weighting fully delegated with no method, defined the fatal-weakness
+  floor only for the all-insufficient-evidence extreme (not the common partial case), and gave
+  MATCH/PARTIAL no boundary — two runs on the same source could disagree with no way to arbitrate.
+  Fixed: primary-source fidelity now carries the largest single weight, every other axis needs a
+  one-clause justification, weights sum to 100; a second fatal-weakness trigger (any criterion
+  below 40% of its own max) generalizes the doctrine file's per-criterion floor instead of only its
+  all-or-nothing extreme; MATCH/PARTIAL/GAP each get a concrete definition. Also: the
+  composer-not-creator survey never mentioned `mh:deep-audit` despite Phase 2 borrowing its
+  dispatch shape — added the missing line (own-session-output vs external-source is the real
+  distinction); a stray "mh:ideate-critic" reference treated `agents/ideate-critic.md` as an
+  invokable skill — fixed; the skill had zero eval coverage — added `evals/idea-audit-clean` and
+  `evals/idea-audit-planted`, mirroring deep-audit's clean/planted shape with a self-contained,
+  network-free fixture, and registered both in `tests/evals/test-eval-cases.sh`'s skill-name check
+  and verdict-sample table; static suite now 46/46.
+
+## [1.1.82] — 2026-09-11
+
+### Fixed
+
+- **`mh:idea-audit` schema-path bug, undefined size floor, vacuous-pass gap, gate dead-end.** A
+  5-agent adversarial audit found: Phase 2's Codex dispatch used a bare
+  `references/attacker-output-schema.json` path that cannot resolve against `--cd <repo-root>`
+  (verified live); the size-floor check had no concrete number; `{pass:true, findings:[]}` was
+  schema-valid with zero verification evidence, indistinguishable from a prompt-injected "just say
+  clean"; and explicit invocation skipped the source-availability check along with the
+  desirability checks, dead-ending on a bare-title invocation since Phase 1 had no branch for it.
+  Fixed: absolute schema path at dispatch; 2 KiB size floor; a required `checked[]` array (min 1
+  item, real citation) that closes the vacuous-pass gap regardless of pass/findings; split
+  explicit-invocation skip so it only bypasses the desirability checks, never the
+  source-availability one; new Phase 0 (qmd-first per the second-brain rule, then web search,
+  always confirm before fetching) so a bare name/title routes to auto-locate instead of
+  dead-ending; explicit routing for research-doc and ideate-output inputs, neither of which need
+  Phase 0; a quote-length cap on Agent A's report to shrink the raw-source text that rides into
+  Phase 2's attacker prompt.
+
 ## [1.1.81] — 2026-09-11
 
 ### Fixed
