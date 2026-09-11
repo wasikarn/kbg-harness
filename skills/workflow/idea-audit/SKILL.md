@@ -245,17 +245,37 @@ Rule-14-compliant scoring instance in this repo) — not a bespoke axis set: nam
 weights, per-criterion score + reason, weighted sum, a **stated** pass threshold and
 fatal-weakness floor, confidence with its basis. Mark any criterion with insufficient data
 `insufficient evidence` (English — the skill-authoring convention's carve-out for Rule 14's Thai
-marker inside `skills/**` files). **If the source side is entirely `insufficient evidence`** (the
-banner path fired, or the attacker never reached the source), that trips the fatal-weakness floor
-regardless of the weighted sum — a confident-looking total built on an unverified source is a
-false confidence, not a real pass.
+marker inside `skills/**` files).
+
+**Weighting rule (the doctrine file's own 35/20/15/15/15 split carries no stated rationale
+either — don't repeat that gap):** whatever axis set fits the specific source, one is always
+**primary-source fidelity** (how well the claims corroborate against real evidence, per Phase
+1/2's work) and it must carry the single largest weight, never tied for first — a confident total
+built on shaky evidence is the exact failure mode this phase exists to prevent, so the axis
+measuring that can't be diluted to parity with fit/blast-radius/etc. Every other axis's weight
+needs one clause of justification in its own table row (not asserted bare); weights sum to 100.
+
+**Fatal-weakness floor — two triggers, not one:** (1) **if the source side is entirely
+`insufficient evidence`** (the banner path fired, or the attacker never reached the source), that
+trips the floor regardless of the weighted sum — unchanged from before. (2) **generalizing the
+doctrine file's actual mechanism** (a per-criterion floor — no criterion below 85 — which is a
+different, more general rule than trigger (1) alone, even though this skill claims to copy that
+file's shape): **any single criterion scoring below 40% of its own max also trips the floor**,
+covering the common partial case — one or two criteria weak, not the whole source — that trigger
+(1) alone left undefined. 40% is this skill's own number, not doctrine's 85 (idea-audit's axes and
+scale differ from that file's); state the chosen threshold in the artifact rather than importing
+85 by assumption.
 
 Per-claim verdict vocabulary: `MATCH / PARTIAL / GAP / N-A`, with a legend line above the table —
-picked for consistency going forward, not asserted as an already-dominant convention. When
-matching a claim against saved source text, match on distinctive substrings or entity-normalized
-text, never a single failed exact-string match alone — HTML entities (`&#8217;` for a curly
-apostrophe, etc.) in a raw-fetched file will otherwise false-negative a real match into a wrong
-`GAP`.
+picked for consistency going forward, not asserted as an already-dominant convention.
+**MATCH:** both the claim's core assertion and its specific details (a number, a scope, a timing)
+corroborate. **PARTIAL:** the core assertion corroborates but a specific detail doesn't (or vice
+versa) — not "somewhat confident," a named detail mismatch. **GAP:** the core assertion is
+contradicted or has no supporting evidence at all. **N-A:** the claim isn't relevant to the
+adoption decision. When matching a claim against saved source text, match on distinctive
+substrings or entity-normalized text, never a single failed exact-string match alone — HTML
+entities (`&#8217;` for a curly apostrophe, etc.) in a raw-fetched file will otherwise
+false-negative a real match into a wrong `GAP`.
 
 Every "not adopting" item gets a citation (file:line, ADR, or commit) **and** a named doctrine
 anchor (a METHODOLOGY rule, YAGNI, maker≠checker, an ADR), labeled explicitly **deferred**,
@@ -316,10 +336,6 @@ No new agent `.md` files. `general-purpose` ×2 (Phase 1), `codex exec`/`general
 
 ## Deliberately not building
 
-- **Evals fixtures under `evals/`.** No gate requires them (`tests/evals/test-eval-cases.sh`
-  iterates only existing `evals/*/` dirs; `handoff` ships with none). The blind baseline above is
-  the authoring-time check this convention actually requires; formal fixtures are a separate,
-  later concern if the skill misfires in practice.
 - **A numeric-scoring library.** Adoption-decision axes vary by what's evaluated; a plain Rule-14
   table in prose is the right size.
 - **A `docs/reference/mattpocock-integration-map.md` row.** That table tracks 1:1 routing to a
@@ -338,16 +354,22 @@ doc-lookup fan-out, no attack step or scored decision), `ai-delegate-plugin`/`po
 (unrelated). In-repo: `mh:ideate` (opposite direction — diverges new ideas, doesn't converge on an
 already-formed external one), `agents/ideate-critic.md` (scores ideate's OWN brainstormed ideas,
 no primary-source verification duty), `agents/blind-spot-hunter.md` (post-code-review defect
-hunter on already-written diffs, not a pre-code adoption decision). None fit; this skill reuses
-`ideate`'s proven shapes (pre-flight gate, isolation invariant, `references/` convention) rather
-than its purpose.
+hunter on already-written diffs, not a pre-code adoption decision), `mh:deep-audit`
+(`skills/review/deep-audit/SKILL.md` — closest functional analog: verify every claim, score on a
+fixed rubric, dispatch a fresh-context checker; Phase 2 above explicitly borrows its dispatch shape
+and its output-schema is adapted from deep-audit's. Distinct scope, not distinct mechanism: deep-audit
+verifies claims about **this session's own output** against this repo's live state; idea-audit
+verifies claims about an **external source** the session didn't produce. Named here explicitly
+rather than left as an unstated omission next to the explicit reuse above). None fit; this skill
+reuses `ideate`'s proven shapes (pre-flight gate, isolation invariant, `references/` convention)
+rather than its purpose.
 
 ## Failure modes
 
 - **Decoration, not divergence.** Two analysts producing the same angle on the source — vary
   framing if this recurs (mirrors `ideate`'s own failure mode).
 - **Judge as ground truth.** The attacker is advisory evidence, not a verdict the user can't
-  question — same model-family caveat `mh:ideate-critic` names for itself.
+  question — same model-family caveat `agents/ideate-critic.md` names for itself.
 - **Silent parse failure.** An attacker output that doesn't validate, reported as if it passed.
 - **A WebFetch-derived save graded as verbatim.** The exact failure this skill's Phase 1 design
   exists to prevent — never skip the banner-and-downgrade path for a lossy fetch.

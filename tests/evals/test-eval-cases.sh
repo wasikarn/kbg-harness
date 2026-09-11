@@ -30,6 +30,7 @@ for d in "$EVALS"/*/; do
     memory-lint-*)   /usr/bin/grep -q 'skill: "mh:memory-lint"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     learn-*)         /usr/bin/grep -q 'skill: "mh:learn"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     ideate-*)        /usr/bin/grep -q 'skill: "mh:ideate"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
+    idea-audit-*)    /usr/bin/grep -q 'skill: "mh:idea-audit"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     deep-audit-*)    /usr/bin/grep -q 'skill: "mh:deep-audit"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     cost-report-*)   /usr/bin/grep -q 'skill: "mh:cost-report"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
     ste-lint-*)      /usr/bin/grep -q 'skill: "mh:ste-lint"' "$d/prompt.md" || { bad "$c: prompt.md does not name the skill"; continue; } ;;
@@ -86,6 +87,7 @@ PY
     ideate-run)                   sample=$'- ring-buffer CAS counters [N7 V8 F9]\n★ **token lease** because...\nWhat if we took this seriously: ...' ;;
     ideate-abort)                 sample=$'```python\nwith open("notes.txt") as f:\n    for line in f:\n        ...\n```' ;;
     deep-audit-*)                 sample='**Final Verdict:** pass (7.8/10, confidence high)' ;;
+    idea-audit-*)                 sample='**Decision: adopt** (weighted total 82/100, threshold 70) — primary-source fidelity 32/35, fit 18/20' ;;
     cost-report-planted)          sample=$'=== Cost summary ===\nnote: 1 of 3 rows predate dedup_usage (2026-09-04)\ntotal:     $10.0000  (3 sessions)' ;;
     cost-report-clean)            sample='Cost tracker not set up: /tmp/x/metrics/costs.jsonl not found. Enable the stop:cost-tracker hook and finish a session first.' ;;
     ste-lint-planted)             sample='notes.md line 5: rule 8.1 semicolon
@@ -148,7 +150,7 @@ PY
   then bad "$c: a grader is malformed"; continue; fi
   ok "$c"
 done
-[ "$n" -eq 44 ] || bad "expected 44 cases, found $n"
+[ "$n" -eq 46 ] || bad "expected 46 cases, found $n"
 
 echo "eval-cases: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
