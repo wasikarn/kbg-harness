@@ -3,6 +3,18 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.88] — 2026-09-12
+
+### Changed
+
+- **GH #159 closed: `gauntlet` CI job confirmed green on a real run.** Removed
+  `continue-on-error: true` from `.github/workflows/validate.yml`'s `gauntlet` job — the first
+  real push after v1.1.87 ran all three jobs (`validate-plugin`, `harness-audit`, `gauntlet`)
+  clean on actual `ubuntu-latest`, confirming the podman `ubuntu:24.04` dry-run's 9 fixes (v1.1.86)
+  hold on the real runner. `docs/reference/repo-gotchas.md`'s `core.hooksPath` gotcha and
+  `CLAUDE.md`'s validation section now describe the gauntlet job as a real required-check
+  backstop, not a reporting-only signal.
+
 ## [1.1.87] — 2026-09-12
 
 ### Added

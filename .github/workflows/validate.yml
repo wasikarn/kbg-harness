@@ -47,10 +47,6 @@ jobs:
     name: gauntlet (run-gauntlet.sh)
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # First landing per GH #159: no local GH Actions runner exists to dry-run this job itself
-    # (a podman ubuntu:24.04 container caught 9 real portability bugs, but it is still not the
-    # actual runner). Remove continue-on-error once a real run on develop confirms green.
-    continue-on-error: true
     steps:
       - name: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
