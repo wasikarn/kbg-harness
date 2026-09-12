@@ -3,6 +3,18 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.84] — 2026-09-12
+
+### Added
+
+- **`docs/reference/spawn-brief.md`** — two small additions from a fresh `mh:idea-audit` drill-down
+  on `Leonxlnx/unlazy` (pinned local clone, not the article-summary read the 2026-09-10 pass used):
+  Done-when now asks for a negative control before trusting an absence claim and independent
+  measurement before writing a supplied number in as its own proof; a new dispatcher-facing line
+  says to launch a wave's Agent calls together, before reading any result, so the per-wave
+  concurrency Rule 13 assumes isn't silently serialized. See
+  `docs/research/unlazy-adoption-audit-2026-09-12.md`.
+
 ## [1.1.83] — 2026-09-11
 
 ### Fixed

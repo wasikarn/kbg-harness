@@ -16,7 +16,9 @@ The shape every dispatched subagent prompt takes. Short on purpose; the constrai
 <observable and pre-stated before starting: exit status plus a task-relevant assertion on the
 output — a literal string, a count (tests run/failed/skipped), or a structured field, whichever
 fits. Exit 0 alone is not evidence (a skipped suite exits 0). A file existing is not evidence
-either — check the content that has to be there, not just presence, or a stale file passes free.>
+either — check the content that has to be there, not just presence, or a stale file passes free.
+Exercise a negative control before trusting an absence claim (a check that fails on a known-bad
+input); measure a stated number independently before writing it into Done-when as its own proof.>
 
 Constraints: stage by explicit path only, never stash/reset/checkout/add -A; delete with `trash`;
 return `NEEDS-DECISION <question>` instead of guessing; a ruling made within your own authority
@@ -38,3 +40,6 @@ A validator returns `{pass, findings[], scope_ok, unexpected_files[]}` and nothi
 `scope_ok` fails on either an unexpected file or an owned file the diff never touches.
 A fixer brief carries those findings verbatim and narrows FILES YOU OWN to the files the
 findings name; a returned unit that may touch anything grows into a diff nobody reviewed.
+
+Launch a wave's Agent calls together, before reading any of their results: dispatching one, waiting
+on it, then dispatching the next serializes what Rule 13's per-wave cap assumes runs concurrently.
