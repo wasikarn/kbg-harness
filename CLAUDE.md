@@ -11,7 +11,10 @@ bash scripts/run-gauntlet.sh                       # plugin-validate (manifest o
 ```
 
 Pre-push runs the gauntlet; pre-commit runs lint + audit + a 4096-byte cap on `docs/METHODOLOGY.md` +
-a benign-payload canary on staged gates (`scripts/gate-canary.sh`).
+a benign-payload canary on staged gates (`scripts/gate-canary.sh`). CI also runs the gauntlet
+(`.github/workflows/validate.yml`'s `gauntlet` job) as a post-push reporting signal, not a
+blocking gate (`continue-on-error: true` until a real run confirms green) — it does not replace
+the local pre-push hook.
 
 ## Git hooks
 

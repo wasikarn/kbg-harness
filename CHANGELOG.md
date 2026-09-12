@@ -3,6 +3,26 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.87] — 2026-09-12
+
+### Added
+
+- **GH #159: `run-gauntlet.sh` wired into CI.** New `gauntlet` job in
+  `.github/workflows/validate.yml`, mirroring `validate-plugin`'s checkout/setup-node/claude-code
+  steps (same action pins, same Node 20, same Claude Code version — now hoisted to a shared
+  `CLAUDE_CODE_VERSION` workflow env var instead of duplicated per job), plus a `trash-cli` install
+  step (`apt-get install -y trash-cli` ships `/usr/bin/trash` directly on Ubuntu 24.04 "noble", no
+  symlink needed — confirmed against `packages.ubuntu.com`) and a `command -v trash` verification
+  step before running `bash scripts/run-gauntlet.sh`. 10-minute timeout (vs. 5 for the other two
+  jobs) since the gauntlet is the largest suite (272 test functions in `test-gates.sh` alone).
+  Lands with `continue-on-error: true`: the v1.1.86 podman dry-run caught 9 real bugs, but it is
+  still not the actual GH Actions runner — this flag comes off in a follow-up commit once a real
+  run on `develop` confirms green. `validate-plugin` stays as a separate fast-fail job rather than
+  being folded in or removed — jobs run in parallel by default, so keeping both costs nothing in
+  wall-clock and keeps per-layer failure attribution clear. `CLAUDE.md`'s validation section now
+  notes CI also runs the gauntlet, as a post-push reporting signal, not a replacement for the local
+  pre-push hook.
+
 ## [1.1.86] — 2026-09-12
 
 ### Fixed
