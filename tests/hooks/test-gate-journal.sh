@@ -88,18 +88,52 @@ ok=1; [ ! -e "$BROKEN_HOME" ] && ok=0
 check "journal write under the unwritable path genuinely failed (no dir ever created)" "$ok"
 
 # --- Case 4: gate-id drift guard -- every gate's hardcoded GATE_ID constant
-# must actually appear in hooks/hook-registry.json (no drift-detection for
-# this exists anywhere else in the harness; check 73 diffs hooks.json against
-# the registry but never looks inside a gate .py). ---
+# must be THE id hook-registry.json assigns to that gate's own .sh file (no
+# drift-detection for this exists anywhere else in the harness; check 73
+# diffs hooks.json against the registry but never looks inside a gate .py).
+# A raw substring search (an earlier version of this check) is too weak: it
+# passes as long as the string exists ANYWHERE in the registry, so swapping
+# two real gates' GATE_IDs -- silently mislabeling every journaled row from
+# both -- goes undetected. Map each gate's .sh filename to its own registry
+# entry via the entry's "command" field, then compare ids directly. ---
 REGISTRY="$ROOT/hooks/hook-registry.json"
+
+registry_id_for() { # registry_id_for <gate.sh basename>
+  python3 -c "
+import json, sys
+d = json.load(open(sys.argv[2]))
+name = sys.argv[1]
+for group in d['hooks'].values():
+    for entry in group:
+        if name in entry.get('command', ''):
+            print(entry.get('id', ''))
+            sys.exit(0)
+" "$1" "$REGISTRY"
+}
+
 ok=0
 for f in "$ROOT"/hooks/gates/*.py; do
   [ "$(basename "$f")" = "_journal.py" ] && continue
   id=$(/usr/bin/grep -oE 'GATE_ID = "[^"]+"' "$f" | head -1 | sed 's/GATE_ID = "//; s/"$//')
   [ -z "$id" ] && continue  # this gate has no journal wiring (none expected today)
-  /usr/bin/grep -q "\"$id\"" "$REGISTRY" || { echo "  drift: $f's GATE_ID=$id not found in hook-registry.json" >&2; ok=1; }
+  sh_name="$(basename "$f" .py).sh"
+  registry_id=$(registry_id_for "$sh_name")
+  [ "$registry_id" = "$id" ] || { echo "  drift: $f's GATE_ID=$id but hook-registry.json's $sh_name entry has id=$registry_id" >&2; ok=1; }
 done
-check "every gate's GATE_ID literal exists in hook-registry.json" "$ok"
+check "every gate's GATE_ID matches hook-registry.json's own entry for that gate" "$ok"
+
+# --- Case 4b: mutation proof the tightened check above isn't vacuous --
+# assign irrecoverable's GATE_ID to config-write-guard's (a real id, just the
+# wrong gate's) and confirm registry_id_for("irrecoverable.sh") still
+# disagrees with it. A raw substring search would have missed this, since
+# "gate:write:config-guard" genuinely exists in the registry. ---
+MUTANT="$WORK/mutant-irrecoverable.py"
+cp "$ROOT/hooks/gates/irrecoverable.py" "$MUTANT"
+sed -i.bak 's/GATE_ID = "gate:bash:irrecoverable"/GATE_ID = "gate:write:config-guard"/' "$MUTANT"
+mutant_id=$(/usr/bin/grep -oE 'GATE_ID = "[^"]+"' "$MUTANT" | head -1 | sed 's/GATE_ID = "//; s/"$//')
+mutant_registry_id=$(registry_id_for "irrecoverable.sh")
+ok=1; [ "$mutant_id" = "gate:write:config-guard" ] && [ "$mutant_registry_id" = "gate:bash:irrecoverable" ] && [ "$mutant_id" != "$mutant_registry_id" ] && ok=0
+check "mutation proof: an ID swapped to a different real gate's id is caught (not a raw substring hit)" "$ok"
 
 # --- Case 5: MH_GATE_JOURNAL_PATH override is honored (the mechanism
 # scripts/run-gauntlet.sh's hook-test layer relies on, instead of swapping
