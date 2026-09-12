@@ -3,6 +3,39 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.86] — 2026-09-12
+
+### Fixed
+
+- **7 real Linux-only test-portability bugs, GH #159 prep.** Found via a podman `ubuntu:24.04`
+  dry-run (non-root, matching a real GH Actions runner) before wiring `scripts/run-gauntlet.sh`
+  into CI — every fix independently verified live: (1) 6 BSD-first `stat -f || stat -c` call
+  sites across `tests/hooks/test-handoff-surface.sh`, `tests/scripts/test-hook-common.sh`,
+  `tests/skills/handoff/test-handoff-path.sh` reordered GNU-first, matching
+  `scripts/_lib/hook-common.sh`'s existing fix — GNU's `-f` doesn't fail cleanly the way BSD's
+  does. (2) `test-hook-common.sh`'s GNU-stat regression block only activated via a Homebrew
+  `gstat` shim, so it silently skipped on every Linux CI run; widened to detect native GNU `stat`
+  too, resolving to an absolute path before building the shim (naming a shim `stat` that then
+  `exec`s a bare `stat` self-recurses once `$PATH` is prepended — reproduced live: 98% CPU,
+  10+ minutes, before the fix). (3) `test_memory_lint.py`'s
+  `test_memory_dir_project_dir_name_requires_config_dir` committed to a fresh repo with no git
+  identity, masked on every dev machine by an already-configured global `user.name`/`user.email`.
+  (4) `test-failure-diagnose-nudge.sh`'s missing-python3 simulation used `PATH=/bin`, which only
+  hides `python3` on macOS (Apple's stub lives in `/usr/bin`) — a usr-merged Linux distro symlinks
+  `/bin -> /usr/bin`, so the simulation silently found the real `python3` instead. (5)
+  `test-gates.sh`'s GH #140 length-cap test passed a 700,000-char string as a literal `python3`
+  CLI argument; Linux's `MAX_ARG_STRLEN` caps a single `execve()` argument at 128 KiB (no such
+  cap on macOS), so `python3` itself failed to exec — `bash_payload()` now pipes the command
+  through stdin, matching how the real hook actually receives it. (6) The same file's mid-merge
+  carve-out fixture ran `git merge -q side` without the `-c user.email/-c user.name` every other
+  git command in the same fixture already carries, so the merge attempt failed on missing
+  identity and silently never reached a conflicted state (swallowed by a trailing `; true`). (7)
+  `test-session-stop.sh`'s memory-audit-commit fixture set identity via `-c` on its own baseline
+  commit only, never persisting it to the fixture repo's local config — `hooks/stop/memory-audit-
+  commit.sh:48` commits with no `-c` flags of its own (correctly, for its real deployment: a
+  developer's already-configured machine), so it had no ambient identity to inherit in a bare
+  container and silently failed (stderr to `/dev/null`, exit 0 regardless).
+
 ## [1.1.85] — 2026-09-12
 
 ### Added

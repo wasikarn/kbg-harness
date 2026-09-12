@@ -106,11 +106,16 @@ fi
 # the sensor's python3-missing fast path never reads stdin at all, so a live
 # upstream writer piping into it can hit a benign SIGPIPE race that pollutes
 # the captured exit status -- redirecting from a file sidesteps that.
-# /bin has bash but no python3 on macOS (Apple's python3 stub lives in
-# /usr/bin) -- a plain, static PATH value, no computed executable path.
+# A directory containing only a `bash` symlink, not a hardcoded OS path: macOS's
+# /bin lacks python3 (Apple's stub lives in /usr/bin), but a usr-merged Linux
+# distro symlinks /bin -> /usr/bin, so PATH=/bin still finds python3 there --
+# confirmed live on Ubuntu 24.04 (readlink -f /bin -> /usr/bin).
 STDERR_CAP="$STATE_DIR/stderr.txt"
+NO_PYTHON3_PATH="$STATE_DIR/no-python3-bin"
+mkdir -p "$NO_PYTHON3_PATH"
+ln -sf "$(command -v bash)" "$NO_PYTHON3_PATH/bash"
 posttoolusefailure_payload "make build" "Command failed" > "$STATE_DIR/payload.json"
-out=$(PATH=/bin bash "$SENSOR" "$STATE" < "$STATE_DIR/payload.json" 2>"$STDERR_CAP")
+out=$(PATH="$NO_PYTHON3_PATH" bash "$SENSOR" "$STATE" < "$STATE_DIR/payload.json" 2>"$STDERR_CAP")
 rc=$?
 if [ "$rc" -eq 0 ] && [ -z "$out" ] && /usr/bin/grep -qi 'python3 not found' "$STDERR_CAP"; then
   ok "missing python3 -- fails open AND announces on stderr (GH #93 posture)"

@@ -479,7 +479,13 @@ proj=$(mktemp -d)
 mem_dir="$fake_home/.claude/projects/$(cd "$proj" && pwd -P | sed 's|/|-|g')/memory"
 mkdir -p "$mem_dir"
 echo "# Memory index" > "$mem_dir/MEMORY.md"
-(cd "$mem_dir" && git init -q && git add MEMORY.md && git -c user.email=test@test -c user.name=test commit -q -m baseline)
+(cd "$mem_dir" && git init -q && git config user.email test@test && git config user.name test && git add MEMORY.md && git -c user.email=test@test -c user.name=test commit -q -m baseline)
+# ^ local (non --global) identity persisted on the fixture repo, not just the baseline commit:
+# memory-audit-commit.sh:48 commits with no -c flags of its own, inheriting whatever identity
+# is already configured for $mem_dir -- a bare CI container has no ambient global git identity
+# (confirmed live on Ubuntu 24.04), so without this the hook's own auto-commit silently fails
+# (stderr redirected to /dev/null, exit 0 regardless) and the two assertions below see a dirty
+# working tree instead of a clean one.
 
 before=$(cd "$mem_dir" && git rev-parse HEAD)
 out=$(cd "$proj" && HOME="$fake_home" bash "$MEMORY_COMMIT" 2>/dev/null)

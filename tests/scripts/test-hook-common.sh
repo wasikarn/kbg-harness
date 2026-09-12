@@ -49,7 +49,7 @@ fi
 D="$T/safe/nested"
 OUT=$(bash -c ". '$LIB'; hook_safe_dir '$D' && echo created")
 if [ "$OUT" = "created" ] && [ -d "$D" ]; then
-  MODE=$(stat -f '%Lp' "$D" 2>/dev/null || stat -c '%a' "$D" 2>/dev/null)
+  MODE=$(stat -c '%a' "$D" 2>/dev/null || stat -f '%Lp' "$D" 2>/dev/null)
   if [ "$MODE" = "700" ]; then
     ok "hook_safe_dir creates a 700 dir"
   else
@@ -259,10 +259,16 @@ fi
 # GNU-first branch, its format-string arguments, and the actual GNU
 # multi-operand collision this ordering exists to avoid, all against real
 # GNU stat behavior instead of a guess at what it does. ---
+GNUSTAT=""
 if command -v gstat >/dev/null 2>&1; then
+  GNUSTAT=$(command -v gstat)
+elif stat --version >/dev/null 2>&1 && stat --version | grep -q 'GNU coreutils'; then
+  GNUSTAT=$(command -v stat)
+fi
+if [ -n "$GNUSTAT" ]; then
   GNUSHIM=$(mktemp -d)
   EXTRA_TRASH+=("$GNUSHIM")
-  printf '#!/usr/bin/env bash\nexec gstat "$@"\n' > "$GNUSHIM/stat"
+  printf '#!/usr/bin/env bash\nexec "%s" "$@"\n' "$GNUSTAT" > "$GNUSHIM/stat"
   chmod +x "$GNUSHIM/stat"
 
   if PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_owner_ok '$T'"; then
@@ -272,21 +278,21 @@ if command -v gstat >/dev/null 2>&1; then
   fi
 
   SNAP_GNU=$(PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_snapshot '$F' x")
-  EXPECT_SNAP=$(gstat -c '%s %Y' "$F")
+  EXPECT_SNAP=$("$GNUSTAT" -c '%s %Y' "$F")
   if [ "$SNAP_GNU" = "$EXPECT_SNAP" ]; then
     ok "hook_snapshot produces the correct 'size mtime' format under a real GNU stat"
   else
     bad "hook_snapshot under real GNU stat: expected '$EXPECT_SNAP', got '$SNAP_GNU'"
   fi
 
-  AGE_GNU=$(PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_entry_age '$F' \$(( \$(gstat -c '%Y' '$F') + 3600 ))")
+  AGE_GNU=$(PATH="$GNUSHIM:$PATH" bash -c ". '$LIB'; hook_entry_age '$F' \$(( \$('$GNUSTAT' -c '%Y' '$F') + 3600 ))")
   if [ "$AGE_GNU" = "3600" ]; then
     ok "hook_entry_age computes the correct age under a real GNU stat"
   else
     bad "hook_entry_age under real GNU stat: expected 3600, got '$AGE_GNU'"
   fi
 else
-  echo "  (skipped: real-GNU-stat regression checks need gstat -- brew install coreutils)"
+  echo "  (skipped: real-GNU-stat regression checks need gstat or native GNU stat -- brew install coreutils on macOS)"
 fi
 
 echo "hook-common: $pass passed, $fail failed"

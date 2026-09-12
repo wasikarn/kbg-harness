@@ -35,7 +35,7 @@ P1=$(run)
 rc=$?
 if [ "$rc" -eq 0 ] && [ -n "$P1" ]; then
   STAGING_DIR=$(dirname "$P1")
-  MODE=$(stat -f '%Lp' "$STAGING_DIR" 2>/dev/null || stat -c '%a' "$STAGING_DIR" 2>/dev/null)
+  MODE=$(stat -c '%a' "$STAGING_DIR" 2>/dev/null || stat -f '%Lp' "$STAGING_DIR" 2>/dev/null)
   if [ "$MODE" = "700" ]; then
     ok "default call allocates a staging path with staging/ at 0700"
   else
@@ -88,7 +88,7 @@ if [ "$(basename "$PUB1")" = "$EXPECTED_BASE" ]; then
 else
   bad "expected published basename $EXPECTED_BASE, got $(basename "$PUB1")"
 fi
-PUB_MODE=$(stat -f '%Lp' "$PUB1" 2>/dev/null || stat -c '%a' "$PUB1" 2>/dev/null)
+PUB_MODE=$(stat -c '%a' "$PUB1" 2>/dev/null || stat -f '%Lp' "$PUB1" 2>/dev/null)
 if [ "$PUB_MODE" = "600" ]; then
   ok "published file is 0600"
 else

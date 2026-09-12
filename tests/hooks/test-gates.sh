@@ -18,8 +18,13 @@ fail=0
 # Build a minimal Bash tool payload. Uses json.dumps (not printf %s) so
 # commands containing quotes/backslashes (e.g. mysql -e "DROP TABLE...",
 # find -exec ... \;) don't produce malformed JSON that silently degrades
-# to an empty command downstream.
-bash_payload() { python3 -c 'import json, sys; print(json.dumps({"tool_name": "Bash", "tool_input": {"command": sys.argv[1]}}))' "$1"; }
+# to an empty command downstream. Piped via stdin, not argv: a GH #140-style
+# oversized command (700k chars) as a literal exec() argument exceeds Linux's
+# MAX_ARG_STRLEN (128 KiB per argument, a hard kernel cap absent on macOS),
+# so python3 itself fails to exec with "Argument list too long" before ever
+# reaching the gate under test -- confirmed live on Ubuntu 24.04. stdin has
+# no such limit, and it also matches how the real hook receives its payload.
+bash_payload() { printf '%s' "$1" | python3 -c 'import json, sys; print(json.dumps({"tool_name": "Bash", "tool_input": {"command": sys.stdin.read()}}))'; }
 
 # Build a Write tool payload. Uses json.dumps (see bash_payload above) so
 # content containing quotes/backslashes doesn't produce malformed JSON.
@@ -848,7 +853,7 @@ NOMERGE_FIX=$(mktemp -d "${TMPDIR:-/tmp}/kbg-nomerge-fixture.XXXXXX")
   && echo a > f && git add f && git -c user.email=t@t -c user.name=t commit -q -m a \
   && git checkout -q -b side && echo b > f && git -c user.email=t@t -c user.name=t commit -q -am b \
   && git checkout -q develop && echo c > f && git -c user.email=t@t -c user.name=t commit -q -am c \
-  && git merge -q side >/dev/null 2>&1; true )
+  && git -c user.email=t@t -c user.name=t merge -q side >/dev/null 2>&1; true )
 ( cd "$NOMERGE_FIX" && git init -q -b develop . && git -c user.email=t@t -c user.name=t commit -q --allow-empty -m init )
 if git -C "$MERGE_FIX" rev-parse -q --verify MERGE_HEAD >/dev/null; then
   test_allow "$IRRECOVERABLE" "git add -A ALLOWED while MERGE_HEAD exists in the payload cwd (mid-merge carve-out)" \

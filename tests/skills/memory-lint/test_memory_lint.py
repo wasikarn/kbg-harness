@@ -304,6 +304,8 @@ def test_memory_dir_project_dir_name_requires_config_dir():
     no committed coverage to catch a future re-regression of the same bug."""
     with tempfile.TemporaryDirectory() as repo, tempfile.TemporaryDirectory() as cfg:
         subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+        subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=repo, check=True)
+        subprocess.run(["git", "config", "user.name", "t"], cwd=repo, check=True)
         subprocess.run(["git", "commit", "-q", "--allow-empty", "-m", "init"], cwd=repo, check=True)
         toplevel = subprocess.run(
             ["git", "-C", repo, "rev-parse", "--show-toplevel"],

@@ -259,8 +259,8 @@ P=$(alloc "$H"); printf 'perm check\n' > "$P"
 PUB=$(publish "$H" "$P")
 surface "$H" >/dev/null 2>&1
 CONS_DIR="$(dirname "$(dirname "$PUB")")/consumed"
-DIR_MODE=$(stat -f '%Lp' "$CONS_DIR" 2>/dev/null || stat -c '%a' "$CONS_DIR" 2>/dev/null)
-FILE_MODE=$(stat -f '%Lp' "$CONS_DIR/$(basename "$PUB")" 2>/dev/null || stat -c '%a' "$CONS_DIR/$(basename "$PUB")" 2>/dev/null)
+DIR_MODE=$(stat -c '%a' "$CONS_DIR" 2>/dev/null || stat -f '%Lp' "$CONS_DIR" 2>/dev/null)
+FILE_MODE=$(stat -c '%a' "$CONS_DIR/$(basename "$PUB")" 2>/dev/null || stat -f '%Lp' "$CONS_DIR/$(basename "$PUB")" 2>/dev/null)
 if [ "$DIR_MODE" = "700" ] && [ "$FILE_MODE" = "600" ]; then
   ok "consumed/ is 0700, the archived file is 0600"
 else
@@ -472,7 +472,7 @@ CONS_DIR="$(dirname "$(dirname "$PUB")")/consumed"
 OUT=$(HOME="$H" PATH="$MVSHIM_DIR:$PATH" bash "$HOOK" 2>"$H/err")
 DEST="$CONS_DIR/$(basename "$PUB")"
 DEST_MODE=""
-[ -d "$DEST" ] && DEST_MODE=$(stat -f '%Lp' "$DEST" 2>/dev/null || stat -c '%a' "$DEST" 2>/dev/null)
+[ -d "$DEST" ] && DEST_MODE=$(stat -c '%a' "$DEST" 2>/dev/null || stat -f '%Lp' "$DEST" 2>/dev/null)
 if echo "$OUT" | grep -q 'consume race content' && [ "$DEST_MODE" = "700" ] && [ ! -s "$H/err" ]; then
   ok "a destination-directory race on the consume side is never chmod'd -- old code stripped the directory's own mode instead"
 else
