@@ -3,6 +3,22 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.90] — 2026-09-12
+
+### Fixed
+
+- **deep-audit on the GH #159 session: false "required check" claim.** `CLAUDE.md` and
+  `docs/reference/repo-gotchas.md` both called the `gauntlet` CI job a "required check" — false:
+  `gh api repos/wasikarn/matt-harness/branches/develop/protection` returns 404, `develop` has no
+  branch-protection rule, so a red `gauntlet` job reports but never blocks a push or merge. Both
+  files now say advisory, not enforced. Also: the v1.1.86 CHANGELOG entry's own enumeration is
+  the authoritative count (7 fixes, 3 identity-fix sites, no SC2027 item) — later commit messages
+  (`aa5059b5`, `1238e83a`) and the GH #159 closing comment drifted to "9" and an unverified SC2027
+  claim while carrying forward a pre-compaction conversation summary without rechecking it against
+  the CHANGELOG already on disk; corrected via a follow-up comment on #159 rather than amending
+  already-pushed commit messages. Found by this session's own `mh:deep-audit` pass (fallback
+  checker — Codex was rate-limited).
+
 ## [1.1.89] — 2026-09-12
 
 ### Added
