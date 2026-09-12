@@ -139,4 +139,37 @@ independent Codex adversarial pass that found real, actionable findings rather t
   work) eventually justify a Rule 3 sentence, or does Rule 1's plan-mode routing already cover
   enough of it in practice? Still left open; nothing in this pass bears on it either way.
 
+## Round 2 (same day, 2026-09-12): 5-analyst + 5-attacker drill-down
+
+A follow-up pass, same session: 5 isolated `general-purpose` analysts, each assigned a distinct
+lens (gates/evidence, dispatch/orchestration, Stop-hook/completion-discipline,
+token-economy/model-tiering, testing/hardening + the open self-check question from Round 1),
+explicitly briefed on everything shipped/declined above to avoid rediscovery. Then 5 independent
+`general-purpose` attackers, one per surfaced ship-candidate, each re-checking the claim against
+primary evidence rather than trusting the analyst's citations — same fresh-context-validator
+pattern as Phase 2 above, run in parallel instead of as one combined pass.
+
+| # | Candidate | Attacker verdict | Disposition |
+|---|---|---|---|
+| 1 | Size-cap the file reads in `hooks/gates/test-integrity.py` / `config-write-guard.py` (mirroring `irrecoverable.py`'s `_CMD_LEN_CAP`) | **REJECT** — the attacker ran the actual regexes against a synthetic 13MB file (1.3s vs. an 8s timeout) and found `config-write-guard.py` imports no `re` module at all; the candidate's core mechanism claim was false | Not shipped |
+| 2 | `Tier: judgment\|mechanical` marker in `spawn-brief.md` for ad hoc dispatches | **REJECT** — the supporting "~3114 ad hoc dispatches" citation pointed to a line that doesn't contain it; the real number lives in a different, pre-correction doc affected by the known 2.4x cost-counter bug (`orchestrate-cost-round2-shipped-2026-09-04`); the mechanism (a self-applied, unenforced label) also directly contradicts `operating-model.md`'s "the maker never grades its own work" | Not shipped |
+| 3 | Partial-wave-launch prose (an Agent call errors before a subagent ever starts — don't read the launched subset as a complete wave) | **SHIP** — gap confirmed absent from `spawn-brief.md`/`operating-model.md`; cheap, no incident behind it but free to state | Shipped, v1.1.85 |
+| 4 | Ownership-overlap prose for `FILES YOU OWN` (sequential dispatch when two leaves' owned paths aren't disjoint) | **REVISE → SHIP** — confirmed genuinely distinct from the closed GH #135/#137 write-allowlist gate (that was an enforced mechanism; this is dispatcher judgment, no hook). Original wording ("share a parent directory") would have fired on nearly every wave in a monorepo; narrowed to actual ancestor/descendant/same-file overlap before shipping | Shipped (revised), v1.1.85 |
+| 5 | Builder self-check-before-handoff line | **REVISE → SHIP** — doctrine citation checked and held (`operating-model.md:38-44` bans self-grading as the *acceptance* decision, stays silent on a private pre-handoff pass); the memory-file "cuts both ways" framing was an unsupported add-on and dropped from the rationale; the drafted placement (after the fence, as dispatcher-only prose) was a real bug — a builder-directed sentence outside the fenced template never reaches the builder. Moved inside the fence, scoped to `Builder/fixer:` | Shipped (revised), v1.1.85 |
+| 6 | Wire `scripts/run-gauntlet.sh` into CI (`.github/workflows/validate.yml` currently runs only plugin-validate + harness-audit) | **REVISE** — diagnosis correct (confirmed: 2 jobs only, real 2026-08-26 hooksPath incident), but undercounted the macOS-only `trash` dependency (18 files, not 12) and missed a second landmine: 3 test files still use the BSD-first `stat -f` fallback order already fixed in production code but never propagated to tests. Not a one-line CI addition | Filed as [#159](https://github.com/wasikarn/matt-harness/issues/159), not shipped this pass |
+
+Two Round-1 open questions were explicitly re-examined rather than left untouched: the
+consent-gated Stop hook got a full buildable design (trigger, cap placement, three release
+conditions, blast-radius warning) but **still not recommended to build** absent an operator ask;
+the self-check-before-handoff question was resolved — shipped, per row 5 above, closing that open
+question rather than carrying it forward again.
+
+**Why round 2 mattered:** three of six candidates that read as reasonable, doctrine-citing prose
+failed under independent adversarial re-verification for reasons a same-model second read would
+likely have missed (a citation pointing at the wrong file entirely; a mechanism verified by
+actually running it against synthetic input rather than reasoning about it abstractly). This
+confirms the pattern already on record in memory `precedence-claims-need-discriminating-probe`
+one level down: fluent, doctrine-citing analysis needs a citation-checking adversarial pass, not
+just a second opinion.
+
 <!-- Reserved: a later pass appends a dated correction here, never rewrites the sections above. -->

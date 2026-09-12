@@ -3,6 +3,22 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.85] — 2026-09-12
+
+### Added
+
+- **`docs/reference/spawn-brief.md`** — 3 more additions from a 5-analyst + 5-attacker drill-down
+  round on `Leonxlnx/unlazy` (each analyst took a distinct lens, each finding independently
+  re-verified by a separate attacker against primary evidence): a builder/fixer self-check line
+  before returning (private pass, never narrows the validator's brief), a partial-wave-launch
+  line (don't read a subset's results as if the wave completed when an Agent call itself errored),
+  and an ownership-overlap line for `FILES YOU OWN` (ancestor/descendant/same-file overlap forces
+  sequential dispatch — narrower than the attacker's first wording, which would have fired on
+  almost every wave in a monorepo). Two other candidates (a gate input-size cap, a `Tier` marker
+  for ad hoc dispatches) were attacked and rejected outright — see the audit doc's round-2 section.
+  Filed #159 for a third, larger candidate (wiring `scripts/run-gauntlet.sh` into CI) rather than
+  rushing a multi-file portability fix into this pass.
+
 ## [1.1.84] — 2026-09-12
 
 ### Added
