@@ -2,6 +2,14 @@
 import json, os, re, shlex, sys
 
 try:
+    from _journal import journal
+except Exception:
+    def journal(*a, **k):
+        pass
+
+GATE_ID = "gate:bash:irrecoverable"
+
+try:
     d = json.load(sys.stdin)
 except Exception:
     d = None
@@ -11,6 +19,8 @@ except Exception:
 # with no destructive token before python runs, so those allow by design.
 if not isinstance(d, dict) or not isinstance(d.get("tool_input"), dict):
     print("[mh:gate] BLOCKED: malformed PreToolUse payload — failing closed", file=sys.stderr)
+    # d may be None or a non-dict here -- pass literals, never d.get(...).
+    journal(GATE_ID, None, "deny", None)
     sys.exit(2)
 
 SQ = chr(39)
@@ -232,10 +242,12 @@ if d.get("agent_id") and _nested_spawn(cmd):
     print("[mh:gate] BLOCKED: a subagent may not spawn a nested Claude Code session via Bash "
           "(claude -p/--print/--agent/--bg/--worktree) -- only the main session dispatches",
           file=sys.stderr)
+    journal(GATE_ID, d.get("tool_name"), "deny", d.get("session_id"))
     sys.exit(2)
 
 def deny(reason):
     print("[mh:gate] BLOCKED: " + reason, file=sys.stderr)
+    journal(GATE_ID, d.get("tool_name"), "deny", d.get("session_id"))
     sys.exit(2)
 
 def delete_hint():

@@ -52,6 +52,22 @@ run_lint() {
 
 run_hook_tests() {
   local rc=0 t
+  # Redirect the gate-verdict journal for the whole hook-test layer: several
+  # suites (test-gates.sh alone has 165 deny/ask assertions) exercise gates
+  # whose journal() call writes to $HOME/.local/share/kbg/metrics/
+  # gate-decisions.jsonl by default. Without this, every local
+  # run-gauntlet.sh/pre-push would silently append synthetic rows to the
+  # operator's real journal, corrupting the analytics it exists to produce.
+  # MH_GATE_JOURNAL_PATH is a narrow override (hooks/gates/_journal.py),
+  # deliberately NOT a full HOME swap: an earlier version of this fix
+  # exported a throwaway HOME for the whole test layer and broke
+  # PyYAML-dependent tests (test-ste-lint.sh, harness-audit's YAML checks) --
+  # PyYAML is resolved via the real $HOME's user site-packages, so replacing
+  # HOME wholesale has far more blast radius than this one write path needs.
+  local JOURNAL_TMP
+  JOURNAL_TMP="$(mktemp -d)"
+  trap 'trash "$JOURNAL_TMP" 2>/dev/null || true' RETURN
+  export MH_GATE_JOURNAL_PATH="$JOURNAL_TMP/gate-decisions.jsonl"
   for t in tests/hooks/*.sh tests/skills/test*.sh tests/skills/*/test*.sh tests/scripts/test*.sh tests/evals/test*.sh; do
     [ -f "$t" ] || continue
     echo "--- $t"

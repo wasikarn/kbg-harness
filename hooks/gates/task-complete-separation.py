@@ -2,6 +2,14 @@
 import json, sys
 
 try:
+    from _journal import journal
+except Exception:
+    def journal(*a, **k):
+        pass
+
+GATE_ID = "gate:task:complete-separation"
+
+try:
     d = json.load(sys.stdin)
 except Exception as e:
     # Fail-safe = ALLOW. Completion is recoverable; a parse error must not
@@ -44,4 +52,5 @@ if not agent_id:
 agent_type = d.get("agent_type") or "unknown"
 print(f"[mh:gate] BLOCKED: subagent ({agent_type}) may not mark its own task completed — "
       f"return to main session for completion (maker≠checker)", file=sys.stderr)
+journal(GATE_ID, d.get("tool_name"), "deny", d.get("session_id"))
 sys.exit(2)

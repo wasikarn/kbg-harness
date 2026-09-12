@@ -2,10 +2,19 @@
 import json, os, re, sys
 from collections import Counter
 
-def emit_ask(reason):
+try:
+    from _journal import journal
+except Exception:
+    def journal(*a, **k):
+        pass
+
+GATE_ID = "gate:write:test-integrity"
+
+def emit_ask(reason, tool_name, session_id):
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
                                              "permissionDecision": "ask",
                                              "permissionDecisionReason": reason}}))
+    journal(GATE_ID, tool_name, "ask", session_id)
 
 # Real test-root shapes only — not a bare "test"/"spec" substring, which
 # false-positived on spec-miner.md, anything containing "specific"/"inspect",
@@ -173,6 +182,7 @@ def reason(path):
 try:
     d = json.load(sys.stdin)
     tool = d.get("tool_name", "") or ""
+    session_id = d.get("session_id")
     ti = d.get("tool_input")
     if not isinstance(ti, dict):
         sys.exit(0)
@@ -184,7 +194,7 @@ try:
     if tool == "Edit":
         old_s, new_s = ti.get("old_string", ""), ti.get("new_string", "")
         if weakened(old_s, new_s):
-            emit_ask(reason(path))
+            emit_ask(reason(path), tool, session_id)
         sys.exit(0)
 
     if tool == "Write":
@@ -197,11 +207,15 @@ try:
             sys.exit(0)  # cannot read the old side — nothing to compare, allow
         new_text = str(ti.get("content", ""))
         if weakened(old_text, new_text):
-            emit_ask(reason(path))
+            emit_ask(reason(path), tool, session_id)
         sys.exit(0)
 
     sys.exit(0)
 except Exception:
     # Cannot confirm this edit did not weaken a test — fail toward asking,
     # same posture this gate takes on any other unclassifiable statement.
-    emit_ask("test-integrity: could not classify this edit to a test-shaped path; approve manually or deny.")
+    # `tool`/`session_id` may be unbound here (json.load itself could have
+    # raised) -- pass literals, never the enclosing-scope names, or a
+    # NameError inside this handler would silently turn fail-toward-ask into
+    # fail-open on exactly the malformed input this branch exists to catch.
+    emit_ask("test-integrity: could not classify this edit to a test-shaped path; approve manually or deny.", None, None)

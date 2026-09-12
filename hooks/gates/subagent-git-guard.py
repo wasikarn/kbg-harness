@@ -2,6 +2,14 @@
 import json, re, sys
 
 try:
+    from _journal import journal
+except Exception:
+    def journal(*a, **k):
+        pass
+
+GATE_ID = "gate:bash:subagent-git-guard"
+
+try:
     d = json.load(sys.stdin)
 except Exception as e:
     # Fail-safe = ALLOW: a parse error must not stall every subagent Bash call.
@@ -117,5 +125,6 @@ if hit:
     print(f"[mh:gate] BLOCKED: subagent ({agent_type}) may not run `git {hit}` "
           f"(command: {clip(cmd)!r}) -- no repo-wide git in a concurrent wave "
           f"(docs/METHODOLOGY.md Rule 13); scope every git command to files you own.", file=sys.stderr)
+    journal(GATE_ID, "Bash", "deny", d.get("session_id"))
     sys.exit(2)
 sys.exit(0)

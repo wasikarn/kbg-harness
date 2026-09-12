@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
 import sys, json, os
 
-def emit_ask(reason):
+try:
+    from _journal import journal
+except Exception:
+    def journal(*a, **k):
+        pass
+
+GATE_ID = "gate:write:config-guard"
+
+def emit_ask(reason, tool_name, session_id):
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
                                              "permissionDecision": "ask",
                                              "permissionDecisionReason": reason}}))
+    journal(GATE_ID, tool_name, "ask", session_id)
 
 SECURITY_KEYS = ("hooks", "enabledPlugins", "env")
 
@@ -69,7 +78,8 @@ try:
     if not os.path.lexists(path):
         emit_ask(
             "config-write-guard: creating a new Claude Code settings file (" + path +
-            ") -- a fresh, unreviewed behavior surface. Confirm this is intentional."
+            ") -- a fresh, unreviewed behavior surface. Confirm this is intentional.",
+            tool, d.get("session_id"),
         )
         sys.exit(0)
 
@@ -102,7 +112,8 @@ try:
         "config-write-guard: this edit to " + path +
         " could not be verified to leave hooks/enabledPlugins/env unchanged " +
         "(unreadable original, unparseable content, or a real change to " +
-        "one of those keys). Confirm this is intentional."
+        "one of those keys). Confirm this is intentional.",
+        tool, d.get("session_id"),
     )
 except Exception:
     sys.exit(0)

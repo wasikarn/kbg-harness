@@ -3,6 +3,44 @@
 All notable changes to `mh` are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/); versions follow [SemVer](https://semver.org/).
 
+## [1.1.89] — 2026-09-12
+
+### Added
+
+- **Restored two collateral losses from the 2026-09-05 v1.0.0 rebuild**, found via a
+  10-agent drill-down (5 analysts + 5 attackers) checking Anthropic's "AI-Native SDLC
+  playbook" against this repo, then adversarially reviewed by `mh:plan-reviewer` (Codex was
+  rate-limited) before implementation:
+  - **Gate-verdict journaling.** `hooks/gates/_journal.py` (new, shared module) logs every
+    `ask`/`deny` verdict from the 7 gates to `~/.local/share/kbg/metrics/gate-decisions.jsonl`
+    — restoring what `hooks/dispatch-pretooluse.py` used to do before commit `2cac98c8`
+    deleted the central dispatcher (a good call) without replacing the journal riding along
+    with it (never called out in that commit's message). Every import is defensive
+    (`try: from _journal import journal / except: no-op`) so a missing/broken journal module
+    can never turn into a gate failure — verified against `irrecoverable.py`, the one gate
+    whose wrapper remaps any non-{0,2} exit to a hard deny. `error`/`timeout` decisions and a
+    jsonl reader are deliberately out of scope (no incident on record needing them; ad-hoc
+    `jq` is the read path for now). `scripts/run-gauntlet.sh`'s hook-test layer now redirects
+    the journal via a new `MH_GATE_JOURNAL_PATH` override (same naming precedent as
+    `cost-report`'s `MH_COSTS_FILE`) so the ~200 deny/ask assertions across existing gate
+    suites don't pollute the real journal on every local run — a first attempt swapped `$HOME`
+    wholesale instead and broke PyYAML-dependent tests (`test-ste-lint.sh`, harness-audit's
+    YAML checks), since PyYAML here resolves via the real `$HOME`'s user site-packages. New
+    test: `tests/hooks/test-gate-journal.sh` (10 cases, including a uid-independent fail-safe,
+    the override itself, and a gate-ID/registry drift guard).
+  - **Weekly harness-audit cron.** `.github/workflows/harness-audit-drift.yml` (restored,
+    near-verbatim) runs `audit.sh` every Monday, commenting on GH issue #116 only when
+    CRIT > 0. It ran live twice before being swept into the rebuild's bulk delete list with no
+    per-item rationale; issue #116 was later closed because the workflow stopped existing, not
+    because the check was wrong, so this restore reopens it rather than minting a new number.
+    Deliberately **no** `continue-on-error` (unlike a first-landing push/PR job): a scheduled
+    job gates nothing, so a red run is the drift signal working, and the alternative's removal
+    condition is unsatisfiable in principle (a healthy repo's `audit.sh` exits 0, so the
+    `issues: write` branch never executes on a "clean" run). Pre-argued by this repo's own
+    doctrine: ADR 0011 names this exact workflow as its accepted, non-model-invoking
+    alternative; ADR 0006's foreclosed list is scoped to a *model* self-starting a loop, which
+    a deterministic bash cron is not.
+
 ## [1.1.88] — 2026-09-12
 
 ### Changed

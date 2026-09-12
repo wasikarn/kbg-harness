@@ -2,6 +2,14 @@
 import json, sys
 
 try:
+    from _journal import journal
+except Exception:
+    def journal(*a, **k):
+        pass
+
+GATE_ID = "gate:agent:subagent-spawn-guard"
+
+try:
     d = json.load(sys.stdin)
 except Exception as e:
     # Fail-safe = ALLOW: a parse error must not stall every subagent Agent call.
@@ -33,4 +41,5 @@ print(f"[mh:gate] BLOCKED: subagent ({agent_type}) may not call the Agent tool t
       f"own reviewer/validator/subagent -- dispatch is the main session's job (maker≠checker, "
       f"docs/METHODOLOGY.md Rule 13). Return findings to the main session and let it "
       f"dispatch the next agent.", file=sys.stderr)
+journal(GATE_ID, d.get("tool_name"), "deny", d.get("session_id"))
 sys.exit(2)
