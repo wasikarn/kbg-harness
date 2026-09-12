@@ -34,6 +34,11 @@ echo "=== config-write-guard gate ==="
 
 FIXTURE=$(mktemp -d)
 trap 'trash "$FIXTURE" 2>/dev/null || true' EXIT
+# Isolate the gate-verdict journal (hooks/gates/_journal.py) from this file's
+# ask-case assertions -- run standalone (this file's own header invites it),
+# it would otherwise silently append rows to the operator's real
+# ~/.local/share/kbg/metrics/gate-decisions.jsonl.
+export MH_GATE_JOURNAL_PATH="$FIXTURE/gate-decisions.jsonl"
 mkdir -p "$FIXTURE/.claude"
 
 out=$(payload_write "$FIXTURE/.claude/settings.local.json" | bash "$GUARD" 2>/dev/null)

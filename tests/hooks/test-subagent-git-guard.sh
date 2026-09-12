@@ -4,6 +4,13 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# Isolate the gate-verdict journal (hooks/gates/_journal.py) from this file's
+# deny assertions -- run standalone (this file's own header invites it), it
+# would otherwise silently append rows to the operator's real
+# ~/.local/share/kbg/metrics/gate-decisions.jsonl.
+_JOURNAL_TMP="$(mktemp -d)"
+trap 'trash "$_JOURNAL_TMP" 2>/dev/null || true' EXIT
+export MH_GATE_JOURNAL_PATH="$_JOURNAL_TMP/gate-decisions.jsonl"
 GATE="$ROOT/hooks/gates/subagent-git-guard.sh"
 
 pass=0

@@ -7,6 +7,13 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# Isolate the gate-verdict journal (hooks/gates/_journal.py) from this file's
+# 165+ deny/ask assertions -- run standalone (this file's own header
+# invites it), it would otherwise silently append rows to the operator's
+# real ~/.local/share/kbg/metrics/gate-decisions.jsonl.
+_JOURNAL_TMP="$(mktemp -d)"
+trap 'trash "$_JOURNAL_TMP" 2>/dev/null || true' EXIT
+export MH_GATE_JOURNAL_PATH="$_JOURNAL_TMP/gate-decisions.jsonl"
 IRRECOVERABLE="$ROOT/hooks/gates/irrecoverable.sh"
 TASK_COMPLETE="$ROOT/hooks/gates/task-complete-separation.sh"
 SUBAGENT_GIT_GUARD="$ROOT/hooks/gates/subagent-git-guard.sh"
